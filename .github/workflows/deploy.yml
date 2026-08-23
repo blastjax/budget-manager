@@ -106,7 +106,13 @@ jobs:
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
 
             export API_IMAGE WEB_IMAGE
-            docker compose pull api web
+            # --policy always: api/web define both `image:` and `build:` (the
+            # build: block is for local `docker compose build` only, per
+            # docker/README.md), so a plain `pull` skips them as "buildable"
+            # and `up` then falls back to building web's `next build` on this
+            # box - slow enough to blow the SSH action's 10m command_timeout.
+            # This flag forces the actual GHCR image to be pulled instead.
+            docker compose pull --policy always api web
             docker compose up -d --remove-orphans
             docker image prune -f
             docker logout ghcr.io
