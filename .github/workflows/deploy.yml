@@ -81,6 +81,10 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ vars.EC2_SSH_PORT || 22 }}
+          # Default (10m) isn't enough on this instance: git pull and the
+          # GHCR login/pull alone have each taken several minutes, so the
+          # combined script needs real headroom rather than a tight budget.
+          command_timeout: 30m
           # appleboy/ssh-action reads these from the step's own process env
           # (set above / at workflow level) and exports them on the remote
           # host before running the script.
