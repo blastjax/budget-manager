@@ -94,8 +94,8 @@ export default function SetsClient() {
         </p>
       </header>
 
-      <div className="flex flex-wrap items-start gap-6">
-        <section className={`${CARD_CLASSES} w-full max-w-md shrink-0 flex flex-col gap-6`}>
+      <div className="flex flex-col items-stretch gap-6 lg:flex-row lg:flex-wrap lg:items-start">
+        <section className={`${CARD_CLASSES} w-full flex flex-col gap-6 lg:max-w-md lg:shrink-0`}>
           <div className="flex flex-col gap-4">
             <h2 className={sectionHeading}>Add a card</h2>
 
@@ -169,7 +169,7 @@ export default function SetsClient() {
           </div>
         </section>
 
-        <section className="flex flex-1 min-w-0 flex-col gap-4">
+        <section className="flex w-full min-w-0 flex-col gap-4 lg:flex-1">
           {boardBanner && (
             <div
               className={`w-full max-w-md rounded-lg border px-4 py-3 text-sm font-medium ${

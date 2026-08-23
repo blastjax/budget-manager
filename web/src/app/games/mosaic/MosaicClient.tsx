@@ -35,6 +35,12 @@ const ROW_LABEL_W = 26;
 const COL_LABEL_H = 20;
 const FULLSCREEN_RESERVE_W = 360 + 2 * ROW_LABEL_W;
 const FULLSCREEN_RESERVE_H = 190 + 2 * COL_LABEL_H;
+/** Below this the settings panel stacks above the board instead of beside it
+ * (see layoutClasses) — matches Tailwind's `lg` breakpoint. */
+const STACKED_LAYOUT_MAX_WIDTH = 1024;
+/** Page padding + row-label column + board border, reserved when sizing the
+ * board to the viewport outside full-screen mode. */
+const STACKED_RESERVE_W = 80;
 
 const LABEL_CLASSES =
   "flex items-center justify-center overflow-hidden text-[10px] font-medium text-zinc-500 dark:text-zinc-400";
@@ -530,6 +536,16 @@ export default function MosaicClient() {
       const availW = windowSize.width - FULLSCREEN_RESERVE_W;
       const availH = windowSize.height - FULLSCREEN_RESERVE_H;
       boardPx = Math.max(240, Math.min(availW, availH));
+    } else if (
+      !fullscreen &&
+      windowSize.width > 0 &&
+      windowSize.width < STACKED_LAYOUT_MAX_WIDTH
+    ) {
+      // Below `lg` the board no longer sits beside the settings panel — it's
+      // full width on its own row — so size it to the viewport instead of
+      // always rendering at the desktop-sized default, which overflowed the
+      // screen on phones.
+      boardPx = Math.min(MAX_BOARD_PX, Math.max(160, windowSize.width - STACKED_RESERVE_W));
     }
     return Math.max(6, Math.floor(boardPx / Math.max(rows, cols)));
   }, [rows, cols, fullscreen, windowSize]);
@@ -605,15 +621,15 @@ export default function MosaicClient() {
 
   const layoutClasses = fullscreen
     ? "flex min-h-0 flex-1 flex-nowrap items-start gap-4 overflow-hidden"
-    : "flex flex-wrap items-start gap-6";
+    : "flex flex-col items-stretch gap-6 lg:flex-row lg:flex-wrap lg:items-start";
 
   const panelClasses = fullscreen
     ? `${CARD_CLASSES} h-full w-72 shrink-0 flex flex-col gap-5 overflow-y-auto`
-    : `${CARD_CLASSES} w-full max-w-xs shrink-0 flex flex-col gap-5`;
+    : `${CARD_CLASSES} w-full flex flex-col gap-5 lg:max-w-xs lg:shrink-0`;
 
   const boardSectionClasses = fullscreen
     ? "flex h-full min-h-0 flex-1 min-w-0 flex-col items-center justify-center gap-5 overflow-auto"
-    : "flex flex-1 min-w-0 flex-col items-center gap-5";
+    : "flex w-full min-w-0 flex-col items-center gap-5 lg:flex-1";
 
   return (
     <div className={rootClasses}>
@@ -894,7 +910,7 @@ export default function MosaicClient() {
         </section>
 
         <section className={boardSectionClasses}>
-          <div className="flex flex-col items-start">
+          <div className="flex max-w-full flex-col items-start overflow-x-auto">
             {colLabels}
             <div className="flex">
               {rowLabels}

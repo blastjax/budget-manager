@@ -18,6 +18,7 @@ import {
 import { ToggleLegendList } from "@/components/ToggleLegendList";
 import { useTheme } from "@/components/ThemeProvider";
 import { getPayslips, type PayslipRow } from "@/lib/api";
+import { chartScrollMinWidth, xAxisTickInterval } from "@/lib/chartAxis";
 import { getChartTooltipStyle } from "@/lib/chartTooltipStyle";
 import { fmtAmount, fmtAxisMoneyTick } from "@/lib/formatNumber";
 import {
@@ -316,9 +317,10 @@ export default function CommissionClient() {
               </div>
             </div>
 
-            <div className="mt-6 h-[min(24rem,55vh)] w-full min-h-[240px]">
+            <div className="mt-6 h-[min(24rem,55vh)] w-full min-h-[240px] overflow-x-auto">
+              <div className="h-full" style={{ minWidth: chartScrollMinWidth(chartData.length) }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                <ComposedChart data={chartData} margin={{ top: 8, right: 20, bottom: 8, left: 8 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     className="stroke-zinc-200 dark:stroke-zinc-700"
@@ -327,7 +329,7 @@ export default function CommissionClient() {
                     dataKey="monthKey"
                     tick={{ fontSize: 11, fill: axisTickFill }}
                     tickFormatter={formatMonthKeyTick}
-                    interval={1}
+                    interval={xAxisTickInterval(chartData.length, 48)}
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: axisTickFill }}
@@ -374,6 +376,7 @@ export default function CommissionClient() {
                   />
                 </ComposedChart>
               </ResponsiveContainer>
+              </div>
             </div>
           </section>
 
@@ -407,11 +410,12 @@ export default function CommissionClient() {
               </div>
             </div>
 
-            <div className="mt-6 h-[min(36rem,75vh)] w-full min-h-[360px]">
+            <div className="mt-6 h-[min(36rem,75vh)] w-full min-h-[360px] overflow-x-auto">
+              <div className="h-full" style={{ minWidth: chartScrollMinWidth(monthlyByYearChartData.length, 40) }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={monthlyByYearChartData}
-                  margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                  margin={{ top: 8, right: 20, bottom: 8, left: 8 }}
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -496,6 +500,7 @@ export default function CommissionClient() {
                   })}
                 </ComposedChart>
               </ResponsiveContainer>
+              </div>
             </div>
           </section>
 

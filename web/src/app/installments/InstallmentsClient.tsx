@@ -853,8 +853,8 @@ export default function InstallmentsClient() {
               <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Per-payment amounts ({draftTotal} row{draftTotal === 1 ? "" : "s"})
               </p>
-              <div className="max-h-64 overflow-y-auto rounded-md border border-zinc-200 dark:border-zinc-800">
-                <table className="w-full text-left text-sm">
+              <div className="max-h-64 overflow-x-auto overflow-y-auto rounded-md border border-zinc-200 dark:border-zinc-800">
+                <table className="w-full min-w-[420px] text-left text-sm">
                   <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-900">
                     <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
                       <th className="py-2 pl-2 pr-2">#</th>
@@ -1007,7 +1007,7 @@ export default function InstallmentsClient() {
         <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
           Plans
         </h2>
-        <ul className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">
+        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {!loading &&
             activeRows.map((r) => {
               const canPay =
@@ -1148,7 +1148,7 @@ export default function InstallmentsClient() {
           <h2 className="text-lg font-medium text-zinc-500 dark:text-zinc-400">
             Archived — Fully Paid
           </h2>
-          <ul className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">
+          <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {doneRows.map((r) => {
               const orig = Number(r.original_total);
               const rem = Number(r.remaining);

@@ -273,7 +273,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
       </div>
 
       <div className="mt-4 flex w-full justify-center sm:mt-5">
-        <div className="w-full max-w-[calc((100%-0.75rem)/2)] sm:max-w-[calc((100%-1rem)/2)] md:max-w-[calc((100%-1.25rem)/2)]">
+        <div className="w-full sm:max-w-[calc((100%-1rem)/2)] md:max-w-[calc((100%-1.25rem)/2)]">
           <div
             className={`${PAYSLIP_STAT_CARD_SHELL_PINNED} ${MEDICAL_REIMBURSEMENT_STAT_THEME.border} ${MEDICAL_REIMBURSEMENT_STAT_THEME.bg}`}
           >
@@ -286,7 +286,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
                     {MEDICAL_REIMBURSEMENT_LABEL}
                   </h3>
                   <p
-                    className={`mt-0.5 text-[11px] font-medium tabular-nums ${MEDICAL_REIMBURSEMENT_STAT_THEME.sub}`}
+                    className={`mt-0.5 truncate text-[11px] font-medium tabular-nums ${MEDICAL_REIMBURSEMENT_STAT_THEME.sub}`}
                   >
                     Apr {medicalAprilStart} – Mar {medicalAprilStart + 1}
                   </p>

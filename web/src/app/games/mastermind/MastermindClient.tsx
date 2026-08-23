@@ -220,8 +220,8 @@ export default function MastermindClient() {
         </p>
       </header>
 
-      <div className="flex flex-wrap items-start gap-6">
-        <section className={`${CARD_CLASSES} w-full max-w-xs shrink-0 flex flex-col gap-5`}>
+      <div className="flex flex-col items-stretch gap-6 lg:flex-row lg:flex-wrap lg:items-start">
+        <section className={`${CARD_CLASSES} w-full flex flex-col gap-5 lg:max-w-xs lg:shrink-0`}>
           <div className="flex flex-col gap-3">
             <h2 className={sectionHeading}>Setup</h2>
             <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
@@ -303,7 +303,7 @@ export default function MastermindClient() {
           </div>
         </section>
 
-        <section className="flex flex-1 min-w-0 flex-col items-center gap-4">
+        <section className="flex w-full min-w-0 flex-col items-center gap-4 lg:flex-1">
           {/* Fixed so it floats over the page instead of shoving the board
               down when it appears or its text wraps. */}
           {banner && (
@@ -324,7 +324,7 @@ export default function MastermindClient() {
 
           {/* Always a white panel, in both themes, so the grade circles (a
               white fill vs. a black fill) stay legible against it. */}
-          <div className="flex w-full max-w-md flex-col-reverse gap-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="flex w-full max-w-md flex-col-reverse gap-2 overflow-x-auto rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
             {Array.from({ length: MAX_ATTEMPTS }, (_, idx) => {
               const isActive = idx === activeIdx && !gameOver;
               const isSubmitted = idx < submittedCount;

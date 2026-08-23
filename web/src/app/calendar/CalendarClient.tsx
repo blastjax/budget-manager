@@ -357,7 +357,7 @@ const DayGridCell = memo(function DayGridCell({
         {day}
       </span>
       <span
-        className={`min-w-0 truncate text-xs tabular-nums leading-tight ${
+        className={`w-full min-w-0 truncate text-xs tabular-nums leading-tight ${
           isToday
             ? "font-semibold text-indigo-700 dark:text-indigo-300"
             : isPast
@@ -1517,27 +1517,29 @@ export default function CalendarClient() {
           </section>
 
           <section className="flex min-w-0 flex-1 flex-col rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
-            <div className="relative flex items-center justify-center gap-3">
-              <button
-                type="button"
-                aria-label="Previous month"
-                onClick={goToPrevMonth}
-                className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
-              >
-                ‹
-              </button>
-              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                {formatMonthYear(year, month)}
-              </h2>
-              <button
-                type="button"
-                aria-label="Next month"
-                onClick={goToNextMonth}
-                className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
-              >
-                ›
-              </button>
-              <div className="absolute right-0 flex items-center gap-2">
+            <div className="flex flex-col items-center gap-3 sm:relative sm:flex-row sm:justify-center">
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  aria-label="Previous month"
+                  onClick={goToPrevMonth}
+                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                >
+                  ‹
+                </button>
+                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                  {formatMonthYear(year, month)}
+                </h2>
+                <button
+                  type="button"
+                  aria-label="Next month"
+                  onClick={goToNextMonth}
+                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                >
+                  ›
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:absolute sm:right-0">
                 {!isViewingCurrentMonth && (
                   <button
                     type="button"

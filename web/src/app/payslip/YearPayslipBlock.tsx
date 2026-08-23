@@ -58,8 +58,8 @@ function YearPayslipBlockInner({
           </span>
         )}
       </h3>
-      {/* 3 months per row × 4 rows */}
-      <div className="grid w-full min-w-0 grid-cols-3 gap-2 sm:gap-3.5">
+      {/* 2 months per row on mobile (3 side by side is too narrow for a label + peso amount); 3 per row × 4 rows from sm: up */}
+      <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3.5">
         {MONTHS.map((month) => {
           const ms = yearSlots.months.get(month);
           const monthSum = ms?.netSum ?? null;

@@ -22,6 +22,7 @@ import {
   type BloodPressureCreateBody,
   type BloodPressureRow,
 } from "@/lib/api";
+import { chartScrollMinWidth, xAxisTickInterval } from "@/lib/chartAxis";
 import { getChartTooltipStyle } from "@/lib/chartTooltipStyle";
 import { formatDateTime, formatMonthDayShort } from "@/lib/dateFormat";
 import { fmtIntegerOrDash } from "@/lib/formatNumber";
@@ -379,16 +380,22 @@ export default function BloodPressureClient() {
               No readings yet — add one to see the trend.
             </p>
           ) : (
+            <div className="h-full w-full overflow-x-auto">
+            <div className="h-full" style={{ minWidth: chartScrollMinWidth(chartPoints.length) }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={chartPoints}
-                margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                margin={{ top: 8, right: 20, bottom: 8, left: 8 }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
                   className="stroke-zinc-200 dark:stroke-zinc-700"
                 />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: axisTickFill }} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: axisTickFill }}
+                  interval={xAxisTickInterval(chartPoints.length, 48)}
+                />
                 <YAxis tick={{ fontSize: 11, fill: axisTickFill }} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend />
@@ -408,6 +415,8 @@ export default function BloodPressureClient() {
                 ))}
               </ComposedChart>
             </ResponsiveContainer>
+            </div>
+            </div>
           )}
         </div>
       </section>

@@ -23,6 +23,8 @@ import {
   type ChartSeriesColorKey,
 } from "@/lib/chartPalette";
 import { getPayslips, type PayslipRow } from "@/lib/api";
+import { chartScrollMinWidth, xAxisTickInterval } from "@/lib/chartAxis";
+import { useLgUp } from "@/lib/useLgUp";
 import { fmtAmount, fmtAxisMoneyTick } from "@/lib/formatNumber";
 import { getChartTooltipStyle } from "@/lib/chartTooltipStyle";
 import {
@@ -397,6 +399,7 @@ export default function SalaryStatsClient() {
   );
 
   const pathname = usePathname();
+  const lgUp = useLgUp();
   const { theme } = useTheme();
   const chartPalette = useMemo(() => {
     void pathname;
@@ -666,9 +669,12 @@ export default function SalaryStatsClient() {
                       cy="50%"
                       outerRadius="52%"
                       paddingAngle={3}
-                      labelLine={{ stroke: axisTickFill, strokeWidth: 1 }}
-                      label={({ name, percent }) =>
-                        `${name} ${fmtMoney((percent ?? 0) * 100)}%`
+                      labelLine={lgUp ? { stroke: axisTickFill, strokeWidth: 1 } : false}
+                      label={
+                        lgUp
+                          ? ({ name, percent }) =>
+                              `${name} ${fmtMoney((percent ?? 0) * 100)}%`
+                          : false
                       }
                     >
                       {visiblePieSlices.map((s) => (
@@ -793,16 +799,18 @@ export default function SalaryStatsClient() {
                   Turn on at least one series or use the range toggles above.
                 </p>
               ) : (
+                <div className="h-full w-full overflow-x-auto">
+                <div className="h-full" style={{ minWidth: chartScrollMinWidth(linePoints.length) }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={linePoints}
-                    margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                    margin={{ top: 8, right: 20, bottom: 8, left: 8 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" className="stroke-zinc-200 dark:stroke-zinc-700" />
                     <XAxis
                       dataKey="label"
                       tick={{ fontSize: 11, fill: axisTickFill }}
-                      interval={1}
+                      interval={xAxisTickInterval(linePoints.length, 48)}
                     />
                     <YAxis
                       tick={{ fontSize: 11, fill: axisTickFill }}
@@ -856,6 +864,8 @@ export default function SalaryStatsClient() {
                     ))}
                   </ComposedChart>
                 </ResponsiveContainer>
+                </div>
+                </div>
               )}
             </div>
 

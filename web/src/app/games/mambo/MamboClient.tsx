@@ -54,6 +54,12 @@ const ROW_LABEL_W = 26;
 const COL_LABEL_H = 18;
 const FULLSCREEN_RESERVE_W = 380 + 2 * ROW_LABEL_W;
 const FULLSCREEN_RESERVE_H = 170 + 2 * COL_LABEL_H;
+/** Below this the settings panel stacks above the board instead of beside it
+ * (see layoutClasses) — matches Tailwind's `lg` breakpoint. */
+const STACKED_LAYOUT_MAX_WIDTH = 1024;
+/** Page padding + row-label column + board border, reserved when sizing the
+ * board to the viewport outside full-screen mode. */
+const STACKED_RESERVE_W = 80;
 
 type Busy = "solve" | "steps" | "hint" | null;
 
@@ -460,6 +466,16 @@ export default function MamboClient() {
       const availW = windowSize.width - FULLSCREEN_RESERVE_W;
       const availH = windowSize.height - FULLSCREEN_RESERVE_H;
       boardPx = Math.max(240, Math.min(availW, availH));
+    } else if (
+      !fullscreen &&
+      windowSize.width > 0 &&
+      windowSize.width < STACKED_LAYOUT_MAX_WIDTH
+    ) {
+      // Below `lg` the board no longer sits beside the settings panel — it's
+      // full width on its own row — so size it to the viewport instead of
+      // always rendering at the desktop-sized default, which overflowed the
+      // screen on phones.
+      boardPx = Math.min(MAX_BOARD_PX, Math.max(160, windowSize.width - STACKED_RESERVE_W));
     }
     const n = Math.max(rows, cols);
     // n cells plus (n - 1) gaps, each gap ~0.3 of a cell.
@@ -552,13 +568,13 @@ export default function MamboClient() {
     : "box-border flex w-full min-w-0 flex-col gap-10 px-4 pb-28 pt-10 sm:px-6 lg:px-8";
   const layoutClasses = fullscreen
     ? "flex min-h-0 flex-1 flex-nowrap items-start gap-4 overflow-hidden"
-    : "flex flex-wrap items-start gap-6";
+    : "flex flex-col items-stretch gap-6 lg:flex-row lg:flex-wrap lg:items-start";
   const panelClasses = fullscreen
     ? `${CARD_CLASSES} h-full w-80 shrink-0 flex flex-col gap-5 overflow-y-auto`
-    : `${CARD_CLASSES} w-full max-w-xs shrink-0 flex flex-col gap-5`;
+    : `${CARD_CLASSES} w-full flex flex-col gap-5 lg:max-w-xs lg:shrink-0`;
   const boardSectionClasses = fullscreen
     ? "flex h-full min-h-0 flex-1 min-w-0 flex-col items-center justify-center gap-4 overflow-auto"
-    : "flex flex-1 min-w-0 flex-col items-center gap-4";
+    : "flex w-full min-w-0 flex-col items-center gap-4 lg:flex-1";
 
   const sectionHeading =
     "text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500";
@@ -854,7 +870,7 @@ export default function MamboClient() {
             </div>
           )}
 
-          <div className="flex flex-col items-start rounded-xl bg-white p-3 shadow-sm">
+          <div className="flex max-w-full flex-col items-start overflow-x-auto rounded-xl bg-white p-3 shadow-sm">
             {colLabels}
             <div className="flex">
               {rowLabels}
