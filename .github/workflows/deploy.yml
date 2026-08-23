@@ -90,8 +90,14 @@ jobs:
             cd ${{ vars.APP_DIR }}
 
             # --ff-only: fail loudly on divergence instead of creating a merge
-            # commit on the server or leaving a half-applied tree.
-            git pull --ff-only origin main
+            # commit on the server or leaving a half-applied tree. Pulls the
+            # ref that triggered this run (agca on push, or whatever branch
+            # was picked on a manual dispatch) - this was hardcoded to `main`
+            # until now, a leftover from before the deploy branch was renamed
+            # to `agca`, so the box was building from a 20-commit-stale
+            # docker-compose.yml (still on Postgres, no `image:` fields) no
+            # matter what changed on the branch actually being deployed.
+            git pull --ff-only origin ${{ github.ref_name }}
 
             # The api container runs as uid 1000 (see docker/Dockerfile.backend),
             # so the bind-mounted DB directory has to be writable by it. Also
