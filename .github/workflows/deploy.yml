@@ -6,23 +6,85 @@ on:
     branches: [agca]
   workflow_dispatch: {}
 
-# One deploy at a time; queue rather than cancel so a run that already
-# started rebuilding on the host is never interrupted half-way.
-concurrency:
-  group: deploy-ec2
-  cancel-in-progress: false
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/${{ github.repository }}-api
+  WEB_IMAGE: ghcr.io/${{ github.repository }}-web
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Built here instead of on the EC2 host: the runner has far more RAM/CPU
+      # than the instance, so `next build` and the two images no longer
+      # compete with each other (or the box's own memory limit) at deploy time.
+      - name: Build and push api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./docker/Dockerfile.backend
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:latest
+            ${{ env.API_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: ./docker/Dockerfile.web
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000' }}
+          tags: |
+            ${{ env.WEB_IMAGE }}:latest
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    # One deploy at a time; queue rather than cancel so a run that already
+    # started updating the host is never interrupted half-way. Scoped to this
+    # job (not the whole workflow) so concurrent pushes can still build in
+    # parallel — only the SSH/host step is serialized.
+    concurrency:
+      group: deploy-ec2
+      cancel-in-progress: false
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_ACTOR: ${{ github.actor }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ vars.EC2_SSH_PORT || 22 }}
+          # appleboy/ssh-action reads these from the step's own process env
+          # (set above / at workflow level) and exports them on the remote
+          # host before running the script.
+          envs: API_IMAGE,WEB_IMAGE,GHCR_TOKEN,GHCR_ACTOR
           script: |
             set -e
             cd ${{ vars.APP_DIR }}
@@ -37,14 +99,17 @@ jobs:
             mkdir -p data
             sudo chown -R 1000:1000 data
 
-            # Build one service at a time: by default compose builds api and
-            # web concurrently via buildx bake, and `next build` alone can
-            # exceed the instance's RAM; building sequentially keeps peak
-            # memory lower.
-            docker compose build api
-            docker compose build web
+            # This run's GITHUB_TOKEN only, not a durable secret on the box:
+            # it expires with the workflow run, so nothing long-lived to
+            # revoke or rotate here. Images already pulled keep running fine
+            # after it expires.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
+
+            export API_IMAGE WEB_IMAGE
+            docker compose pull api web
             docker compose up -d --remove-orphans
             docker image prune -f
+            docker logout ghcr.io
 
             # Fail the job if the stack doesn't come up, so a red check means
             # "not deployed" rather than "deployed and broken". Reuses the
