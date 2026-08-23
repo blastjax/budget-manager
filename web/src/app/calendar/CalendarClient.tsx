@@ -29,7 +29,7 @@ import {
   type PayslipRow,
 } from "@/lib/api";
 import { formatMonthDayShort, formatMonthYear } from "@/lib/dateFormat";
-import { fmtAmount } from "@/lib/formatNumber";
+import { fmtAmount, fmtCompactMoney } from "@/lib/formatNumber";
 import {
   evaluateAmountExpression,
   formatAmountNumber,
@@ -357,6 +357,7 @@ const DayGridCell = memo(function DayGridCell({
         {day}
       </span>
       <span
+        title={dailyBudget != null ? fmtMoney(dailyBudget) : undefined}
         className={`w-full min-w-0 truncate text-xs tabular-nums leading-tight ${
           isToday
             ? "font-semibold text-indigo-700 dark:text-indigo-300"
@@ -365,7 +366,7 @@ const DayGridCell = memo(function DayGridCell({
               : "text-zinc-600 dark:text-zinc-400"
         }`}
       >
-        {dailyBudget != null ? fmtMoney(dailyBudget) : "–"}
+        {dailyBudget != null ? fmtCompactMoney(dailyBudget) : "–"}
       </span>
     </div>
   );

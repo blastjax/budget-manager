@@ -71,3 +71,13 @@ export function fmtAxisMoneyTick(value: unknown): string {
   const n = Number(value);
   return n >= 1000 ? `${AMOUNT_FORMAT.format(n / 1000)}k` : AMOUNT_FORMAT.format(n);
 }
+
+/** `450`, `1.6k`, `12.3k` — whole-ish amount for tight spots (e.g. a calendar day
+ * cell) where a full `1,579.51` never fits without truncating mid-number. */
+const COMPACT_MONEY_FORMAT = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+export function fmtCompactMoney(n: number): string {
+  if (!Number.isFinite(n)) return "–";
+  return Math.abs(n) >= 1000
+    ? `${COMPACT_MONEY_FORMAT.format(n / 1000)}k`
+    : COMPACT_MONEY_FORMAT.format(n);
+}

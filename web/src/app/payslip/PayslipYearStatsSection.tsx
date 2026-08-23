@@ -268,7 +268,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
         </button>
       </div>
 
-      <div className="grid min-w-0 grid-cols-2 items-stretch gap-3 sm:gap-4 md:gap-5">
+      <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 sm:grid-cols-2 sm:gap-4 md:gap-5">
         {DEFAULT_STAT_CARD_ORDER.map((id) => renderStatCard(id))}
       </div>
 
@@ -360,7 +360,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           Deductions
         </h3>
-        <div className="grid min-w-0 grid-cols-2 items-stretch gap-3 sm:gap-4 md:gap-5">
+        <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 sm:grid-cols-2 sm:gap-4 md:gap-5">
           <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
