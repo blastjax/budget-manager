@@ -75,6 +75,7 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_ACTOR: ${{ github.actor }}
           WEB_PORT: ${{ vars.WEB_PORT || 3000 }}
+          BUDGET_CORS_ORIGINS: ${{ vars.BUDGET_CORS_ORIGINS }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
@@ -87,7 +88,7 @@ jobs:
           # appleboy/ssh-action reads these from the step's own process env
           # (set above / at workflow level) and exports them on the remote
           # host before running the script.
-          envs: API_IMAGE,WEB_IMAGE,GHCR_TOKEN,GHCR_ACTOR,WEB_PORT
+          envs: API_IMAGE,WEB_IMAGE,GHCR_TOKEN,GHCR_ACTOR,WEB_PORT,BUDGET_CORS_ORIGINS
           script: |
             set -e
             cd ${{ vars.APP_DIR }}
@@ -114,7 +115,7 @@ jobs:
             # after it expires.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
 
-            export API_IMAGE WEB_IMAGE WEB_PORT
+            export API_IMAGE WEB_IMAGE WEB_PORT BUDGET_CORS_ORIGINS
             # --policy always: api/web define both `image:` and `build:` (the
             # build: block is for local `docker compose build` only, per
             # docker/README.md), so a plain `pull` skips them as "buildable"
