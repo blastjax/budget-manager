@@ -30,3 +30,7 @@ export const SEGMENTED_BUTTON_CLASSES = "rounded-md px-3 py-1.5 text-sm font-med
 export const SEGMENTED_BUTTON_ACTIVE_CLASSES = "bg-indigo-600 text-white shadow-sm";
 export const SEGMENTED_BUTTON_INACTIVE_CLASSES =
   "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800";
+
+/** Small square icon button used for chart zoom in/out controls. */
+export const CHART_ZOOM_BUTTON_CLASSES =
+  "flex h-8 min-w-8 select-none items-center justify-center rounded-md border border-zinc-300 text-base font-medium text-zinc-700 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900";

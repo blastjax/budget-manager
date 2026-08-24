@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartZoomControls } from "@/components/ChartZoomControls";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import { useTheme } from "@/components/ThemeProvider";
@@ -27,6 +28,7 @@ import { getChartTooltipStyle } from "@/lib/chartTooltipStyle";
 import { formatDateTime, formatMonthDayShort } from "@/lib/dateFormat";
 import { fmtIntegerOrDash } from "@/lib/formatNumber";
 import { DASHED_EMPTY_CLASSES, ERROR_ALERT_CLASSES, PRIMARY_BUTTON_CLASSES } from "@/lib/ui";
+import { useChartZoom } from "@/lib/useChartZoom";
 
 /**
  * A reading is "healthy" when systolic, diastolic, and pulse all sit in the
@@ -96,6 +98,7 @@ export default function BloodPressureClient() {
   const { theme } = useTheme();
   const axisTickFill = theme === "dark" ? "#a1a1aa" : "#71717a";
   const tooltipStyle = useMemo(() => getChartTooltipStyle(theme), [theme]);
+  const trendZoom = useChartZoom();
 
   const load = useCallback(async () => {
     setError(null);
@@ -352,12 +355,24 @@ export default function BloodPressureClient() {
       )}
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
-        <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-          Trend
-        </h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Systolic, diastolic, pulse, SpO2, temperature, and weight over time (oldest to newest).
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+              Trend
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Systolic, diastolic, pulse, SpO2, temperature, and weight over time (oldest to newest).
+            </p>
+          </div>
+          <ChartZoomControls
+            zoom={trendZoom.zoom}
+            onZoomIn={trendZoom.zoomIn}
+            onZoomOut={trendZoom.zoomOut}
+            onReset={trendZoom.resetZoom}
+            canZoomIn={trendZoom.canZoomIn}
+            canZoomOut={trendZoom.canZoomOut}
+          />
+        </div>
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
           {CHART_GROUPS.map((g) => (
             <label
@@ -381,7 +396,7 @@ export default function BloodPressureClient() {
             </p>
           ) : (
             <div className="h-full w-full overflow-x-auto">
-            <div className="h-full" style={{ minWidth: chartScrollMinWidth(chartPoints.length) }}>
+            <div className="h-full" style={{ minWidth: chartScrollMinWidth(chartPoints.length, 56 * trendZoom.zoom) }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={chartPoints}

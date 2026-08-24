@@ -15,6 +15,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartZoomControls } from "@/components/ChartZoomControls";
 import { ToggleLegendList } from "@/components/ToggleLegendList";
 import { useTheme } from "@/components/ThemeProvider";
 import {
@@ -42,6 +43,7 @@ import {
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
   SEGMENTED_WRAPPER_CLASSES,
 } from "@/lib/ui";
+import { useChartZoom } from "@/lib/useChartZoom";
 
 /** Pie + non-deduction line categories (MP2 is grouped with statutory deductions). */
 const PIE_SERIES_KEYS = [
@@ -409,6 +411,7 @@ export default function SalaryStatsClient() {
   const axisTickFill = theme === "dark" ? "#a1a1aa" : "#71717a";
 
   const chartTooltipStyle = useMemo(() => getChartTooltipStyle(theme), [theme]);
+  const trendZoom = useChartZoom();
 
   const load = useCallback(async () => {
     setError(null);
@@ -735,15 +738,27 @@ export default function SalaryStatsClient() {
           </section>
 
           <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-              Trend by month
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Monthly totals per category (including 13th month, withholding, SSS,
-              Philhealth, Pag-ibig, and MP2). Adjust the range (defaults from first data
-              month through today). A deductions total for the whole range is shown under
-              the chart.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                  Trend by month
+                </h2>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  Monthly totals per category (including 13th month, withholding, SSS,
+                  Philhealth, Pag-ibig, and MP2). Adjust the range (defaults from first data
+                  month through today). A deductions total for the whole range is shown under
+                  the chart.
+                </p>
+              </div>
+              <ChartZoomControls
+                zoom={trendZoom.zoom}
+                onZoomIn={trendZoom.zoomIn}
+                onZoomOut={trendZoom.zoomOut}
+                onReset={trendZoom.resetZoom}
+                canZoomIn={trendZoom.canZoomIn}
+                canZoomOut={trendZoom.canZoomOut}
+              />
+            </div>
 
             <div className="mt-4 flex flex-wrap items-end justify-center gap-4">
               <LineRangeMonthPicker
@@ -800,7 +815,7 @@ export default function SalaryStatsClient() {
                 </p>
               ) : (
                 <div className="h-full w-full overflow-x-auto">
-                <div className="h-full" style={{ minWidth: chartScrollMinWidth(linePoints.length) }}>
+                <div className="h-full" style={{ minWidth: chartScrollMinWidth(linePoints.length, 56 * trendZoom.zoom) }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={linePoints}

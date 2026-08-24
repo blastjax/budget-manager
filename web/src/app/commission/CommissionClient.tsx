@@ -15,6 +15,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartZoomControls } from "@/components/ChartZoomControls";
 import { ToggleLegendList } from "@/components/ToggleLegendList";
 import { useTheme } from "@/components/ThemeProvider";
 import { getPayslips, type PayslipRow } from "@/lib/api";
@@ -35,6 +36,7 @@ import {
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
   SEGMENTED_WRAPPER_CLASSES,
 } from "@/lib/ui";
+import { useChartZoom } from "@/lib/useChartZoom";
 import { buildCommissionForecast, type CalculationSegment } from "./commissionForecast";
 
 const ACTUAL_COLOR = { light: "#059669", dark: "#34d399" } as const;
@@ -154,6 +156,8 @@ export default function CommissionClient() {
   const axisTickFill = theme === "dark" ? "#a1a1aa" : "#71717a";
 
   const chartTooltipStyle = useMemo(() => getChartTooltipStyle(theme), [theme]);
+  const trendZoom = useChartZoom();
+  const monthlyByYearZoom = useChartZoom();
 
   const load = useCallback(async () => {
     setError(null);
@@ -287,15 +291,27 @@ export default function CommissionClient() {
       ) : (
         <>
           <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-              Commission trend &amp; forecast
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Monthly commission totals from payslip history (solid), with a projected
-              continuation (dashed). Each forecasted month is trended from that same
-              calendar month in previous years — e.g. next July is projected from prior
-              Julys — rather than nearby months, since commission tends to vary by month.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                  Commission trend &amp; forecast
+                </h2>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  Monthly commission totals from payslip history (solid), with a projected
+                  continuation (dashed). Each forecasted month is trended from that same
+                  calendar month in previous years — e.g. next July is projected from prior
+                  Julys — rather than nearby months, since commission tends to vary by month.
+                </p>
+              </div>
+              <ChartZoomControls
+                zoom={trendZoom.zoom}
+                onZoomIn={trendZoom.zoomIn}
+                onZoomOut={trendZoom.zoomOut}
+                onReset={trendZoom.resetZoom}
+                canZoomIn={trendZoom.canZoomIn}
+                canZoomOut={trendZoom.canZoomOut}
+              />
+            </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               <span className="text-sm text-zinc-600 dark:text-zinc-400">Forecast</span>
@@ -318,7 +334,7 @@ export default function CommissionClient() {
             </div>
 
             <div className="mt-6 h-[min(24rem,55vh)] w-full min-h-[240px] overflow-x-auto">
-              <div className="h-full" style={{ minWidth: chartScrollMinWidth(chartData.length) }}>
+              <div className="h-full" style={{ minWidth: chartScrollMinWidth(chartData.length, 56 * trendZoom.zoom) }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 8, right: 20, bottom: 8, left: 8 }}>
                   <CartesianGrid
@@ -381,14 +397,26 @@ export default function CommissionClient() {
           </section>
 
           <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-              Commission by month
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              The same twelve calendar months, one line per year, so seasonal patterns
-              within a year are easy to compare across years. Click a year below the
-              chart to hide or show it.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                  Commission by month
+                </h2>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  The same twelve calendar months, one line per year, so seasonal patterns
+                  within a year are easy to compare across years. Click a year below the
+                  chart to hide or show it.
+                </p>
+              </div>
+              <ChartZoomControls
+                zoom={monthlyByYearZoom.zoom}
+                onZoomIn={monthlyByYearZoom.zoomIn}
+                onZoomOut={monthlyByYearZoom.zoomOut}
+                onReset={monthlyByYearZoom.resetZoom}
+                canZoomIn={monthlyByYearZoom.canZoomIn}
+                canZoomOut={monthlyByYearZoom.canZoomOut}
+              />
+            </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               <span className="text-sm text-zinc-600 dark:text-zinc-400">Chart type</span>
@@ -411,7 +439,7 @@ export default function CommissionClient() {
             </div>
 
             <div className="mt-6 h-[min(36rem,75vh)] w-full min-h-[360px] overflow-x-auto">
-              <div className="h-full" style={{ minWidth: chartScrollMinWidth(monthlyByYearChartData.length, 40) }}>
+              <div className="h-full" style={{ minWidth: chartScrollMinWidth(monthlyByYearChartData.length, 40 * monthlyByYearZoom.zoom) }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={monthlyByYearChartData}
