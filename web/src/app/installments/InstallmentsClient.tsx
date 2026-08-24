@@ -1136,7 +1136,7 @@ export default function InstallmentsClient() {
               );
             })}
           {!loading && activeRows.length === 0 && (
-            <li className={`col-span-3 ${DASHED_EMPTY_CLASSES}`}>
+            <li className={`col-span-full ${DASHED_EMPTY_CLASSES}`}>
               {doneRows.length > 0 ? "All plans are fully paid." : "No installment plans yet."}
             </li>
           )}

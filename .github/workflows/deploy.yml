@@ -49,7 +49,7 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
           push: true
-          build-args: ${{ matrix.name == 'web' && format('NEXT_PUBLIC_API_URL={0}', vars.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000') || '' }}
+          build-args: ${{ matrix.name == 'web' && format('NEXT_PUBLIC_API_URL={0}', secrets.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000') || '' }}
           tags: |
             ${{ matrix.name == 'api' && env.API_IMAGE || env.WEB_IMAGE }}:latest
             ${{ matrix.name == 'api' && env.API_IMAGE || env.WEB_IMAGE }}:${{ github.sha }}
@@ -74,8 +74,9 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_ACTOR: ${{ github.actor }}
-          WEB_PORT: ${{ vars.WEB_PORT || 3000 }}
-          BUDGET_CORS_ORIGINS: ${{ vars.BUDGET_CORS_ORIGINS }}
+          WEB_PORT: ${{ secrets.WEB_PORT || 3000 }}
+          BUDGET_CORS_ORIGINS: ${{ secrets.BUDGET_CORS_ORIGINS }}
+          BUDGET_OTP_SECRET: ${{ secrets.BUDGET_OTP_SECRET }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
@@ -88,10 +89,10 @@ jobs:
           # appleboy/ssh-action reads these from the step's own process env
           # (set above / at workflow level) and exports them on the remote
           # host before running the script.
-          envs: API_IMAGE,WEB_IMAGE,GHCR_TOKEN,GHCR_ACTOR,WEB_PORT,BUDGET_CORS_ORIGINS
+          envs: API_IMAGE,WEB_IMAGE,GHCR_TOKEN,GHCR_ACTOR,WEB_PORT,BUDGET_CORS_ORIGINS,BUDGET_OTP_SECRET
           script: |
             set -e
-            cd ${{ vars.APP_DIR }}
+            cd ${{ secrets.APP_DIR }}
 
             # --ff-only: fail loudly on divergence instead of creating a merge
             # commit on the server or leaving a half-applied tree. Pulls the
@@ -115,7 +116,7 @@ jobs:
             # after it expires.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
 
-            export API_IMAGE WEB_IMAGE WEB_PORT BUDGET_CORS_ORIGINS
+            export API_IMAGE WEB_IMAGE WEB_PORT BUDGET_CORS_ORIGINS BUDGET_OTP_SECRET
             # --policy always: api/web define both `image:` and `build:` (the
             # build: block is for local `docker compose build` only, per
             # docker/README.md), so a plain `pull` skips them as "buildable"

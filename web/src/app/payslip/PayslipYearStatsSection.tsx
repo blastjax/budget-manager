@@ -411,7 +411,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
               </div>
             </div>
           </div>
-          <div className={`col-span-2 ${PAYSLIP_DEDUCTION_CARD_SHELL}`}>
+          <div className={`col-span-full ${PAYSLIP_DEDUCTION_CARD_SHELL}`}>
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
                 Deductions total
