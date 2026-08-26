@@ -289,6 +289,18 @@ export default function LottoClient() {
         {draws.map((detail) => {
           const drawSet = new Set(detail.draw.numbers);
           const collapsed = collapsedIds.has(detail.draw.id);
+          const attemptsByMatch = detail.attempts
+            .map((attempt) => ({
+              attempt,
+              matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
+            }))
+            .sort((a, b) => b.matchCount - a.matchCount);
+          const matchBreakdown = [3, 4, 5, 6]
+            .map((tier) => ({
+              tier,
+              count: attemptsByMatch.filter((a) => a.matchCount === tier).length,
+            }))
+            .filter((b) => b.count > 0);
           return (
             <section key={detail.draw.id} className={CARD_CLASSES}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -345,18 +357,19 @@ export default function LottoClient() {
 
               {!collapsed && (
               <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                   <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Attempts
                   </h3>
-                  <button
-                    type="button"
-                    disabled={saving}
-                    className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
-                    onClick={() => openAddAttempt(detail.draw.id)}
-                  >
-                    + Add attempt
-                  </button>
+                  {matchBreakdown.length > 0 && (
+                    <span className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      {matchBreakdown.map(({ tier, count }) => (
+                        <span key={tier}>
+                          {tier}/6 &times;{count}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                 </div>
 
                 {detail.attempts.length === 0 ? (
@@ -365,44 +378,50 @@ export default function LottoClient() {
                   </p>
                 ) : (
                   <ul className="mt-3 flex flex-col gap-2">
-                    {detail.attempts.map((attempt) => {
-                      const matchCount = attempt.numbers.filter((n) => drawSet.has(n)).length;
-                      return (
-                        <li
-                          key={attempt.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
-                        >
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {attempt.numbers.map((n) => (
-                              <NumberBall key={n} n={n} variant={drawSet.has(n) ? "match" : "miss"} />
-                            ))}
-                            <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                              {matchCount}/6 matched
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              disabled={saving}
-                              className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
-                              onClick={() => openEditAttempt(detail.draw.id, attempt)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              disabled={saving}
-                              className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
-                              onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
+                    {attemptsByMatch.map(({ attempt, matchCount }) => (
+                      <li
+                        key={attempt.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {attempt.numbers.map((n) => (
+                            <NumberBall key={n} n={n} variant={drawSet.has(n) ? "match" : "miss"} />
+                          ))}
+                          <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                            {matchCount}/6 matched
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={saving}
+                            className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                            onClick={() => openEditAttempt(detail.draw.id, attempt)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={saving}
+                            className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                            onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    ))}
                   </ul>
                 )}
+
+                <button
+                  type="button"
+                  disabled={saving}
+                  className={`${SECONDARY_BUTTON_CLASSES} mt-3 px-2 py-1 text-xs`}
+                  onClick={() => openAddAttempt(detail.draw.id)}
+                >
+                  + Add attempt
+                </button>
               </div>
               )}
             </section>

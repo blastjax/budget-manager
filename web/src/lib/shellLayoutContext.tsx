@@ -82,9 +82,9 @@ export function ShellLayoutProvider({ children }: { children: ReactNode }) {
   const [mobileBalancesOpen, setMobileBalancesOpen] = useState(false);
 
   useEffect(() => {
-    setLeftCollapsed(readBool(LS_LEFT_COLLAPSED, false));
+    setLeftCollapsedState(readBool(LS_LEFT_COLLAPSED, false));
     setLeftWidthState(readNum(LS_LEFT_WIDTH, LEFT_DEFAULT, LEFT_MIN, LEFT_MAX));
-    setRightCollapsed(readBool(LS_RIGHT_COLLAPSED, false));
+    setRightCollapsedState(readBool(LS_RIGHT_COLLAPSED, false));
     setRightWidthState(readNum(LS_RIGHT_WIDTH, RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX));
     setHydrated(true);
   }, []);
