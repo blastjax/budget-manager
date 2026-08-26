@@ -36,6 +36,7 @@ const NAV_SEGMENTS: readonly { title: string | null; links: readonly NavLink[] }
       { href: "/games/mambo", label: "Mambo" },
       { href: "/games/mastermind", label: "Mastermind" },
       { href: "/games/sets", label: "Sets" },
+      { href: "/lotto", label: "Lotto" },
     ],
   },
   {

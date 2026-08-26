@@ -352,6 +352,36 @@ _SCHEMA_STATEMENTS: list[str] = [
     CREATE INDEX IF NOT EXISTS idx_credit_card_payment_parent
         ON credit_card_payment (credit_card_id, payment_date DESC)
     """,
+    """
+    CREATE TABLE IF NOT EXISTS lotto_draw (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        draw_date DATE NOT NULL UNIQUE,
+        n1 INTEGER NOT NULL,
+        n2 INTEGER NOT NULL,
+        n3 INTEGER NOT NULL,
+        n4 INTEGER NOT NULL,
+        n5 INTEGER NOT NULL,
+        n6 INTEGER NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_lotto_draw_date ON lotto_draw (draw_date DESC)",
+    """
+    CREATE TABLE IF NOT EXISTS lotto_attempt (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        draw_id INTEGER NOT NULL REFERENCES lotto_draw(id) ON DELETE CASCADE,
+        n1 INTEGER NOT NULL,
+        n2 INTEGER NOT NULL,
+        n3 INTEGER NOT NULL,
+        n4 INTEGER NOT NULL,
+        n5 INTEGER NOT NULL,
+        n6 INTEGER NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_lotto_attempt_parent ON lotto_attempt (draw_id, created_at)",
 ]
 
 
@@ -1914,3 +1944,142 @@ def delete_pay_period_start_override(
                 (period_year, period_month, period_half),
             )
             return cur.fetchone() is not None
+
+
+_LOTTO_DRAW_COLS = "id, draw_date, n1, n2, n3, n4, n5, n6, created_at"
+_LOTTO_ATTEMPT_COLS = "id, draw_id, n1, n2, n3, n4, n5, n6, created_at"
+
+
+def _lotto_attempts_rows(cur: Any, draw_id: int) -> list[dict[str, Any]]:
+    cur.execute(
+        f"""
+        SELECT {_LOTTO_ATTEMPT_COLS} FROM lotto_attempt
+        WHERE draw_id = ?
+        ORDER BY created_at ASC, id ASC
+        """,
+        (draw_id,),
+    )
+    return [_row_to_dict(cur, r) for r in cur.fetchall()]
+
+
+def _lotto_draw_detail(cur: Any, draw_id: int) -> dict[str, Any] | None:
+    cur.execute(
+        f"SELECT {_LOTTO_DRAW_COLS} FROM lotto_draw WHERE id = ?",
+        (draw_id,),
+    )
+    row = cur.fetchone()
+    if row is None:
+        return None
+    draw = _row_to_dict(cur, row)
+    return {"draw": draw, "attempts": _lotto_attempts_rows(cur, draw_id)}
+
+
+def list_lotto_draws(limit: int = 200) -> list[dict[str, Any]]:
+    """Every draw (newest first), each with its attempts nested."""
+    limit = max(1, min(limit, 2000))
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                f"""
+                SELECT {_LOTTO_DRAW_COLS} FROM lotto_draw
+                ORDER BY draw_date DESC, id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            draws = [_row_to_dict(cur, r) for r in cur.fetchall()]
+            if not draws:
+                return []
+            ids = [d["id"] for d in draws]
+            cur.execute(
+                f"""
+                SELECT {_LOTTO_ATTEMPT_COLS} FROM lotto_attempt
+                WHERE draw_id IN ({",".join("?" * len(ids))})
+                ORDER BY created_at ASC, id ASC
+                """,
+                ids,
+            )
+            attempts_by_draw: dict[int, list[dict[str, Any]]] = {}
+            for r in cur.fetchall():
+                a = _row_to_dict(cur, r)
+                attempts_by_draw.setdefault(a["draw_id"], []).append(a)
+            return [
+                {"draw": d, "attempts": attempts_by_draw.get(d["id"], [])}
+                for d in draws
+            ]
+
+
+def upsert_lotto_draw(draw_date: Any, numbers: list[int]) -> dict[str, Any]:
+    """Create the result for a date, or overwrite it if one already exists."""
+    n1, n2, n3, n4, n5, n6 = numbers
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                """
+                INSERT INTO lotto_draw (draw_date, n1, n2, n3, n4, n5, n6)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (draw_date) DO UPDATE SET
+                    n1 = excluded.n1, n2 = excluded.n2, n3 = excluded.n3,
+                    n4 = excluded.n4, n5 = excluded.n5, n6 = excluded.n6
+                RETURNING id
+                """,
+                (draw_date, n1, n2, n3, n4, n5, n6),
+            )
+            draw_id = cur.fetchone()[0]
+            return _lotto_draw_detail(cur, draw_id)
+
+
+def delete_lotto_draw(draw_id: int) -> bool:
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute("DELETE FROM lotto_draw WHERE id = ?", (draw_id,))
+            return cur.rowcount > 0
+
+
+def insert_lotto_attempt(draw_id: int, numbers: list[int]) -> dict[str, Any] | None:
+    """Add one attempt under a draw and return the refreshed draw detail."""
+    n1, n2, n3, n4, n5, n6 = numbers
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                """
+                INSERT INTO lotto_attempt (draw_id, n1, n2, n3, n4, n5, n6)
+                SELECT ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM lotto_draw WHERE id = ?)
+                RETURNING id
+                """,
+                (draw_id, n1, n2, n3, n4, n5, n6, draw_id),
+            )
+            if not cur.fetchone():
+                return None
+            return _lotto_draw_detail(cur, draw_id)
+
+
+def update_lotto_attempt(
+    draw_id: int, attempt_id: int, numbers: list[int]
+) -> dict[str, Any] | None:
+    n1, n2, n3, n4, n5, n6 = numbers
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                """
+                UPDATE lotto_attempt SET n1 = ?, n2 = ?, n3 = ?, n4 = ?, n5 = ?, n6 = ?
+                WHERE id = ? AND draw_id = ?
+                RETURNING id
+                """,
+                (n1, n2, n3, n4, n5, n6, attempt_id, draw_id),
+            )
+            if not cur.fetchone():
+                return None
+            return _lotto_draw_detail(cur, draw_id)
+
+
+def delete_lotto_attempt(draw_id: int, attempt_id: int) -> dict[str, Any] | None:
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                "DELETE FROM lotto_attempt WHERE id = ? AND draw_id = ? RETURNING id",
+                (attempt_id, draw_id),
+            )
+            if not cur.fetchone():
+                return None
+            return _lotto_draw_detail(cur, draw_id)

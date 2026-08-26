@@ -971,3 +971,62 @@ export async function deleteCreditCardPayment(paymentId: number) {
     `/api/credit-card/payments/${paymentId}`,
   );
 }
+
+export type LottoDrawRow = {
+  id: number;
+  draw_date: string;
+  numbers: number[];
+  created_at: string;
+};
+
+export type LottoAttemptRow = {
+  id: number;
+  draw_id: number;
+  numbers: number[];
+  created_at: string;
+};
+
+export type LottoDrawDetail = {
+  draw: LottoDrawRow;
+  attempts: LottoAttemptRow[];
+};
+
+export async function getLottoDraws(limit?: number) {
+  return getJson<{ draws: LottoDrawDetail[] }>("/api/lotto", { limit });
+}
+
+export async function setLottoDraw(drawDate: string, numbers: number[]) {
+  return sendJson<LottoDrawDetail>("POST", "/api/lotto", {
+    draw_date: drawDate,
+    numbers,
+  });
+}
+
+export async function deleteLottoDraw(drawId: number) {
+  return sendJson<{ ok: boolean }>("DELETE", `/api/lotto/${drawId}`);
+}
+
+export async function createLottoAttempt(drawId: number, numbers: number[]) {
+  return sendJson<LottoDrawDetail>("POST", `/api/lotto/${drawId}/attempts`, {
+    numbers,
+  });
+}
+
+export async function updateLottoAttempt(
+  drawId: number,
+  attemptId: number,
+  numbers: number[],
+) {
+  return sendJson<LottoDrawDetail>(
+    "PUT",
+    `/api/lotto/${drawId}/attempts/${attemptId}`,
+    { numbers },
+  );
+}
+
+export async function deleteLottoAttempt(drawId: number, attemptId: number) {
+  return sendJson<LottoDrawDetail>(
+    "DELETE",
+    `/api/lotto/${drawId}/attempts/${attemptId}`,
+  );
+}
