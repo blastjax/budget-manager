@@ -3,7 +3,7 @@ run-name: Deploy to EC2 (${{ github.event_name == 'workflow_dispatch' && 'manual
 
 on:
   push:
-    branches: [agca]
+    branches: [main]
   workflow_dispatch: {}
 
 env:
