@@ -23,7 +23,9 @@ import {
   SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 
-const NUMBERS_HELP = "6 unique numbers, 1-58 (e.g. 3, 17, 29, 42, 58, 1)";
+const NUMBERS_HELP =
+  "6 unique numbers, 1-58 — separate with commas, spaces, or dashes (e.g. 3, 17, 29, 42, 58, 1 or 03-17-29-42-58-01)";
+const NUMBERS_PLACEHOLDER = "3, 17, 29, 42, 58, 1  or  03-17-29-42-58-01";
 
 function parseNumbers(text: string): number[] {
   const parts = text.split(/[^0-9]+/).filter((p) => p.length > 0);
@@ -90,6 +92,17 @@ export default function LottoClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
+
+  const toggleCollapsed = (drawId: number) => {
+    setCollapsedIds((s) => {
+      const next = new Set(s);
+      if (next.has(drawId)) next.delete(drawId);
+      else next.add(drawId);
+      return next;
+    });
+  };
 
   const [drawModal, setDrawModal] = useState<DrawModalState>(emptyDrawModal);
   const [drawFormError, setDrawFormError] = useState<string | null>(null);
@@ -275,19 +288,41 @@ export default function LottoClient() {
       <div className="flex flex-col gap-5">
         {draws.map((detail) => {
           const drawSet = new Set(detail.draw.numbers);
+          const collapsed = collapsedIds.has(detail.draw.id);
           return (
             <section key={detail.draw.id} className={CARD_CLASSES}>
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                    {formatDate(detail.draw.draw_date)}
-                  </h2>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {detail.draw.numbers.map((n) => (
-                      <NumberBall key={n} n={n} variant="result" />
-                    ))}
+                <button
+                  type="button"
+                  className="flex min-w-0 items-start gap-2 text-left"
+                  aria-expanded={!collapsed}
+                  onClick={() => toggleCollapsed(detail.draw.id)}
+                >
+                  <span
+                    className={`mt-1.5 inline-block shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
+                      collapsed ? "-rotate-90" : ""
+                    }`}
+                    aria-hidden
+                  >
+                    ▾
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                      {formatDate(detail.draw.draw_date)}
+                      {collapsed && (
+                        <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                          ({detail.attempts.length} attempt
+                          {detail.attempts.length === 1 ? "" : "s"})
+                        </span>
+                      )}
+                    </h2>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {detail.draw.numbers.map((n) => (
+                        <NumberBall key={n} n={n} variant="result" />
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </button>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -308,6 +343,7 @@ export default function LottoClient() {
                 </div>
               </div>
 
+              {!collapsed && (
               <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -368,6 +404,7 @@ export default function LottoClient() {
                   </ul>
                 )}
               </div>
+              )}
             </section>
           );
         })}
@@ -413,8 +450,7 @@ export default function LottoClient() {
             <input
               required
               type="text"
-              inputMode="numeric"
-              placeholder="3, 17, 29, 42, 58, 1"
+              placeholder={NUMBERS_PLACEHOLDER}
               className={INPUT_CLASSES}
               value={drawModal.numbersText}
               disabled={saving}
@@ -462,8 +498,7 @@ export default function LottoClient() {
             <input
               required
               type="text"
-              inputMode="numeric"
-              placeholder="3, 17, 29, 42, 58, 1"
+              placeholder={NUMBERS_PLACEHOLDER}
               className={INPUT_CLASSES}
               value={attemptModal.numbersText}
               disabled={saving}
