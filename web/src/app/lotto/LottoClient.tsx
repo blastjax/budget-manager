@@ -648,10 +648,8 @@ export default function LottoClient() {
                 </div>
               </div>
 
-              {!collapsed && (
+              {!collapsed && hasAttempts && (
               <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                {detail.attempts.length > 0 && (
-                <>
                 <div className="flex flex-wrap items-center gap-3">
                   <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Attempts
@@ -758,8 +756,6 @@ export default function LottoClient() {
                       </div>
                     ))}
                   </div>
-                )}
-                </>
                 )}
 
                 <button
