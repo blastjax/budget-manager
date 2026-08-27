@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Modal } from "@/components/Modal";
 import {
+  apiFetch,
   deletePayslipPdf,
   payslipPdfUrl,
   uploadPayslipPdf,
@@ -620,9 +621,13 @@ function PayslipPdfPanel({
   const [showing, setShowing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  // Bumped on upload/replace so the `<iframe>` refetches instead of showing a
-  // cached copy of the previous PDF.
+  // Bumped on upload/replace so the blob fetch below re-runs instead of
+  // showing a cached copy of the previous PDF.
   const [version, setVersion] = useState(0);
+  // The PDF route requires the OTP session header, which a plain <iframe>/<a>
+  // src can't carry — so it's fetched through apiFetch and rendered from a
+  // blob: URL instead of pointing straight at the API URL.
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Reset when the modal navigates to a different payslip.
@@ -633,7 +638,30 @@ function PayslipPdfPanel({
     setVersion(0);
   }, [payslipId, initialHasPdf]);
 
-  const src = `${payslipPdfUrl(payslipId)}?v=${version}`;
+  useEffect(() => {
+    if (!hasPdf) {
+      setBlobUrl(null);
+      return;
+    }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    (async () => {
+      try {
+        const res = await apiFetch(`${payslipPdfUrl(payslipId)}?v=${version}`);
+        if (!res.ok) throw new Error("Failed to load PDF");
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : "Failed to load PDF");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [hasPdf, payslipId, version]);
 
   const handleUpload = async (file: File) => {
     setBusy(true);
@@ -683,8 +711,8 @@ function PayslipPdfPanel({
               {showing ? "Hide payslip" : "Show payslip"}
             </button>
             <a
-              className={PDF_BTN}
-              href={src}
+              className={`${PDF_BTN}${blobUrl ? "" : " pointer-events-none opacity-50"}`}
+              href={blobUrl ?? undefined}
               target="_blank"
               rel="noreferrer"
             >
@@ -733,11 +761,11 @@ function PayslipPdfPanel({
       {err && (
         <p className="mt-2 text-xs text-red-600 dark:text-red-400">{err}</p>
       )}
-      {hasPdf && (
+      {hasPdf && blobUrl && (
         <div className={`mt-3 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700${showing ? "" : " hidden"}`}>
           <iframe
-            key={src}
-            src={src}
+            key={blobUrl}
+            src={blobUrl}
             title="Payslip PDF"
             className="h-[75vh] w-full bg-white"
           />
