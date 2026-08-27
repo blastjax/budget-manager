@@ -89,6 +89,11 @@ jobs:
           set -e
           cd ${{ secrets.APP_DIR }}
 
+          # SSM runs this as root, but the repo is owned by the box's normal
+          # deploy user - without this, git refuses to touch a repo it
+          # doesn't own (CVE-2022-24765 mitigation).
+          git config --global --add safe.directory ${{ secrets.APP_DIR }}
+
           # --ff-only: fail loudly on divergence instead of creating a merge
           # commit on the server or leaving a half-applied tree. Pulls the
           # ref that triggered this run (main on push, or whatever branch
