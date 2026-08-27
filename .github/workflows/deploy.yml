@@ -156,13 +156,18 @@ jobs:
               exit 1
             fi
             healthy=""
-            for _ in $(seq 1 40); do
+            # 100 x 2s keeps the same 200s ceiling as the previous 40 x 5s, but
+            # with the compose healthchecks now using start_interval the
+            # containers report healthy within a few seconds, so the poll
+            # granularity - not the container - was the thing left rounding the
+            # deploy up.
+            for _ in $(seq 1 100); do
               status=$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo unknown)
               if [ "$status" = "healthy" ]; then
                 healthy=1
                 break
               fi
-              sleep 5
+              sleep 2
             done
             if [ -z "$healthy" ]; then
               echo "$service did not become healthy (last status: ${status:-unknown})" >&2

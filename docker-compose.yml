@@ -16,6 +16,14 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+      # Probe every second while still inside start_period rather than waiting
+      # out the full `interval`. Steady-state probe load is unchanged - this
+      # only changes how fast a freshly started container is first reported
+      # healthy. That matters because redis -> api -> web is a serial
+      # depends_on: service_healthy chain, so each one's start-up latency adds
+      # directly to the deploy job's wall clock. Needs Docker Engine 25.0+;
+      # the EC2 host is on 29.7.2.
+      start_interval: 1s
   api:
     restart: always
     # image: pulled from GHCR on the EC2 host (see deploy.yml); the build:
@@ -60,6 +68,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+      # See the note on redis: fast probes during start-up only, so the deploy
+      # doesn't sit through a 15s interval waiting on a process that was ready
+      # in two.
+      start_interval: 2s
   web:
     restart: always
     # image: pulled from GHCR on the EC2 host (see deploy.yml); the build:
@@ -86,6 +98,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+      # See the note on redis: fast probes during start-up only, so the deploy
+      # doesn't sit through a 15s interval waiting on a process that was ready
+      # in two.
+      start_interval: 2s
   caddy:
     restart: always
     image: caddy:2-alpine
