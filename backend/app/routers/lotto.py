@@ -16,9 +16,11 @@ from app.schemas.lotto import LottoAttemptCreate, LottoDrawCreate
 from db import (
     delete_lotto_attempt,
     delete_lotto_draw,
+    get_lotto_draw_id_by_date,
     insert_lotto_attempt,
     list_lotto_draws,
     update_lotto_attempt,
+    update_lotto_draw,
     upsert_lotto_draw,
 )
 
@@ -69,6 +71,20 @@ def lotto_list(limit: int = Query(default=200, ge=1, le=2000)) -> dict[str, Any]
 @router.post("/api/lotto")
 def lotto_set_draw(body: LottoDrawCreate) -> dict[str, Any]:
     detail = upsert_lotto_draw(body.draw_date.isoformat(), body.numbers)
+    return _serialize_detail(detail)
+
+
+@router.put("/api/lotto/{draw_id}")
+def lotto_update_draw(draw_id: int, body: LottoDrawCreate) -> dict[str, Any]:
+    draw_date = body.draw_date.isoformat()
+    existing_id = get_lotto_draw_id_by_date(draw_date)
+    if existing_id is not None and existing_id != draw_id:
+        raise HTTPException(
+            status_code=409, detail="Another result already exists for that date."
+        )
+    detail = update_lotto_draw(draw_id, draw_date, body.numbers)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Draw not found.")
     return _serialize_detail(detail)
 
 

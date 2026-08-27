@@ -1002,6 +1002,13 @@ export async function setLottoDraw(drawDate: string, numbers: number[]) {
   });
 }
 
+export async function updateLottoDraw(drawId: number, drawDate: string, numbers: number[]) {
+  return sendJson<LottoDrawDetail>("PUT", `/api/lotto/${drawId}`, {
+    draw_date: drawDate,
+    numbers,
+  });
+}
+
 export async function deleteLottoDraw(drawId: number) {
   return sendJson<{ ok: boolean }>("DELETE", `/api/lotto/${drawId}`);
 }

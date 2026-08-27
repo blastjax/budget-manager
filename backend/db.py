@@ -2029,6 +2029,35 @@ def upsert_lotto_draw(draw_date: Any, numbers: list[int]) -> dict[str, Any]:
             return _lotto_draw_detail(cur, draw_id)
 
 
+def get_lotto_draw_id_by_date(draw_date: Any) -> int | None:
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute("SELECT id FROM lotto_draw WHERE draw_date = ?", (draw_date,))
+            row = cur.fetchone()
+            return row[0] if row else None
+
+
+def update_lotto_draw(
+    draw_id: int, draw_date: Any, numbers: list[int]
+) -> dict[str, Any] | None:
+    """Update an existing draw's date and numbers in place, keeping its id and attempts."""
+    n1, n2, n3, n4, n5, n6 = numbers
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                """
+                UPDATE lotto_draw SET draw_date = ?, n1 = ?, n2 = ?, n3 = ?, n4 = ?, n5 = ?, n6 = ?
+                WHERE id = ?
+                RETURNING id
+                """,
+                (draw_date, n1, n2, n3, n4, n5, n6, draw_id),
+            )
+            row = cur.fetchone()
+            if row is None:
+                return None
+            return _lotto_draw_detail(cur, draw_id)
+
+
 def delete_lotto_draw(draw_id: int) -> bool:
     with get_connection() as conn:
         with db_cursor(conn) as cur:

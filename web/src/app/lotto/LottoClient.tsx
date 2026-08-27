@@ -10,6 +10,7 @@ import {
   getLottoDraws,
   setLottoDraw,
   updateLottoAttempt,
+  updateLottoDraw,
   type LottoAttemptRow,
   type LottoDrawDetail,
 } from "@/lib/api";
@@ -26,6 +27,41 @@ import {
 const NUMBERS_HELP =
   "6 unique numbers, 1-58 — separate with commas, spaces, or dashes (e.g. 3, 17, 29, 42, 58, 1 or 03-17-29-42-58-01)";
 const NUMBERS_PLACEHOLDER = "3, 17, 29, 42, 58, 1  or  03-17-29-42-58-01";
+
+const DRAW_DATE_HELP = "YYYY-MM-DD or M/D/YYYY (e.g. 2026-07-07 or 7/7/2026)";
+const DRAW_DATE_PLACEHOLDER = "2026-07-07  or  7/7/2026";
+
+/** Turns a validated y/m/d into "YYYY-MM-DD", rejecting dates like Feb 30. */
+function toIsoDate(year: number, month: number, day: number): string {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new Error("Enter a valid date.");
+  }
+  const mm = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return `${year}-${mm}-${dd}`;
+}
+
+/** Accepts "YYYY-MM-DD" (what a native date picker produces) as well as a
+ * typed "M/D/YYYY" (e.g. 7/7/2026). */
+function parseDrawDate(text: string): string {
+  const trimmed = text.trim();
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
+  if (iso) {
+    const [, y, m, d] = iso;
+    return toIsoDate(Number(y), Number(m), Number(d));
+  }
+  const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
+  if (us) {
+    const [, m, d, y] = us;
+    return toIsoDate(Number(y), Number(m), Number(d));
+  }
+  throw new Error(`Enter a date as ${DRAW_DATE_HELP}.`);
+}
 
 function parseNumbers(text: string): number[] {
   const parts = text.split(/[^0-9]+/).filter((p) => p.length > 0);
@@ -71,7 +107,13 @@ function NumberBall({
   );
 }
 
-type DrawModalState = { open: boolean; drawDate: string; numbersText: string; isEdit: boolean };
+type DrawModalState = {
+  open: boolean;
+  drawId: number | null;
+  drawDate: string;
+  numbersText: string;
+  isEdit: boolean;
+};
 type AttemptModalState = {
   open: boolean;
   drawId: number | null;
@@ -79,7 +121,13 @@ type AttemptModalState = {
   numbersText: string;
 };
 
-const emptyDrawModal: DrawModalState = { open: false, drawDate: "", numbersText: "", isEdit: false };
+const emptyDrawModal: DrawModalState = {
+  open: false,
+  drawId: null,
+  drawDate: "",
+  numbersText: "",
+  isEdit: false,
+};
 const emptyAttemptModal: AttemptModalState = {
   open: false,
   drawId: null,
@@ -101,6 +149,15 @@ export default function LottoClient() {
       if (next.has(drawId)) next.delete(drawId);
       else next.add(drawId);
       return next;
+    });
+  };
+
+  const allCollapsed = draws.length > 0 && draws.every((d) => collapsedIds.has(d.draw.id));
+
+  const toggleCollapseAll = () => {
+    setCollapsedIds((s) => {
+      const allAreCollapsed = draws.length > 0 && draws.every((d) => s.has(d.draw.id));
+      return allAreCollapsed ? new Set() : new Set(draws.map((d) => d.draw.id));
     });
   };
 
@@ -130,24 +187,21 @@ export default function LottoClient() {
   const upsertLocalDraw = (detail: LottoDrawDetail) => {
     setDraws((ds) => {
       const i = ds.findIndex((d) => d.draw.id === detail.draw.id);
-      if (i === -1) {
-        return [detail, ...ds].sort((a, b) => b.draw.draw_date.localeCompare(a.draw.draw_date));
-      }
-      const out = ds.slice();
-      out[i] = detail;
-      return out;
+      const out = i === -1 ? [detail, ...ds] : ds.map((d, idx) => (idx === i ? detail : d));
+      return out.sort((a, b) => b.draw.draw_date.localeCompare(a.draw.draw_date));
     });
   };
 
   const openAddDraw = () => {
     setDrawFormError(null);
-    setDrawModal({ open: true, drawDate: "", numbersText: "", isEdit: false });
+    setDrawModal({ open: true, drawId: null, drawDate: "", numbersText: "", isEdit: false });
   };
 
   const openEditDraw = (detail: LottoDrawDetail) => {
     setDrawFormError(null);
     setDrawModal({
       open: true,
+      drawId: detail.draw.id,
       drawDate: detail.draw.draw_date,
       numbersText: numbersToText(detail.draw.numbers),
       isEdit: true,
@@ -163,20 +217,25 @@ export default function LottoClient() {
     e.preventDefault();
     setDrawFormError(null);
     if (!drawModal.drawDate) {
-      setDrawFormError("Pick a date.");
+      setDrawFormError("Enter a date.");
       return;
     }
+    let drawDate: string;
     let numbers: number[];
     try {
+      drawDate = parseDrawDate(drawModal.drawDate);
       numbers = parseNumbers(drawModal.numbersText);
     } catch (err) {
-      setDrawFormError(err instanceof Error ? err.message : "Invalid numbers");
+      setDrawFormError(err instanceof Error ? err.message : "Invalid input");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const detail = await setLottoDraw(drawModal.drawDate, numbers);
+      const detail =
+        drawModal.isEdit && drawModal.drawId != null
+          ? await updateLottoDraw(drawModal.drawId, drawDate, numbers)
+          : await setLottoDraw(drawDate, numbers);
       upsertLocalDraw(detail);
       closeDrawModal();
     } catch (err) {
@@ -283,6 +342,18 @@ export default function LottoClient() {
 
       {!loading && draws.length === 0 && (
         <p className={DASHED_EMPTY_CLASSES}>No results yet — add one to get started.</p>
+      )}
+
+      {draws.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+            onClick={toggleCollapseAll}
+          >
+            {allCollapsed ? "Expand all" : "Collapse all"}
+          </button>
+        </div>
       )}
 
       <div className="flex flex-col gap-5">
@@ -482,17 +553,14 @@ export default function LottoClient() {
             <span className="text-zinc-600 dark:text-zinc-400">Draw date</span>
             <input
               required
-              type="date"
+              type="text"
+              placeholder={DRAW_DATE_PLACEHOLDER}
               className={INPUT_CLASSES}
               value={drawModal.drawDate}
-              disabled={saving || drawModal.isEdit}
+              disabled={saving}
               onChange={(e) => setDrawModal((m) => ({ ...m, drawDate: e.target.value }))}
             />
-            {drawModal.isEdit && (
-              <span className="text-xs text-zinc-500">
-                Date can&apos;t be changed here — delete and re-add to move it.
-              </span>
-            )}
+            <span className="text-xs text-zinc-500">{DRAW_DATE_HELP}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-zinc-600 dark:text-zinc-400">Winning numbers</span>
