@@ -361,6 +361,26 @@ export default function LottoClient() {
     const recentDraws = draws.slice(0, RECENT_WINDOW); // draws are newest-first
     const recentFreq = freqOver(recentDraws);
 
+    // One number per equal slice of the 1-58 range, favoring the most
+    // frequent number within each slice — spreads the pick across the full
+    // range instead of letting it cluster in one neighborhood.
+    const pickBalanced = (entries: [number, number][]): number[] => {
+      const byNumber = new Map(entries);
+      const bucketCount = 6;
+      const bucketSize = Math.ceil(58 / bucketCount);
+      const picks: number[] = [];
+      for (let b = 0; b < bucketCount; b++) {
+        const start = b * bucketSize + 1;
+        const end = Math.min(58, start + bucketSize - 1);
+        let best = start;
+        for (let n = start; n <= end; n++) {
+          if ((byNumber.get(n) ?? 0) > (byNumber.get(best) ?? 0)) best = n;
+        }
+        picks.push(best);
+      }
+      return picks.sort((a, b) => a - b);
+    };
+
     const plural = (n: number) => (n === 1 ? "result" : "results");
 
     return [
@@ -381,6 +401,13 @@ export default function LottoClient() {
         title: "Recent trend",
         reasoning: `Drawn most often in just the last ${recentDraws.length} logged ${plural(recentDraws.length)} — numbers trending lately rather than over all-time history.`,
         numbers: pick(recentFreq, "top"),
+      },
+      {
+        key: "balanced",
+        title: "Balanced spread",
+        reasoning:
+          "One number from each equal slice of the 1-58 range (1-10, 11-20, …), favoring whichever number in that slice has come up most — spreads the pick across the full range instead of clustering.",
+        numbers: pickBalanced(allFreq),
       },
     ];
   }, [draws]);
