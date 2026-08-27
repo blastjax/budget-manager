@@ -61,97 +61,128 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: read
+      id-token: write
     # One deploy at a time; queue rather than cancel so a run that already
     # started updating the host is never interrupted half-way. Scoped to this
     # job (not the whole workflow) so concurrent pushes can still build in
-    # parallel — only the SSH/host step is serialized.
+    # parallel — only the SSM/host step is serialized.
     concurrency:
       group: deploy-ec2
       cancel-in-progress: false
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_ACTOR: ${{ github.actor }}
-          WEB_PORT: ${{ secrets.WEB_PORT || 3000 }}
-          BUDGET_CORS_ORIGINS: ${{ secrets.BUDGET_CORS_ORIGINS }}
-          BUDGET_OTP_SECRET: ${{ secrets.BUDGET_OTP_SECRET }}
+      # Direct SSH from GitHub-hosted (Azure) runners to this host started
+      # timing out at the TCP level with no config on either side to
+      # explain it (SG/NACL wide open, no host firewall, instance healthy —
+      # a manual SSH from a residential IP worked fine seconds later). SSM
+      # runs over HTTPS through AWS's own endpoints instead of a public
+      # port-22 connection, so it isn't subject to whatever was dropping
+      # that path, and it means port 22 no longer needs to be open at all.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ vars.EC2_SSH_PORT || 22 }}
-          # Default (10m) isn't enough on this instance: git pull and the
-          # GHCR login/pull alone have each taken several minutes, so the
-          # combined script needs real headroom rather than a tight budget.
-          command_timeout: 30m
-          # appleboy/ssh-action reads these from the step's own process env
-          # (set above / at workflow level) and exports them on the remote
-          # host before running the script.
-          envs: API_IMAGE,WEB_IMAGE,GHCR_TOKEN,GHCR_ACTOR,WEB_PORT,BUDGET_CORS_ORIGINS,BUDGET_OTP_SECRET
-          script: |
-            set -e
-            cd ${{ secrets.APP_DIR }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-            # --ff-only: fail loudly on divergence instead of creating a merge
-            # commit on the server or leaving a half-applied tree. Pulls the
-            # ref that triggered this run (agca on push, or whatever branch
-            # was picked on a manual dispatch) - this was hardcoded to `main`
-            # until now, a leftover from before the deploy branch was renamed
-            # to `agca`, so the box was building from a 20-commit-stale
-            # docker-compose.yml (still on Postgres, no `image:` fields) no
-            # matter what changed on the branch actually being deployed.
-            git pull --ff-only origin ${{ github.ref_name }}
+      - name: Deploy via SSM
+        run: |
+          cat > /tmp/deploy.sh <<'SCRIPT'
+          set -e
+          cd ${{ secrets.APP_DIR }}
 
-            # The api container runs as uid 1000 (see docker/Dockerfile.backend),
-            # so the bind-mounted DB directory has to be writable by it. Also
-            # fixes ownership left behind by older root-run containers.
-            mkdir -p data
-            sudo chown -R 1000:1000 data
+          # --ff-only: fail loudly on divergence instead of creating a merge
+          # commit on the server or leaving a half-applied tree. Pulls the
+          # ref that triggered this run (main on push, or whatever branch
+          # was picked on a manual dispatch).
+          git pull --ff-only origin ${{ github.ref_name }}
 
-            # This run's GITHUB_TOKEN only, not a durable secret on the box:
-            # it expires with the workflow run, so nothing long-lived to
-            # revoke or rotate here. Images already pulled keep running fine
-            # after it expires.
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
+          # The api container runs as uid 1000 (see docker/Dockerfile.backend),
+          # so the bind-mounted DB directory has to be writable by it. Also
+          # fixes ownership left behind by older root-run containers.
+          mkdir -p data
+          chown -R 1000:1000 data
 
-            export API_IMAGE WEB_IMAGE WEB_PORT BUDGET_CORS_ORIGINS BUDGET_OTP_SECRET
-            # --policy always: api/web define both `image:` and `build:` (the
-            # build: block is for local `docker compose build` only, per
-            # docker/README.md), so a plain `pull` skips them as "buildable"
-            # and `up` then falls back to building web's `next build` on this
-            # box - slow enough to blow the SSH action's 10m command_timeout.
-            # This flag forces the actual GHCR image to be pulled instead.
-            docker compose pull --policy always api web
-            docker compose up -d --remove-orphans
-            docker image prune -f
-            docker logout ghcr.io
+          # This run's GITHUB_TOKEN only, not a durable secret on the box:
+          # it expires with the workflow run, so nothing long-lived to
+          # revoke or rotate here. Images already pulled keep running fine
+          # after it expires.
+          echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
 
-            # Fail the job if the stack doesn't come up, so a red check means
-            # "not deployed" rather than "deployed and broken". Reuses the
-            # healthchecks already defined in docker-compose.yml, which keeps
-            # this free of any host-side curl/wget dependency.
-            for service in api web; do
-              cid=$(docker compose ps -q "$service")
-              if [ -z "$cid" ]; then
-                echo "$service container is not running" >&2
-                docker compose logs --tail 50 "$service" >&2 || true
-                exit 1
+          export API_IMAGE='${{ env.API_IMAGE }}'
+          export WEB_IMAGE='${{ env.WEB_IMAGE }}'
+          export WEB_PORT='${{ secrets.WEB_PORT || 3000 }}'
+          export BUDGET_CORS_ORIGINS='${{ secrets.BUDGET_CORS_ORIGINS }}'
+          export BUDGET_OTP_SECRET='${{ secrets.BUDGET_OTP_SECRET }}'
+          # --policy always: api/web define both `image:` and `build:` (the
+          # build: block is for local `docker compose build` only, per
+          # docker/README.md), so a plain `pull` skips them as "buildable"
+          # and `up` then falls back to building web's `next build` on this
+          # box - slow enough to blow a tight command budget.
+          # This flag forces the actual GHCR image to be pulled instead.
+          docker compose pull --policy always api web
+          docker compose up -d --remove-orphans
+          docker image prune -f
+          docker logout ghcr.io
+
+          # Fail the job if the stack doesn't come up, so a red check means
+          # "not deployed" rather than "deployed and broken". Reuses the
+          # healthchecks already defined in docker-compose.yml, which keeps
+          # this free of any host-side curl/wget dependency.
+          for service in api web; do
+            cid=$(docker compose ps -q "$service")
+            if [ -z "$cid" ]; then
+              echo "$service container is not running" >&2
+              docker compose logs --tail 50 "$service" >&2 || true
+              exit 1
+            fi
+            healthy=""
+            for _ in $(seq 1 40); do
+              status=$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo unknown)
+              if [ "$status" = "healthy" ]; then
+                healthy=1
+                break
               fi
-              healthy=""
-              for _ in $(seq 1 40); do
-                status=$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo unknown)
-                if [ "$status" = "healthy" ]; then
-                  healthy=1
-                  break
-                fi
-                sleep 5
-              done
-              if [ -z "$healthy" ]; then
-                echo "$service did not become healthy (last status: ${status:-unknown})" >&2
-                docker compose logs --tail 50 "$service" >&2 || true
-                exit 1
-              fi
-              echo "$service is healthy"
+              sleep 5
             done
+            if [ -z "$healthy" ]; then
+              echo "$service did not become healthy (last status: ${status:-unknown})" >&2
+              docker compose logs --tail 50 "$service" >&2 || true
+              exit 1
+            fi
+            echo "$service is healthy"
+          done
+          SCRIPT
+
+          jq -Rs '{"commands": [.]}' /tmp/deploy.sh > /tmp/ssm-params.json
+
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters file:///tmp/ssm-params.json \
+            --timeout-seconds 1800 \
+            --query "Command.CommandId" --output text)
+          echo "SSM CommandId: $CMD_ID"
+
+          # Poll for up to 30 minutes, matching the previous command_timeout:
+          # git pull and the GHCR login/pull alone have each taken several
+          # minutes on this instance, so the script needs real headroom.
+          STATUS="Pending"
+          for _ in $(seq 1 180); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$CMD_ID" --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
+
+          echo "Final status: $STATUS"
+          echo "--- stdout ---"
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "${{ vars.EC2_INSTANCE_ID }}" --query "StandardOutputContent" --output text
+          echo "--- stderr ---"
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "${{ vars.EC2_INSTANCE_ID }}" --query "StandardErrorContent" --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "Deploy command finished with status: $STATUS" >&2
+            exit 1
+          fi
