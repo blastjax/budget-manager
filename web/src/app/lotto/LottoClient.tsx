@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import {
@@ -87,7 +87,7 @@ function NumberBall({
   variant = "neutral",
 }: {
   n: number;
-  variant?: "neutral" | "result" | "match" | "miss";
+  variant?: "neutral" | "result" | "match" | "miss" | "pick";
 }) {
   const styles: Record<string, string> = {
     neutral:
@@ -97,6 +97,7 @@ function NumberBall({
     match:
       "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-500 dark:bg-emerald-600",
     miss: "border-zinc-300 bg-zinc-50 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500",
+    pick: "border-orange-500 bg-orange-500 text-white dark:border-orange-500 dark:bg-orange-600",
   };
   return (
     <span
@@ -322,6 +323,24 @@ export default function LottoClient() {
 
   const anyModalOpen = drawModal.open || attemptModal.open;
 
+  // Naive "next draw" pick: the 6 numbers that have come up most often across
+  // every past result, ties broken by number. Just a frequency read of
+  // history — not a real prediction of a random draw.
+  const nextDrawPick = useMemo(() => {
+    if (draws.length === 0) return [];
+    const freq = new Map<number, number>();
+    for (const { draw } of draws) {
+      for (const n of draw.numbers) {
+        freq.set(n, (freq.get(n) ?? 0) + 1);
+      }
+    }
+    return Array.from(freq.entries())
+      .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+      .slice(0, 6)
+      .map(([n]) => n)
+      .sort((a, b) => a - b);
+  }, [draws]);
+
   return (
     <div className="relative mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
       <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
@@ -333,6 +352,23 @@ export default function LottoClient() {
           numbers turn green.
         </p>
       </header>
+
+      {nextDrawPick.length > 0 && (
+        <section className="rounded-xl border border-orange-300 bg-orange-50 p-5 shadow-sm dark:border-orange-800 dark:bg-orange-950/30 sm:p-6">
+          <h2 className="text-sm font-semibold text-orange-900 dark:text-orange-200">
+            Next draw pick
+          </h2>
+          <p className="mt-1 text-xs text-orange-800/80 dark:text-orange-300/80">
+            The 6 numbers that have come up most often across past results — just a
+            frequency read of history, not a real prediction.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {nextDrawPick.map((n) => (
+              <NumberBall key={n} n={n} variant="pick" />
+            ))}
+          </div>
+        </section>
+      )}
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -417,6 +453,18 @@ export default function LottoClient() {
                     </div>
                   </div>
                 </button>
+                {matchBreakdown.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {matchBreakdown.map(({ tier, count }) => (
+                      <span
+                        key={tier}
+                        className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                      >
+                        {tier}/6 &times;{count}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
