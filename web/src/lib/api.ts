@@ -995,14 +995,20 @@ export async function getLottoDraws(limit?: number) {
   return getJson<{ draws: LottoDrawDetail[] }>("/api/lotto", { limit });
 }
 
-export async function setLottoDraw(drawDate: string, numbers: number[]) {
+/** `numbers: null` logs just the date — the result can be filled in later
+ * once it's announced, so attempts can be recorded ahead of the draw. */
+export async function setLottoDraw(drawDate: string, numbers: number[] | null) {
   return sendJson<LottoDrawDetail>("POST", "/api/lotto", {
     draw_date: drawDate,
     numbers,
   });
 }
 
-export async function updateLottoDraw(drawId: number, drawDate: string, numbers: number[]) {
+export async function updateLottoDraw(
+  drawId: number,
+  drawDate: string,
+  numbers: number[] | null,
+) {
   return sendJson<LottoDrawDetail>("PUT", `/api/lotto/${drawId}`, {
     draw_date: drawDate,
     numbers,

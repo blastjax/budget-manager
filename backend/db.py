@@ -356,14 +356,17 @@ _SCHEMA_STATEMENTS: list[str] = [
     CREATE TABLE IF NOT EXISTS lotto_draw (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         draw_date DATE NOT NULL UNIQUE,
-        n1 INTEGER NOT NULL,
-        n2 INTEGER NOT NULL,
-        n3 INTEGER NOT NULL,
-        n4 INTEGER NOT NULL,
-        n5 INTEGER NOT NULL,
-        n6 INTEGER NOT NULL,
+        n1 INTEGER,
+        n2 INTEGER,
+        n3 INTEGER,
+        n4 INTEGER,
+        n5 INTEGER,
+        n6 INTEGER,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
+        CHECK (
+            (n1 IS NULL AND n2 IS NULL AND n3 IS NULL AND n4 IS NULL AND n5 IS NULL AND n6 IS NULL)
+            OR (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
+        )
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_lotto_draw_date ON lotto_draw (draw_date DESC)",
@@ -385,10 +388,69 @@ _SCHEMA_STATEMENTS: list[str] = [
 ]
 
 
+def _migrate_lotto_draw_allow_pending() -> None:
+    """Older DBs have ``n1``..``n6`` NOT NULL on ``lotto_draw``. Rebuild the
+    table so a draw's date can be logged before its winning numbers are
+    known — attempts can be recorded ahead of the actual draw, then the
+    result filled in later via the same edit form.
+
+    Runs on its own autocommit connection (outside ``get_connection()``, which
+    turns foreign keys on) since SQLite requires FKs off for a table rebuild
+    like this, and that pragma is a no-op inside a transaction."""
+    path = sqlite_path()
+    if not path.exists():
+        return  # fresh DB — the CREATE TABLE statement below defines it correctly
+    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
+    try:
+        cols = conn.execute("PRAGMA table_info(lotto_draw)").fetchall()
+        if not cols:
+            return  # table doesn't exist yet
+        notnull_by_name = {c[1]: c[3] for c in cols}
+        if not notnull_by_name.get("n1"):
+            return  # already migrated (nullable), or an unexpected shape — leave alone
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.execute("BEGIN")
+        try:
+            conn.execute(
+                """
+                CREATE TABLE lotto_draw_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    draw_date DATE NOT NULL UNIQUE,
+                    n1 INTEGER, n2 INTEGER, n3 INTEGER, n4 INTEGER, n5 INTEGER, n6 INTEGER,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CHECK (
+                        (n1 IS NULL AND n2 IS NULL AND n3 IS NULL AND n4 IS NULL AND n5 IS NULL AND n6 IS NULL)
+                        OR (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
+                    )
+                )
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO lotto_draw_new (id, draw_date, n1, n2, n3, n4, n5, n6, created_at)
+                SELECT id, draw_date, n1, n2, n3, n4, n5, n6, created_at FROM lotto_draw
+                """
+            )
+            conn.execute("DROP TABLE lotto_draw")
+            conn.execute("ALTER TABLE lotto_draw_new RENAME TO lotto_draw")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lotto_draw_date ON lotto_draw (draw_date DESC)"
+            )
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        finally:
+            conn.execute("PRAGMA foreign_keys = ON")
+    finally:
+        conn.close()
+
+
 def init_schema() -> None:
     """Create every table/index that doesn't already exist. Idempotent and cheap
     enough to call on every startup — ``CREATE ... IF NOT EXISTS`` short-circuits
     once the schema is in place."""
+    _migrate_lotto_draw_allow_pending()
     with get_connection() as conn:
         for stmt in _SCHEMA_STATEMENTS:
             conn.execute(stmt)
@@ -2009,9 +2071,10 @@ def list_lotto_draws(limit: int = 200) -> list[dict[str, Any]]:
             ]
 
 
-def upsert_lotto_draw(draw_date: Any, numbers: list[int]) -> dict[str, Any]:
-    """Create the result for a date, or overwrite it if one already exists."""
-    n1, n2, n3, n4, n5, n6 = numbers
+def upsert_lotto_draw(draw_date: Any, numbers: list[int] | None) -> dict[str, Any]:
+    """Create the result for a date, or overwrite it if one already exists.
+    ``numbers`` may be None to log just the date before the result is known."""
+    n1, n2, n3, n4, n5, n6 = numbers if numbers is not None else (None,) * 6
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
@@ -2038,10 +2101,11 @@ def get_lotto_draw_id_by_date(draw_date: Any) -> int | None:
 
 
 def update_lotto_draw(
-    draw_id: int, draw_date: Any, numbers: list[int]
+    draw_id: int, draw_date: Any, numbers: list[int] | None
 ) -> dict[str, Any] | None:
-    """Update an existing draw's date and numbers in place, keeping its id and attempts."""
-    n1, n2, n3, n4, n5, n6 = numbers
+    """Update an existing draw's date and numbers in place, keeping its id and
+    attempts. ``numbers`` may be None to clear/leave the result unset."""
+    n1, n2, n3, n4, n5, n6 = numbers if numbers is not None else (None,) * 6
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(

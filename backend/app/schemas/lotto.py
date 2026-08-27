@@ -25,8 +25,24 @@ class LottoNumbers(BaseModel):
         return sorted(v)
 
 
-class LottoDrawCreate(LottoNumbers):
+class LottoDrawCreate(BaseModel):
     draw_date: dt.date
+    # Optional: a draw can be logged by date alone before its winning numbers
+    # are announced, so attempts can be recorded ahead of the actual draw.
+    numbers: list[int] | None = None
+
+    @field_validator("numbers")
+    @classmethod
+    def _check_numbers(cls, v: list[int] | None) -> list[int] | None:
+        if v is None:
+            return None
+        if len(v) != 6:
+            raise ValueError("Enter exactly 6 numbers, or leave blank until the result is known.")
+        if any(n < 1 or n > 58 for n in v):
+            raise ValueError("Numbers must be between 1 and 58.")
+        if len(set(v)) != len(v):
+            raise ValueError("Numbers must be unique.")
+        return sorted(v)
 
 
 class LottoAttemptCreate(LottoNumbers):

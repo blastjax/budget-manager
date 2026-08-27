@@ -80,6 +80,13 @@ function numbersToText(numbers: number[]): string {
   return numbers.join(", ");
 }
 
+/** Like `parseNumbers`, but blank input means "no result yet" rather than an
+ * error — a draw can be logged by date alone before its numbers are known. */
+function parseOptionalNumbers(text: string): number[] | null {
+  if (text.trim() === "") return null;
+  return parseNumbers(text);
+}
+
 function NumberBall({
   n,
   variant = "neutral",
@@ -152,12 +159,18 @@ export default function LottoClient() {
     });
   };
 
-  const allCollapsed = draws.length > 0 && draws.every((d) => collapsedIds.has(d.draw.id));
+  // A draw with no attempts has nothing to hide, so it's never collapsible —
+  // only draws with attempts participate in collapse state.
+  const collapsibleDraws = draws.filter((d) => d.attempts.length > 0);
+
+  const allCollapsed =
+    collapsibleDraws.length > 0 && collapsibleDraws.every((d) => collapsedIds.has(d.draw.id));
 
   const toggleCollapseAll = () => {
     setCollapsedIds((s) => {
-      const allAreCollapsed = draws.length > 0 && draws.every((d) => s.has(d.draw.id));
-      return allAreCollapsed ? new Set() : new Set(draws.map((d) => d.draw.id));
+      const allAreCollapsed =
+        collapsibleDraws.length > 0 && collapsibleDraws.every((d) => s.has(d.draw.id));
+      return allAreCollapsed ? new Set() : new Set(collapsibleDraws.map((d) => d.draw.id));
     });
   };
 
@@ -172,7 +185,9 @@ export default function LottoClient() {
     try {
       const r = await getLottoDraws(500);
       setDraws(r.draws);
-      setCollapsedIds(new Set(r.draws.map((d) => d.draw.id)));
+      setCollapsedIds(
+        new Set(r.draws.filter((d) => d.attempts.length > 0).map((d) => d.draw.id)),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load lotto results");
       setDraws([]);
@@ -222,10 +237,10 @@ export default function LottoClient() {
       return;
     }
     let drawDate: string;
-    let numbers: number[];
+    let numbers: number[] | null;
     try {
       drawDate = parseDrawDate(drawModal.drawDate);
-      numbers = parseNumbers(drawModal.numbersText);
+      numbers = parseOptionalNumbers(drawModal.numbersText);
     } catch (err) {
       setDrawFormError(err instanceof Error ? err.message : "Invalid input");
       return;
@@ -329,7 +344,8 @@ export default function LottoClient() {
   const drawPredictions = useMemo<
     { key: string; title: string; reasoning: string; numbers: number[] }[]
   >(() => {
-    if (draws.length === 0) return [];
+    const resultDraws = draws.filter((d) => d.draw.numbers.length === 6);
+    if (resultDraws.length === 0) return [];
 
     const pick = (
       entries: [number, number][],
@@ -355,10 +371,10 @@ export default function LottoClient() {
       return Array.from(freq.entries());
     };
 
-    const allFreq = freqOver(draws);
+    const allFreq = freqOver(resultDraws);
 
     const RECENT_WINDOW = 10;
-    const recentDraws = draws.slice(0, RECENT_WINDOW); // draws are newest-first
+    const recentDraws = resultDraws.slice(0, RECENT_WINDOW); // newest-first
     const recentFreq = freqOver(recentDraws);
 
     // One number per equal slice of the 1-58 range, favoring the most
@@ -387,13 +403,13 @@ export default function LottoClient() {
       {
         key: "hot",
         title: "Hot numbers",
-        reasoning: `Drawn most often across all ${draws.length} logged ${plural(draws.length)} — the theory that a number "on a streak" keeps coming up.`,
+        reasoning: `Drawn most often across all ${resultDraws.length} logged ${plural(resultDraws.length)} — the theory that a number "on a streak" keeps coming up.`,
         numbers: pick(allFreq, "top"),
       },
       {
         key: "cold",
         title: "Cold numbers",
-        reasoning: `Drawn least often (or never) across all ${draws.length} logged ${plural(draws.length)} — the "overdue" theory, that a number absent this long is due to appear.`,
+        reasoning: `Drawn least often (or never) across all ${resultDraws.length} logged ${plural(resultDraws.length)} — the "overdue" theory, that a number absent this long is due to appear.`,
         numbers: pick(allFreq, "bottom"),
       },
       {
@@ -492,7 +508,7 @@ export default function LottoClient() {
         <p className={DASHED_EMPTY_CLASSES}>No results yet — add one to get started.</p>
       )}
 
-      {draws.length > 0 && (
+      {collapsibleDraws.length > 0 && (
         <div className="flex justify-end">
           <button
             type="button"
@@ -506,20 +522,29 @@ export default function LottoClient() {
 
       <div className="flex flex-col gap-5">
         {draws.map((detail) => {
+          const hasResult = detail.draw.numbers.length === 6;
           const drawSet = new Set(detail.draw.numbers);
-          const collapsed = collapsedIds.has(detail.draw.id);
-          const attemptsByMatch = detail.attempts
-            .map((attempt) => ({
-              attempt,
-              matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
-            }))
-            .sort((a, b) => b.matchCount - a.matchCount);
-          const matchBreakdown = [3, 4, 5, 6]
-            .map((tier) => ({
-              tier,
-              count: attemptsByMatch.filter((a) => a.matchCount === tier).length,
-            }))
-            .filter((b) => b.count > 0);
+          const hasAttempts = detail.attempts.length > 0;
+          const collapsed = hasAttempts && collapsedIds.has(detail.draw.id);
+          // Without a result yet, there's nothing to match attempts against —
+          // skip the match/tier math entirely rather than showing everything
+          // as a false "0/6 matched".
+          const attemptsByMatch = hasResult
+            ? detail.attempts
+                .map((attempt) => ({
+                  attempt,
+                  matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
+                }))
+                .sort((a, b) => b.matchCount - a.matchCount)
+            : [];
+          const matchBreakdown = hasResult
+            ? [3, 4, 5, 6]
+                .map((tier) => ({
+                  tier,
+                  count: attemptsByMatch.filter((a) => a.matchCount === tier).length,
+                }))
+                .filter((b) => b.count > 0)
+            : [];
           const attemptGroups = attemptsByMatch.reduce<
             { matchCount: number; items: typeof attemptsByMatch }[]
           >((groups, item) => {
@@ -531,40 +556,58 @@ export default function LottoClient() {
             }
             return groups;
           }, []);
+          const drawNumbersDisplay = hasResult ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {detail.draw.numbers.map((n) => (
+                <NumberBall key={n} n={n} variant="result" />
+              ))}
+            </div>
+          ) : (
+            <span className="mt-2 inline-block rounded-full border border-dashed border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              Result not in yet
+            </span>
+          );
           return (
             <section key={detail.draw.id} className={CARD_CLASSES}>
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <button
-                  type="button"
-                  className="flex min-w-0 items-start gap-2 text-left"
-                  aria-expanded={!collapsed}
-                  onClick={() => toggleCollapsed(detail.draw.id)}
-                >
-                  <span
-                    className={`mt-1.5 inline-block shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
-                      collapsed ? "-rotate-90" : ""
-                    }`}
-                    aria-hidden
+                {hasAttempts ? (
+                  <button
+                    type="button"
+                    className="flex min-w-0 items-start gap-2 text-left"
+                    aria-expanded={!collapsed}
+                    onClick={() => toggleCollapsed(detail.draw.id)}
                   >
-                    ▾
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                      {formatDate(detail.draw.draw_date)}
-                      {collapsed && (
-                        <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
-                          ({detail.attempts.length} attempt
-                          {detail.attempts.length === 1 ? "" : "s"})
-                        </span>
-                      )}
-                    </h2>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {detail.draw.numbers.map((n) => (
-                        <NumberBall key={n} n={n} variant="result" />
-                      ))}
+                    <span
+                      className={`mt-1.5 inline-block shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
+                        collapsed ? "-rotate-90" : ""
+                      }`}
+                      aria-hidden
+                    >
+                      ▾
+                    </span>
+                    <div>
+                      <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                        {formatDate(detail.draw.draw_date)}
+                        {collapsed && (
+                          <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                            ({detail.attempts.length} attempt
+                            {detail.attempts.length === 1 ? "" : "s"})
+                          </span>
+                        )}
+                      </h2>
+                      {drawNumbersDisplay}
+                    </div>
+                  </button>
+                ) : (
+                  <div className="flex min-w-0 items-start gap-2">
+                    <div>
+                      <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                        {formatDate(detail.draw.draw_date)}
+                      </h2>
+                      {drawNumbersDisplay}
                     </div>
                   </div>
-                </button>
+                )}
                 {matchBreakdown.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5">
                     {matchBreakdown.map(({ tier, count }) => (
@@ -578,6 +621,14 @@ export default function LottoClient() {
                   </div>
                 )}
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+                    onClick={() => openAddAttempt(detail.draw.id)}
+                  >
+                    + Add attempt
+                  </button>
                   <button
                     type="button"
                     disabled={saving}
@@ -618,6 +669,42 @@ export default function LottoClient() {
                   <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-500">
                     No attempts logged for this date yet.
                   </p>
+                ) : !hasResult ? (
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {detail.attempts.map((attempt) => (
+                      <li
+                        key={attempt.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {attempt.numbers.map((n) => (
+                            <NumberBall key={n} n={n} variant="neutral" />
+                          ))}
+                          <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                            Awaiting result
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={saving}
+                            className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                            onClick={() => openEditAttempt(detail.draw.id, attempt)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={saving}
+                            className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                            onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
                   <div className="mt-3 flex flex-col gap-3">
                     {attemptGroups.map((group) => (
@@ -722,16 +809,20 @@ export default function LottoClient() {
             <span className="text-xs text-zinc-500">{DRAW_DATE_HELP}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Winning numbers</span>
+            <span className="text-zinc-600 dark:text-zinc-400">
+              Winning numbers <span className="font-normal text-zinc-400">(optional)</span>
+            </span>
             <input
-              required
               type="text"
               className={INPUT_CLASSES}
               value={drawModal.numbersText}
               disabled={saving}
               onChange={(e) => setDrawModal((m) => ({ ...m, numbersText: e.target.value }))}
             />
-            <span className="text-xs text-zinc-500">{NUMBERS_HELP}</span>
+            <span className="text-xs text-zinc-500">
+              {NUMBERS_HELP} — leave blank if the draw hasn&apos;t happened yet; fill it in
+              once the result is announced.
+            </span>
           </label>
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>

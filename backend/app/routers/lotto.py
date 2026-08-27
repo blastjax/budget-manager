@@ -28,6 +28,9 @@ router = APIRouter(tags=["lotto"], dependencies=[Depends(require_db)])
 
 
 def _numbers(row: dict[str, Any]) -> list[int]:
+    """A draw's winning numbers, or `[]` if the result isn't in yet."""
+    if row["n1"] is None:
+        return []
     return [row["n1"], row["n2"], row["n3"], row["n4"], row["n5"], row["n6"]]
 
 
