@@ -313,7 +313,6 @@ export default function MonthlyExpensesClient() {
               className={INPUT_CLASSES}
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Netflix"
               disabled={saving}
             />
           </label>

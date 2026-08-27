@@ -928,7 +928,6 @@ export default function InstallmentsClient() {
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                placeholder="—"
                                 className="w-24 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
                                 value={ld.interest}
                                 onChange={(e) =>
@@ -1446,7 +1445,6 @@ export default function InstallmentsClient() {
                             <input
                               type="text"
                               inputMode="decimal"
-                              placeholder="—"
                               draggable={false}
                               className="w-24 cursor-text rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
                               value={

@@ -26,10 +26,8 @@ import {
 
 const NUMBERS_HELP =
   "6 unique numbers, 1-58 — separate with commas, spaces, or dashes (e.g. 3, 17, 29, 42, 58, 1 or 03-17-29-42-58-01)";
-const NUMBERS_PLACEHOLDER = "3, 17, 29, 42, 58, 1  or  03-17-29-42-58-01";
 
 const DRAW_DATE_HELP = "YYYY-MM-DD or M/D/YYYY (e.g. 2026-07-07 or 7/7/2026)";
-const DRAW_DATE_PLACEHOLDER = "2026-07-07  or  7/7/2026";
 
 /** Turns a validated y/m/d into "YYYY-MM-DD", rejecting dates like Feb 30. */
 function toIsoDate(year: number, month: number, day: number): string {
@@ -689,7 +687,6 @@ export default function LottoClient() {
             <input
               required
               type="text"
-              placeholder={DRAW_DATE_PLACEHOLDER}
               className={INPUT_CLASSES}
               value={drawModal.drawDate}
               disabled={saving}
@@ -702,7 +699,6 @@ export default function LottoClient() {
             <input
               required
               type="text"
-              placeholder={NUMBERS_PLACEHOLDER}
               className={INPUT_CLASSES}
               value={drawModal.numbersText}
               disabled={saving}
@@ -750,7 +746,6 @@ export default function LottoClient() {
             <input
               required
               type="text"
-              placeholder={NUMBERS_PLACEHOLDER}
               className={INPUT_CLASSES}
               value={attemptModal.numbersText}
               disabled={saving}

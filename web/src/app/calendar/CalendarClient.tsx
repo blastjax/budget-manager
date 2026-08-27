@@ -1694,7 +1694,6 @@ export default function CalendarClient() {
                 className={INPUT_CLASSES}
                 value={expenseForm.description}
                 onChange={(e) => setExpenseForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="e.g. Rent"
                 disabled={savingExpense}
               />
             </label>
@@ -1836,7 +1835,6 @@ export default function CalendarClient() {
                     if (formatted != null) setTransferSpent(formatted);
                   }}
                   disabled={savingTransfer}
-                  placeholder="0.00"
                 />
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">
                   Fills in the amount to move below: {fmtMoney(transfer.fromAmount)} budget − spent.
@@ -1931,7 +1929,6 @@ export default function CalendarClient() {
                     if (evaluated != null) setSpendAmount(evaluated);
                   }}
                   disabled={savingSpend}
-                  placeholder="0.00"
                 />
               </label>
               {spendError && (

@@ -116,7 +116,6 @@ export function PayslipFormFields({
             onChange={(e) =>
               setForm((f) => ({ ...f, period_year: e.target.value }))
             }
-            placeholder="e.g. 2024"
             disabled={disabled || lockPeriod}
           />
         </label>

@@ -781,7 +781,6 @@ export default function MosaicClient() {
                 type="text"
                 readOnly
                 value={currentCode ?? ""}
-                placeholder="Paint or generate a board to get a code"
                 className={`${INPUT_CLASSES} flex-1 px-2 py-1.5 text-xs`}
                 onFocus={(e) => e.currentTarget.select()}
               />
@@ -803,7 +802,6 @@ export default function MosaicClient() {
                 type="text"
                 value={codeInput}
                 onChange={(e) => setCodeInput(e.target.value)}
-                placeholder="Paste a board code"
                 className={`${INPUT_CLASSES} flex-1 px-2 py-1.5 text-xs`}
               />
               <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={loadFromCode}>

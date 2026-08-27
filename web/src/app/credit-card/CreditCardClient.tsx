@@ -652,7 +652,6 @@ export default function CreditCardClient() {
                         type="text"
                         inputMode="decimal"
                         className={INPUT_CLASSES}
-                        placeholder="e.g. 5000"
                         value={calcPaymentInput}
                         onChange={(e) => setCalcPaymentInput(e.target.value)}
                         onBlur={(e) => {
@@ -710,7 +709,6 @@ export default function CreditCardClient() {
                         type="text"
                         inputMode="decimal"
                         className={INPUT_CLASSES}
-                        placeholder="e.g. 6"
                         value={calcMonthsInput}
                         onChange={(e) => setCalcMonthsInput(e.target.value)}
                       />
@@ -863,7 +861,6 @@ export default function CreditCardClient() {
               className={INPUT_CLASSES}
               value={cardForm.name}
               onChange={(e) => setCardForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. UnionBank Rewards"
               disabled={cardSaving}
             />
           </label>

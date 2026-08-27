@@ -131,7 +131,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             className="mb-3 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-center text-lg tracking-widest text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
-            placeholder="000000"
           />
           {error ? (
             <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>

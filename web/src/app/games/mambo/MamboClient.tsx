@@ -834,7 +834,6 @@ export default function MamboClient() {
                 type="text"
                 value={codeInput}
                 onChange={(e) => setCodeInput(e.target.value)}
-                placeholder="Paste a puzzle code"
                 className={`${INPUT_CLASSES} min-w-0 flex-1 px-2 py-1.5 text-xs`}
               />
               <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={loadFromCode}>
