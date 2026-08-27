@@ -9,19 +9,25 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
-
-COPY . .
-
 # Run unprivileged. uid/gid 1000 matches the default `ubuntu` user on EC2, so
 # the bind-mounted ./data directory (which holds budget.sqlite plus its -wal
 # and -shm files) stays writable; the deploy workflow chowns it to match.
+#
+# Created before the source is copied so the layer stays cached across code
+# changes. It used to run last, after `COPY . .`, which meant every push to
+# backend/ re-ran a recursive chown and wrote a second full copy of /app into
+# a new layer instead of reusing this one.
 RUN groupadd --system --gid 1000 app \
     && useradd --system --uid 1000 --gid app app \
     && mkdir -p /app/data \
     && chown -R app:app /app
+
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
+
+# --chown here replaces the post-copy `chown -R`: same result, no extra layer.
+COPY --chown=app:app . .
 
 USER app
 

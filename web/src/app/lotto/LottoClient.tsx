@@ -143,6 +143,7 @@ export default function LottoClient() {
   const [error, setError] = useState<string | null>(null);
 
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
+  const [predictionsCollapsed, setPredictionsCollapsed] = useState(false);
 
   const toggleCollapsed = (drawId: number) => {
     setCollapsedIds((s) => {
@@ -323,22 +324,66 @@ export default function LottoClient() {
 
   const anyModalOpen = drawModal.open || attemptModal.open;
 
-  // Naive "next draw" pick: the 6 numbers that have come up most often across
-  // every past result, ties broken by number. Just a frequency read of
-  // history — not a real prediction of a random draw.
-  const nextDrawPick = useMemo(() => {
+  // A few naive "next draw" picks, each a different frequency read of past
+  // results — not real predictions of a random draw, just different lenses
+  // on the history logged so far.
+  const drawPredictions = useMemo<
+    { key: string; title: string; reasoning: string; numbers: number[] }[]
+  >(() => {
     if (draws.length === 0) return [];
-    const freq = new Map<number, number>();
-    for (const { draw } of draws) {
-      for (const n of draw.numbers) {
-        freq.set(n, (freq.get(n) ?? 0) + 1);
+
+    const pick = (
+      entries: [number, number][],
+      order: "top" | "bottom",
+    ): number[] =>
+      entries
+        .slice()
+        .sort((a, b) =>
+          order === "top" ? b[1] - a[1] || a[0] - b[0] : a[1] - b[1] || a[0] - b[0],
+        )
+        .slice(0, 6)
+        .map(([n]) => n)
+        .sort((a, b) => a - b);
+
+    const freqOver = (subset: LottoDrawDetail[]): [number, number][] => {
+      const freq = new Map<number, number>();
+      for (let n = 1; n <= 58; n++) freq.set(n, 0);
+      for (const { draw } of subset) {
+        for (const n of draw.numbers) {
+          freq.set(n, (freq.get(n) ?? 0) + 1);
+        }
       }
-    }
-    return Array.from(freq.entries())
-      .sort((a, b) => b[1] - a[1] || a[0] - b[0])
-      .slice(0, 6)
-      .map(([n]) => n)
-      .sort((a, b) => a - b);
+      return Array.from(freq.entries());
+    };
+
+    const allFreq = freqOver(draws);
+
+    const RECENT_WINDOW = 10;
+    const recentDraws = draws.slice(0, RECENT_WINDOW); // draws are newest-first
+    const recentFreq = freqOver(recentDraws);
+
+    const plural = (n: number) => (n === 1 ? "result" : "results");
+
+    return [
+      {
+        key: "hot",
+        title: "Hot numbers",
+        reasoning: `Drawn most often across all ${draws.length} logged ${plural(draws.length)} — the theory that a number "on a streak" keeps coming up.`,
+        numbers: pick(allFreq, "top"),
+      },
+      {
+        key: "cold",
+        title: "Cold numbers",
+        reasoning: `Drawn least often (or never) across all ${draws.length} logged ${plural(draws.length)} — the "overdue" theory, that a number absent this long is due to appear.`,
+        numbers: pick(allFreq, "bottom"),
+      },
+      {
+        key: "recent",
+        title: "Recent trend",
+        reasoning: `Drawn most often in just the last ${recentDraws.length} logged ${plural(recentDraws.length)} — numbers trending lately rather than over all-time history.`,
+        numbers: pick(recentFreq, "top"),
+      },
+    ];
   }, [draws]);
 
   return (
@@ -353,20 +398,61 @@ export default function LottoClient() {
         </p>
       </header>
 
-      {nextDrawPick.length > 0 && (
+      {drawPredictions.length > 0 && (
         <section className="rounded-xl border border-orange-300 bg-orange-50 p-5 shadow-sm dark:border-orange-800 dark:bg-orange-950/30 sm:p-6">
-          <h2 className="text-sm font-semibold text-orange-900 dark:text-orange-200">
-            Next draw pick
-          </h2>
-          <p className="mt-1 text-xs text-orange-800/80 dark:text-orange-300/80">
-            The 6 numbers that have come up most often across past results — just a
-            frequency read of history, not a real prediction.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {nextDrawPick.map((n) => (
-              <NumberBall key={n} n={n} variant="pick" />
-            ))}
-          </div>
+          <button
+            type="button"
+            className="flex w-full items-start justify-between gap-2 text-left"
+            aria-expanded={!predictionsCollapsed}
+            onClick={() => setPredictionsCollapsed((c) => !c)}
+          >
+            <div>
+              <h2 className="text-sm font-semibold text-orange-900 dark:text-orange-200">
+                Next draw picks
+                {predictionsCollapsed && (
+                  <span className="ml-2 text-xs font-normal text-orange-800/70 dark:text-orange-300/70">
+                    ({drawPredictions.length})
+                  </span>
+                )}
+              </h2>
+              <p className="mt-1 text-xs text-orange-800/80 dark:text-orange-300/80">
+                A few different frequency reads of past results — not real predictions of
+                a random draw.
+              </p>
+            </div>
+            <span
+              className={`mt-1 inline-block shrink-0 text-orange-500 transition-transform dark:text-orange-400 ${
+                predictionsCollapsed ? "-rotate-90" : ""
+              }`}
+              aria-hidden
+            >
+              ▾
+            </span>
+          </button>
+          {!predictionsCollapsed && (
+            <div className="mt-4 flex flex-col gap-4">
+              {drawPredictions.map((prediction, i) => (
+                <div
+                  key={prediction.key}
+                  className={
+                    i > 0 ? "border-t border-orange-200 pt-4 dark:border-orange-900" : ""
+                  }
+                >
+                  <h3 className="text-sm font-medium text-orange-900 dark:text-orange-200">
+                    {prediction.title}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-orange-800/80 dark:text-orange-300/80">
+                    {prediction.reasoning}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {prediction.numbers.map((n) => (
+                      <NumberBall key={n} n={n} variant="pick" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
