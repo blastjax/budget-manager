@@ -143,7 +143,7 @@ export default function LottoClient() {
   const [error, setError] = useState<string | null>(null);
 
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
-  const [predictionsCollapsed, setPredictionsCollapsed] = useState(false);
+  const [predictionsCollapsed, setPredictionsCollapsed] = useState(true);
 
   const toggleCollapsed = (drawId: number) => {
     setCollapsedIds((s) => {
@@ -174,6 +174,7 @@ export default function LottoClient() {
     try {
       const r = await getLottoDraws(500);
       setDraws(r.draws);
+      setCollapsedIds(new Set(r.draws.map((d) => d.draw.id)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load lotto results");
       setDraws([]);
