@@ -650,6 +650,8 @@ export default function LottoClient() {
 
               {!collapsed && (
               <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                {detail.attempts.length > 0 && (
+                <>
                 <div className="flex flex-wrap items-center gap-3">
                   <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Attempts
@@ -665,11 +667,7 @@ export default function LottoClient() {
                   )}
                 </div>
 
-                {detail.attempts.length === 0 ? (
-                  <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-500">
-                    No attempts logged for this date yet.
-                  </p>
-                ) : !hasResult ? (
+                {!hasResult ? (
                   <ul className="mt-3 flex flex-col gap-2">
                     {detail.attempts.map((attempt) => (
                       <li
@@ -760,6 +758,8 @@ export default function LottoClient() {
                       </div>
                     ))}
                   </div>
+                )}
+                </>
                 )}
 
                 <button
