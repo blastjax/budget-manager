@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import {
@@ -159,7 +159,7 @@ function NumberBall({
   variant = "neutral",
 }: {
   n: number;
-  variant?: "neutral" | "result" | "match" | "miss" | "pick";
+  variant?: "neutral" | "result" | "match" | "miss";
 }) {
   const styles: Record<string, string> = {
     neutral:
@@ -169,7 +169,6 @@ function NumberBall({
     match:
       "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-500 dark:bg-emerald-600",
     miss: "border-zinc-300 bg-zinc-50 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500",
-    pick: "border-orange-500 bg-orange-500 text-white dark:border-orange-500 dark:bg-orange-600",
   };
   return (
     <span
@@ -222,7 +221,6 @@ export default function LottoClient() {
   const [error, setError] = useState<string | null>(null);
 
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
-  const [predictionsCollapsed, setPredictionsCollapsed] = useState(true);
 
   const toggleCollapsed = (drawId: number) => {
     setCollapsedIds((s) => {
@@ -568,96 +566,6 @@ export default function LottoClient() {
 
   const anyModalOpen = drawModal.open || attemptModal.open || uploadModal.open;
 
-  // A few naive "next draw" picks, each a different frequency read of past
-  // results — not real predictions of a random draw, just different lenses
-  // on the history logged so far.
-  const drawPredictions = useMemo<
-    { key: string; title: string; reasoning: string; numbers: number[] }[]
-  >(() => {
-    const resultDraws = draws.filter((d) => d.draw.numbers.length === 6);
-    if (resultDraws.length === 0) return [];
-
-    const pick = (
-      entries: [number, number][],
-      order: "top" | "bottom",
-    ): number[] =>
-      entries
-        .slice()
-        .sort((a, b) =>
-          order === "top" ? b[1] - a[1] || a[0] - b[0] : a[1] - b[1] || a[0] - b[0],
-        )
-        .slice(0, 6)
-        .map(([n]) => n)
-        .sort((a, b) => a - b);
-
-    const freqOver = (subset: LottoDrawDetail[]): [number, number][] => {
-      const freq = new Map<number, number>();
-      for (let n = 1; n <= 58; n++) freq.set(n, 0);
-      for (const { draw } of subset) {
-        for (const n of draw.numbers) {
-          freq.set(n, (freq.get(n) ?? 0) + 1);
-        }
-      }
-      return Array.from(freq.entries());
-    };
-
-    const allFreq = freqOver(resultDraws);
-
-    const RECENT_WINDOW = 10;
-    const recentDraws = resultDraws.slice(0, RECENT_WINDOW); // newest-first
-    const recentFreq = freqOver(recentDraws);
-
-    // One number per equal slice of the 1-58 range, favoring the most
-    // frequent number within each slice — spreads the pick across the full
-    // range instead of letting it cluster in one neighborhood.
-    const pickBalanced = (entries: [number, number][]): number[] => {
-      const byNumber = new Map(entries);
-      const bucketCount = 6;
-      const bucketSize = Math.ceil(58 / bucketCount);
-      const picks: number[] = [];
-      for (let b = 0; b < bucketCount; b++) {
-        const start = b * bucketSize + 1;
-        const end = Math.min(58, start + bucketSize - 1);
-        let best = start;
-        for (let n = start; n <= end; n++) {
-          if ((byNumber.get(n) ?? 0) > (byNumber.get(best) ?? 0)) best = n;
-        }
-        picks.push(best);
-      }
-      return picks.sort((a, b) => a - b);
-    };
-
-    const plural = (n: number) => (n === 1 ? "result" : "results");
-
-    return [
-      {
-        key: "hot",
-        title: "Hot numbers",
-        reasoning: `Drawn most often across all ${resultDraws.length} logged ${plural(resultDraws.length)} — the theory that a number "on a streak" keeps coming up.`,
-        numbers: pick(allFreq, "top"),
-      },
-      {
-        key: "cold",
-        title: "Cold numbers",
-        reasoning: `Drawn least often (or never) across all ${resultDraws.length} logged ${plural(resultDraws.length)} — the "overdue" theory, that a number absent this long is due to appear.`,
-        numbers: pick(allFreq, "bottom"),
-      },
-      {
-        key: "recent",
-        title: "Recent trend",
-        reasoning: `Drawn most often in just the last ${recentDraws.length} logged ${plural(recentDraws.length)} — numbers trending lately rather than over all-time history.`,
-        numbers: pick(recentFreq, "top"),
-      },
-      {
-        key: "balanced",
-        title: "Balanced spread",
-        reasoning:
-          "One number from each equal slice of the 1-58 range (1-10, 11-20, …), favoring whichever number in that slice has come up most — spreads the pick across the full range instead of clustering.",
-        numbers: pickBalanced(allFreq),
-      },
-    ];
-  }, [draws]);
-
   return (
     <div className="relative mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
       <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
@@ -680,64 +588,6 @@ export default function LottoClient() {
           </button>
         </div>
       </header>
-
-      {drawPredictions.length > 0 && (
-        <section className="rounded-xl border border-orange-300 bg-orange-50 p-5 shadow-sm dark:border-orange-800 dark:bg-orange-950/30 sm:p-6">
-          <button
-            type="button"
-            className="flex w-full items-start justify-between gap-2 text-left"
-            aria-expanded={!predictionsCollapsed}
-            onClick={() => setPredictionsCollapsed((c) => !c)}
-          >
-            <div>
-              <h2 className="text-sm font-semibold text-orange-900 dark:text-orange-200">
-                Next draw picks
-                {predictionsCollapsed && (
-                  <span className="ml-2 text-xs font-normal text-orange-800/70 dark:text-orange-300/70">
-                    ({drawPredictions.length})
-                  </span>
-                )}
-              </h2>
-              <p className="mt-1 text-xs text-orange-800/80 dark:text-orange-300/80">
-                A few different frequency reads of past results — not real predictions of
-                a random draw.
-              </p>
-            </div>
-            <span
-              className={`mt-1 inline-block shrink-0 text-orange-500 transition-transform dark:text-orange-400 ${
-                predictionsCollapsed ? "-rotate-90" : ""
-              }`}
-              aria-hidden
-            >
-              ▾
-            </span>
-          </button>
-          {!predictionsCollapsed && (
-            <div className="mt-4 flex flex-col gap-4">
-              {drawPredictions.map((prediction, i) => (
-                <div
-                  key={prediction.key}
-                  className={
-                    i > 0 ? "border-t border-orange-200 pt-4 dark:border-orange-900" : ""
-                  }
-                >
-                  <h3 className="text-sm font-medium text-orange-900 dark:text-orange-200">
-                    {prediction.title}
-                  </h3>
-                  <p className="mt-0.5 text-xs text-orange-800/80 dark:text-orange-300/80">
-                    {prediction.reasoning}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {prediction.numbers.map((n) => (
-                      <NumberBall key={n} n={n} variant="pick" />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
