@@ -428,6 +428,75 @@ export default function LottoClient() {
     }
   };
 
+  /** The first unused ticket number for a draw, so a freshly-grouped pair
+   * gets a ticket that doesn't collide with any existing one. */
+  const nextTicketNumber = (attempts: LottoAttemptRow[]): number =>
+    attempts.reduce((max, a) => (a.ticket != null && a.ticket > max ? a.ticket : max), 0) + 1;
+
+  const setAttemptTicket = async (
+    drawId: number,
+    attempt: LottoAttemptRow,
+    ticket: number | null,
+  ) => {
+    if (attempt.ticket === ticket) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const detail = await updateLottoAttempt(drawId, attempt.id, attempt.numbers, ticket);
+      upsertLocalDraw(detail);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to group attempt");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** The attempt named by a drop event's drag data, looked up in current state. */
+  const attemptFromDragEvent = (
+    drawId: number,
+    e: React.DragEvent,
+  ): LottoAttemptRow | null => {
+    const id = Number(e.dataTransfer.getData("text/plain"));
+    if (!Number.isFinite(id)) return null;
+    return draws.find((d) => d.draw.id === drawId)?.attempts.find((a) => a.id === id) ?? null;
+  };
+
+  /** Dropping one attempt onto another groups them: if the target is
+   * already on a ticket, the dragged attempt joins it; if neither is
+   * grouped yet, a new ticket is minted for both. */
+  const onDropOnAttempt = async (
+    drawId: number,
+    target: LottoAttemptRow,
+    e: React.DragEvent,
+  ) => {
+    e.preventDefault();
+    const dragged = attemptFromDragEvent(drawId, e);
+    if (!dragged || dragged.id === target.id) return;
+    let ticket = target.ticket;
+    if (ticket == null) {
+      const draw = draws.find((d) => d.draw.id === drawId);
+      ticket = nextTicketNumber(draw?.attempts ?? []);
+      await setAttemptTicket(drawId, target, ticket);
+    }
+    await setAttemptTicket(drawId, dragged, ticket);
+  };
+
+  /** Dropping an attempt directly onto a ticket cluster joins that ticket. */
+  const onDropOnTicket = async (drawId: number, ticket: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const dragged = attemptFromDragEvent(drawId, e);
+    if (!dragged) return;
+    await setAttemptTicket(drawId, dragged, ticket);
+  };
+
+  /** Dropping an attempt onto the ungrouped section pulls it out of its ticket. */
+  const onDropToUngroup = async (drawId: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const dragged = attemptFromDragEvent(drawId, e);
+    if (!dragged) return;
+    await setAttemptTicket(drawId, dragged, null);
+  };
+
   const openUpload = () => {
     setUploadFormError(null);
     setUploadFile(null);
@@ -719,17 +788,14 @@ export default function LottoClient() {
 
           // Cluster attempts by ticket — up to a handful of board plays on
           // one physical ticket share a ticket number, so they're grouped
-          // together instead of scattered across a flat list; ungrouped
-          // attempts stand alone. Clusters are ordered by their best match
-          // (6/6 first), ticket number breaking ties, ungrouped attempts
-          // sinking to the bottom of a tie.
-          type AttemptCluster = {
-            ticket: number | null;
-            items: typeof attemptsByMatch;
-            bestMatch: number;
-          };
+          // together instead of scattered across a flat list. Ticket
+          // clusters are ordered by their best match (6/6 first), ticket
+          // number breaking ties; ungrouped attempts sit in their own
+          // section underneath (drag one onto a ticket, or onto another
+          // ungrouped attempt, to group it).
+          type AttemptCluster = { ticket: number; items: typeof attemptsByMatch; bestMatch: number };
           const byTicket = new Map<number, typeof attemptsByMatch>();
-          const loose: typeof attemptsByMatch = [];
+          const looseItems: typeof attemptsByMatch = [];
           for (const item of attemptsByMatch) {
             const ticket = item.attempt.ticket;
             if (ticket != null) {
@@ -737,26 +803,19 @@ export default function LottoClient() {
               if (arr) arr.push(item);
               else byTicket.set(ticket, [item]);
             } else {
-              loose.push(item);
+              looseItems.push(item);
             }
           }
-          const attemptClusters: AttemptCluster[] = [
-            ...Array.from(byTicket.entries()).map(([ticket, items]) => ({
+          looseItems.sort((a, b) => b.matchCount - a.matchCount);
+          const ticketClusters: AttemptCluster[] = Array.from(byTicket.entries())
+            .map(([ticket, items]) => ({
               ticket,
               items: items.slice().sort((a, b) => b.matchCount - a.matchCount),
               bestMatch: Math.max(...items.map((i) => i.matchCount)),
-            })),
-            ...loose.map((item) => ({
-              ticket: null,
-              items: [item],
-              bestMatch: item.matchCount,
-            })),
-          ].sort((a, b) => {
-            if (b.bestMatch !== a.bestMatch) return b.bestMatch - a.bestMatch;
-            if (a.ticket == null) return 1;
-            if (b.ticket == null) return -1;
-            return a.ticket - b.ticket;
-          });
+            }))
+            .sort((a, b) =>
+              b.bestMatch !== a.bestMatch ? b.bestMatch - a.bestMatch : a.ticket - b.ticket,
+            );
           const drawNumbersDisplay = hasResult ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {detail.draw.numbers.map((n) => (
@@ -771,7 +830,26 @@ export default function LottoClient() {
           const renderAttemptRow = (attempt: LottoAttemptRow, matchCount: number) => (
             <li
               key={attempt.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+              draggable
+              title="Drag onto another attempt or ticket to group them"
+              className="flex cursor-grab flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950"
+              onDragStart={(e) => {
+                const el = e.target as HTMLElement | null;
+                if (!el || el.closest("button")) {
+                  e.preventDefault();
+                  return;
+                }
+                e.dataTransfer.setData("text/plain", String(attempt.id));
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={(e) => {
+                e.stopPropagation();
+                void onDropOnAttempt(detail.draw.id, attempt, e);
+              }}
             >
               <div className="flex flex-wrap items-center gap-1.5">
                 {attempt.numbers.map((n) => (
@@ -904,46 +982,68 @@ export default function LottoClient() {
                 </div>
 
                 <div className="mt-3 flex flex-col gap-3">
-                  {attemptClusters.map((cluster) =>
-                    cluster.ticket != null ? (
-                      <div
-                        key={`ticket-${cluster.ticket}`}
-                        className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-900/40"
-                      >
-                        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                          <span className="font-semibold text-zinc-700 dark:text-zinc-200">
-                            Ticket {cluster.ticket}
+                  {ticketClusters.map((cluster) => (
+                    <div
+                      key={`ticket-${cluster.ticket}`}
+                      className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-900/40"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                      }}
+                      onDrop={(e) => void onDropOnTicket(detail.draw.id, cluster.ticket, e)}
+                    >
+                      <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                        <span className="font-semibold text-zinc-700 dark:text-zinc-200">
+                          Ticket {cluster.ticket}
+                        </span>
+                        {hasResult && (
+                          <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                            best {cluster.bestMatch}/6
                           </span>
-                          {hasResult && (
-                            <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
-                              best {cluster.bestMatch}/6
-                            </span>
-                          )}
-                          <span>
-                            {cluster.items.length} attempt{cluster.items.length === 1 ? "" : "s"}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={saving}
-                            className="ml-auto rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-normal dark:border-zinc-600"
-                            onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
-                          >
-                            + Add to this ticket
-                          </button>
-                        </div>
-                        <ul className="flex flex-col gap-2">
-                          {cluster.items.map(({ attempt, matchCount }) =>
-                            renderAttemptRow(attempt, matchCount),
-                          )}
-                        </ul>
+                        )}
+                        <span>
+                          {cluster.items.length} attempt{cluster.items.length === 1 ? "" : "s"}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={saving}
+                          className="ml-auto rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-normal dark:border-zinc-600"
+                          onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
+                        >
+                          + Add to this ticket
+                        </button>
                       </div>
-                    ) : (
-                      <ul key={`loose-${cluster.items[0].attempt.id}`} className="flex flex-col gap-2">
+                      <ul className="flex flex-col gap-2">
                         {cluster.items.map(({ attempt, matchCount }) =>
                           renderAttemptRow(attempt, matchCount),
                         )}
                       </ul>
-                    ),
+                    </div>
+                  ))}
+                  {looseItems.length > 0 && (
+                    <div
+                      className={
+                        ticketClusters.length > 0
+                          ? "rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700"
+                          : ""
+                      }
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                      }}
+                      onDrop={(e) => void onDropToUngroup(detail.draw.id, e)}
+                    >
+                      {ticketClusters.length > 0 && (
+                        <div className="mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                          Ungrouped — drag onto a ticket (or another attempt) to group
+                        </div>
+                      )}
+                      <ul className="flex flex-col gap-2">
+                        {looseItems.map(({ attempt, matchCount }) =>
+                          renderAttemptRow(attempt, matchCount),
+                        )}
+                      </ul>
+                    </div>
                   )}
                 </div>
 
