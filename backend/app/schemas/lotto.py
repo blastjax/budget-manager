@@ -50,3 +50,8 @@ class LottoAttemptCreate(LottoNumbers):
     # ticket (up to a handful of picks per ticket), so the UI can cluster
     # them. None means the attempt isn't part of a ticket group.
     ticket: int | None = None
+
+
+class LottoAttemptHiddenUpdate(BaseModel):
+    # Hides or unhides an attempt without deleting it.
+    hidden: bool

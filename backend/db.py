@@ -381,6 +381,7 @@ _SCHEMA_STATEMENTS: list[str] = [
         n4 INTEGER NOT NULL,
         n5 INTEGER NOT NULL,
         n6 INTEGER NOT NULL,
+        hidden INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CHECK (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
     )
@@ -467,12 +468,32 @@ def _migrate_lotto_attempt_add_ticket() -> None:
         conn.close()
 
 
+def _migrate_lotto_attempt_add_hidden() -> None:
+    """Older DBs don't have the ``hidden`` column on ``lotto_attempt``. Hiding
+    an attempt tucks it out of the normal view without deleting it; existing
+    attempts get ``hidden = 0`` (visible)."""
+    path = sqlite_path()
+    if not path.exists():
+        return  # fresh DB — the CREATE TABLE statement below defines it correctly
+    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
+    try:
+        cols = conn.execute("PRAGMA table_info(lotto_attempt)").fetchall()
+        if not cols:
+            return  # table doesn't exist yet
+        if any(c[1] == "hidden" for c in cols):
+            return  # already migrated
+        conn.execute("ALTER TABLE lotto_attempt ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0")
+    finally:
+        conn.close()
+
+
 def init_schema() -> None:
     """Create every table/index that doesn't already exist. Idempotent and cheap
     enough to call on every startup — ``CREATE ... IF NOT EXISTS`` short-circuits
     once the schema is in place."""
     _migrate_lotto_draw_allow_pending()
     _migrate_lotto_attempt_add_ticket()
+    _migrate_lotto_attempt_add_hidden()
     with get_connection() as conn:
         for stmt in _SCHEMA_STATEMENTS:
             conn.execute(stmt)
@@ -2031,7 +2052,7 @@ def delete_pay_period_start_override(
 
 
 _LOTTO_DRAW_COLS = "id, draw_date, n1, n2, n3, n4, n5, n6, created_at"
-_LOTTO_ATTEMPT_COLS = "id, draw_id, ticket, n1, n2, n3, n4, n5, n6, created_at"
+_LOTTO_ATTEMPT_COLS = "id, draw_id, ticket, n1, n2, n3, n4, n5, n6, hidden, created_at"
 
 
 def _lotto_attempts_rows(cur: Any, draw_id: int) -> list[dict[str, Any]]:
@@ -2198,6 +2219,25 @@ def delete_lotto_attempt(draw_id: int, attempt_id: int) -> dict[str, Any] | None
             cur.execute(
                 "DELETE FROM lotto_attempt WHERE id = ? AND draw_id = ? RETURNING id",
                 (attempt_id, draw_id),
+            )
+            if not cur.fetchone():
+                return None
+            return _lotto_draw_detail(cur, draw_id)
+
+
+def set_lotto_attempt_hidden(
+    draw_id: int, attempt_id: int, hidden: bool
+) -> dict[str, Any] | None:
+    """Hide or unhide an attempt without deleting it."""
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                """
+                UPDATE lotto_attempt SET hidden = ?
+                WHERE id = ? AND draw_id = ?
+                RETURNING id
+                """,
+                (1 if hidden else 0, attempt_id, draw_id),
             )
             if not cur.fetchone():
                 return None

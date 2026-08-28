@@ -8,6 +8,7 @@ import {
   deleteLottoAttempt,
   deleteLottoDraw,
   getLottoDraws,
+  setLottoAttemptHidden,
   setLottoDraw,
   updateLottoAttempt,
   updateLottoDraw,
@@ -233,6 +234,9 @@ export default function LottoClient() {
   const [error, setError] = useState<string | null>(null);
 
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
+  // Hidden attempts are tucked out of view by default across every draw;
+  // this flips them all back into view at once.
+  const [showHiddenAttempts, setShowHiddenAttempts] = useState(false);
 
   const toggleCollapsed = (drawId: number) => {
     setCollapsedIds((s) => {
@@ -243,9 +247,14 @@ export default function LottoClient() {
     });
   };
 
-  // A draw with no attempts has nothing to hide, so it's never collapsible —
-  // only draws with attempts participate in collapse state.
+  // A draw with no attempts has nothing to collapse, so it's never
+  // collapsible — only draws with attempts participate in collapse state.
   const collapsibleDraws = draws.filter((d) => d.attempts.length > 0);
+
+  const totalHiddenAttempts = draws.reduce(
+    (sum, d) => sum + d.attempts.filter((a) => a.hidden).length,
+    0,
+  );
 
   const allCollapsed =
     collapsibleDraws.length > 0 && collapsibleDraws.every((d) => collapsedIds.has(d.draw.id));
@@ -438,6 +447,21 @@ export default function LottoClient() {
     }
   };
 
+  /** Hides or unhides an attempt without deleting it — hidden attempts stay
+   * in the data and reappear once "Show hidden" is switched on. */
+  const onToggleAttemptHidden = async (drawId: number, attempt: LottoAttemptRow) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const detail = await setLottoAttemptHidden(drawId, attempt.id, !attempt.hidden);
+      upsertLocalDraw(detail);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update attempt");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   /** The first unused ticket number for a draw, so a freshly-grouped pair
    * gets a ticket that doesn't collide with any existing one. */
   const nextTicketNumber = (attempts: LottoAttemptRow[]): number =>
@@ -611,15 +635,28 @@ export default function LottoClient() {
         <p className={DASHED_EMPTY_CLASSES}>No results yet — add one to get started.</p>
       )}
 
-      {collapsibleDraws.length > 0 && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
-            onClick={toggleCollapseAll}
-          >
-            {allCollapsed ? "Expand all" : "Collapse all"}
-          </button>
+      {(collapsibleDraws.length > 0 || totalHiddenAttempts > 0) && (
+        <div className="flex justify-end gap-2">
+          {totalHiddenAttempts > 0 && (
+            <button
+              type="button"
+              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+              onClick={() => setShowHiddenAttempts((s) => !s)}
+            >
+              {showHiddenAttempts
+                ? "Hide hidden attempts"
+                : `Show hidden attempts (${totalHiddenAttempts})`}
+            </button>
+          )}
+          {collapsibleDraws.length > 0 && (
+            <button
+              type="button"
+              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+              onClick={toggleCollapseAll}
+            >
+              {allCollapsed ? "Expand all" : "Collapse all"}
+            </button>
+          )}
         </div>
       )}
 
@@ -627,19 +664,31 @@ export default function LottoClient() {
         {draws.map((detail) => {
           const hasResult = detail.draw.numbers.length === 6;
           const drawSet = new Set(detail.draw.numbers);
-          const hasAttempts = detail.attempts.length > 0;
+          // The card's own header counts every attempt, hidden or not — only
+          // the list below it is filtered by "Show hidden".
+          const totalAttempts = detail.attempts.length;
+          const ticketCount = new Set(
+            detail.attempts.flatMap((a) => (a.ticket != null ? [a.ticket] : [])),
+          ).size;
+          // Hidden attempts stay in the data (nothing is deleted) but drop
+          // out of the normal view until "Show hidden" is switched on.
+          const visibleAttempts = showHiddenAttempts
+            ? detail.attempts
+            : detail.attempts.filter((a) => !a.hidden);
+          const hiddenCount = totalAttempts - visibleAttempts.length;
+          const hasAttempts = totalAttempts > 0;
           const collapsed = hasAttempts && collapsedIds.has(detail.draw.id);
           // Without a result yet, there's nothing to match attempts against —
           // matchCount is a placeholder (-1) rather than a false "0/6 matched".
-          // Order follows detail.attempts as logged (the sequence on the
+          // Order follows visibleAttempts as logged (the sequence on the
           // physical tickets) — see bumpMatches below for how strong matches
           // surface without disturbing that order.
           const attemptsByMatch = hasResult
-            ? detail.attempts.map((attempt) => ({
+            ? visibleAttempts.map((attempt) => ({
                 attempt,
                 matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
               }))
-            : detail.attempts.map((attempt) => ({ attempt, matchCount: -1 }));
+            : visibleAttempts.map((attempt) => ({ attempt, matchCount: -1 }));
           const matchBreakdown = hasResult
             ? [3, 4, 5, 6]
                 .map((tier) => ({
@@ -695,7 +744,9 @@ export default function LottoClient() {
               key={attempt.id}
               draggable
               title="Drag onto another attempt or ticket to group them"
-              className="flex cursor-grab flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950"
+              className={`flex cursor-grab flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950 ${
+                attempt.hidden ? "opacity-50" : ""
+              }`}
               onDragStart={(e) => {
                 const el = e.target as HTMLElement | null;
                 if (!el || el.closest("button")) {
@@ -725,6 +776,11 @@ export default function LottoClient() {
                 <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
                   {hasResult ? `${matchCount}/6 matched` : "Awaiting result"}
                 </span>
+                {attempt.hidden && (
+                  <span className="ml-1 rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                    Hidden
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -734,6 +790,14 @@ export default function LottoClient() {
                   onClick={() => openEditAttempt(detail.draw.id, attempt)}
                 >
                   Edit
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                  onClick={() => void onToggleAttemptHidden(detail.draw.id, attempt)}
+                >
+                  {attempt.hidden ? "Unhide" : "Hide"}
                 </button>
                 <button
                   type="button"
@@ -769,8 +833,12 @@ export default function LottoClient() {
                         {formatDate(detail.draw.draw_date)}
                         {collapsed && (
                           <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
-                            ({detail.attempts.length} attempt
-                            {detail.attempts.length === 1 ? "" : "s"})
+                            ({totalAttempts} attempt
+                            {totalAttempts === 1 ? "" : "s"}
+                            {ticketCount > 0
+                              ? `, ${ticketCount} ticket${ticketCount === 1 ? "" : "s"}`
+                              : ""}
+                            )
                           </span>
                         )}
                       </h2>
@@ -833,6 +901,16 @@ export default function LottoClient() {
                   <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Attempts
                   </h3>
+                  {ticketCount > 0 && (
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {ticketCount} ticket{ticketCount === 1 ? "" : "s"}
+                    </span>
+                  )}
+                  {hiddenCount > 0 && !showHiddenAttempts && (
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      ({hiddenCount} hidden)
+                    </span>
+                  )}
                   {matchBreakdown.length > 0 && (
                     <span className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                       {matchBreakdown.map(({ tier, count }) => (
