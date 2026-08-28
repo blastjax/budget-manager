@@ -982,6 +982,9 @@ export type LottoDrawRow = {
 export type LottoAttemptRow = {
   id: number;
   draw_id: number;
+  /** Groups this attempt with the other board plays on the same physical
+   * ticket, so the UI can cluster them. `null` means ungrouped. */
+  ticket: number | null;
   numbers: number[];
   created_at: string;
 };
@@ -1019,9 +1022,14 @@ export async function deleteLottoDraw(drawId: number) {
   return sendJson<{ ok: boolean }>("DELETE", `/api/lotto/${drawId}`);
 }
 
-export async function createLottoAttempt(drawId: number, numbers: number[]) {
+export async function createLottoAttempt(
+  drawId: number,
+  numbers: number[],
+  ticket?: number | null,
+) {
   return sendJson<LottoDrawDetail>("POST", `/api/lotto/${drawId}/attempts`, {
     numbers,
+    ticket: ticket ?? null,
   });
 }
 
@@ -1029,11 +1037,12 @@ export async function updateLottoAttempt(
   drawId: number,
   attemptId: number,
   numbers: number[],
+  ticket?: number | null,
 ) {
   return sendJson<LottoDrawDetail>(
     "PUT",
     `/api/lotto/${drawId}/attempts/${attemptId}`,
-    { numbers },
+    { numbers, ticket: ticket ?? null },
   );
 }
 

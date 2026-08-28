@@ -47,6 +47,7 @@ def _serialize_attempt(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": row["id"],
         "draw_id": row["draw_id"],
+        "ticket": row["ticket"],
         "numbers": _numbers(row),
         "created_at": row["created_at"],
     }
@@ -100,7 +101,7 @@ def lotto_remove_draw(draw_id: int) -> dict[str, Any]:
 
 @router.post("/api/lotto/{draw_id}/attempts")
 def lotto_add_attempt(draw_id: int, body: LottoAttemptCreate) -> dict[str, Any]:
-    detail = insert_lotto_attempt(draw_id, body.numbers)
+    detail = insert_lotto_attempt(draw_id, body.numbers, body.ticket)
     if detail is None:
         raise HTTPException(status_code=404, detail="Draw not found.")
     return _serialize_detail(detail)
@@ -110,7 +111,7 @@ def lotto_add_attempt(draw_id: int, body: LottoAttemptCreate) -> dict[str, Any]:
 def lotto_update_attempt(
     draw_id: int, attempt_id: int, body: LottoAttemptCreate
 ) -> dict[str, Any]:
-    detail = update_lotto_attempt(draw_id, attempt_id, body.numbers)
+    detail = update_lotto_attempt(draw_id, attempt_id, body.numbers, body.ticket)
     if detail is None:
         raise HTTPException(status_code=404, detail="Attempt not found.")
     return _serialize_detail(detail)

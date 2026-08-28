@@ -87,23 +87,71 @@ function parseOptionalNumbers(text: string): number[] | null {
   return parseNumbers(text);
 }
 
-/** One line of a .txt upload is one attempt's 6 numbers. */
-function parseAttemptsFile(text: string): number[][] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-  if (lines.length === 0) {
-    throw new Error("That file doesn't have any numbers in it.");
+/** A blank line's worth of numbers-lines grouped together — one physical
+ * ticket, holding each of its board plays (attempts). */
+type TicketBlock = { ticket: number | null; attempts: number[][] };
+
+const TICKET_HEADER_RE = /^ticket\s*#?\s*(\d+)\s*:?$/i;
+
+function parseTicketBlock(lines: string[], blockIndex: number): TicketBlock {
+  let ticket: number | null = null;
+  let numberLines = lines;
+  const header = TICKET_HEADER_RE.exec(lines[0].trim());
+  if (header) {
+    ticket = Number(header[1]);
+    numberLines = lines.slice(1);
   }
-  return lines.map((line, i) => {
+  if (numberLines.length === 0) {
+    throw new Error(`Ticket ${blockIndex + 1} has no numbers under it.`);
+  }
+  const attempts = numberLines.map((line, i) => {
     try {
       return parseNumbers(line);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Invalid numbers";
-      throw new Error(`Line ${i + 1}: ${msg}`);
+      throw new Error(`Ticket ${blockIndex + 1}, line ${i + 1}: ${msg}`);
     }
   });
+  return { ticket, attempts };
+}
+
+/** A .txt upload is one or more tickets, each a blank-line-separated group of
+ * lines — every line under a ticket is one attempt's 6 numbers. A ticket's
+ * first line may optionally read "ticket N" to pin its number explicitly;
+ * otherwise tickets are numbered in file order. */
+function parseTicketsFile(text: string): TicketBlock[] {
+  const rawLines = text.split(/\r?\n/);
+  const blocks: TicketBlock[] = [];
+  let current: string[] = [];
+  const flush = () => {
+    if (current.length > 0) {
+      blocks.push(parseTicketBlock(current, blocks.length));
+      current = [];
+    }
+  };
+  for (const line of rawLines) {
+    if (line.trim() === "") {
+      flush();
+    } else {
+      current.push(line);
+    }
+  }
+  flush();
+  if (blocks.length === 0) {
+    throw new Error("That file doesn't have any numbers in it.");
+  }
+  return blocks;
+}
+
+/** Blank means "not part of a ticket group". */
+function parseOptionalTicket(text: string): number | null {
+  const trimmed = text.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error("Ticket # must be a positive whole number.");
+  }
+  return n;
 }
 
 function NumberBall({
@@ -144,6 +192,7 @@ type AttemptModalState = {
   drawId: number | null;
   attemptId: number | null;
   numbersText: string;
+  ticketText: string;
 };
 type UploadModalState = {
   open: boolean;
@@ -162,6 +211,7 @@ const emptyAttemptModal: AttemptModalState = {
   drawId: null,
   attemptId: null,
   numbersText: "",
+  ticketText: "",
 };
 const emptyUploadModal: UploadModalState = { open: false, drawDate: "" };
 
@@ -303,9 +353,15 @@ export default function LottoClient() {
     }
   };
 
-  const openAddAttempt = (drawId: number) => {
+  const openAddAttempt = (drawId: number, ticket: number | null = null) => {
     setAttemptFormError(null);
-    setAttemptModal({ open: true, drawId, attemptId: null, numbersText: "" });
+    setAttemptModal({
+      open: true,
+      drawId,
+      attemptId: null,
+      numbersText: "",
+      ticketText: ticket != null ? String(ticket) : "",
+    });
   };
 
   const openEditAttempt = (drawId: number, attempt: LottoAttemptRow) => {
@@ -315,6 +371,7 @@ export default function LottoClient() {
       drawId,
       attemptId: attempt.id,
       numbersText: numbersToText(attempt.numbers),
+      ticketText: attempt.ticket != null ? String(attempt.ticket) : "",
     });
   };
 
@@ -328,8 +385,10 @@ export default function LottoClient() {
     setAttemptFormError(null);
     if (attemptModal.drawId == null) return;
     let numbers: number[];
+    let ticket: number | null;
     try {
       numbers = parseNumbers(attemptModal.numbersText);
+      ticket = parseOptionalTicket(attemptModal.ticketText);
     } catch (err) {
       setAttemptFormError(err instanceof Error ? err.message : "Invalid numbers");
       return;
@@ -339,8 +398,13 @@ export default function LottoClient() {
     try {
       const detail =
         attemptModal.attemptId != null
-          ? await updateLottoAttempt(attemptModal.drawId, attemptModal.attemptId, numbers)
-          : await createLottoAttempt(attemptModal.drawId, numbers);
+          ? await updateLottoAttempt(
+              attemptModal.drawId,
+              attemptModal.attemptId,
+              numbers,
+              ticket,
+            )
+          : await createLottoAttempt(attemptModal.drawId, numbers, ticket);
       upsertLocalDraw(detail);
       closeAttemptModal();
     } catch (err) {
@@ -388,10 +452,10 @@ export default function LottoClient() {
       return;
     }
     let drawDate: string;
-    let attempts: number[][];
+    let blocks: TicketBlock[];
     try {
       drawDate = parseDrawDate(uploadModal.drawDate);
-      attempts = parseAttemptsFile(await uploadFile.text());
+      blocks = parseTicketsFile(await uploadFile.text());
     } catch (err) {
       setUploadFormError(err instanceof Error ? err.message : "Invalid input");
       return;
@@ -408,9 +472,21 @@ export default function LottoClient() {
         drawId = created.draw.id;
         upsertLocalDraw(created);
       }
+      // Tickets without an explicit "ticket N" header are numbered after
+      // whatever's already on this draw (so a second upload doesn't collide
+      // with tickets from the first), in file order.
+      const priorMaxTicket = (existing?.attempts ?? []).reduce(
+        (max, a) => (a.ticket != null && a.ticket > max ? a.ticket : max),
+        0,
+      );
+      let nextAutoTicket = priorMaxTicket + 1;
       let detail: LottoDrawDetail | null = null;
-      for (const numbers of attempts) {
-        detail = await createLottoAttempt(drawId, numbers);
+      for (const block of blocks) {
+        const ticket = block.ticket ?? nextAutoTicket;
+        nextAutoTicket = Math.max(nextAutoTicket, ticket + 1);
+        for (const numbers of block.attempts) {
+          detail = await createLottoAttempt(drawId, numbers, ticket);
+        }
       }
       if (detail) upsertLocalDraw(detail);
       closeUploadModal();
@@ -623,8 +699,7 @@ export default function LottoClient() {
           const hasAttempts = detail.attempts.length > 0;
           const collapsed = hasAttempts && collapsedIds.has(detail.draw.id);
           // Without a result yet, there's nothing to match attempts against —
-          // skip the match/tier math entirely rather than showing everything
-          // as a false "0/6 matched".
+          // matchCount is a placeholder (-1) rather than a false "0/6 matched".
           const attemptsByMatch = hasResult
             ? detail.attempts
                 .map((attempt) => ({
@@ -632,7 +707,7 @@ export default function LottoClient() {
                   matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
                 }))
                 .sort((a, b) => b.matchCount - a.matchCount)
-            : [];
+            : detail.attempts.map((attempt) => ({ attempt, matchCount: -1 }));
           const matchBreakdown = hasResult
             ? [3, 4, 5, 6]
                 .map((tier) => ({
@@ -641,17 +716,47 @@ export default function LottoClient() {
                 }))
                 .filter((b) => b.count > 0)
             : [];
-          const attemptGroups = attemptsByMatch.reduce<
-            { matchCount: number; items: typeof attemptsByMatch }[]
-          >((groups, item) => {
-            const last = groups[groups.length - 1];
-            if (last && last.matchCount === item.matchCount) {
-              last.items.push(item);
+
+          // Cluster attempts by ticket — up to a handful of board plays on
+          // one physical ticket share a ticket number, so they're grouped
+          // together instead of scattered across a flat list; ungrouped
+          // attempts stand alone. Clusters are ordered by their best match
+          // (6/6 first), ticket number breaking ties, ungrouped attempts
+          // sinking to the bottom of a tie.
+          type AttemptCluster = {
+            ticket: number | null;
+            items: typeof attemptsByMatch;
+            bestMatch: number;
+          };
+          const byTicket = new Map<number, typeof attemptsByMatch>();
+          const loose: typeof attemptsByMatch = [];
+          for (const item of attemptsByMatch) {
+            const ticket = item.attempt.ticket;
+            if (ticket != null) {
+              const arr = byTicket.get(ticket);
+              if (arr) arr.push(item);
+              else byTicket.set(ticket, [item]);
             } else {
-              groups.push({ matchCount: item.matchCount, items: [item] });
+              loose.push(item);
             }
-            return groups;
-          }, []);
+          }
+          const attemptClusters: AttemptCluster[] = [
+            ...Array.from(byTicket.entries()).map(([ticket, items]) => ({
+              ticket,
+              items: items.slice().sort((a, b) => b.matchCount - a.matchCount),
+              bestMatch: Math.max(...items.map((i) => i.matchCount)),
+            })),
+            ...loose.map((item) => ({
+              ticket: null,
+              items: [item],
+              bestMatch: item.matchCount,
+            })),
+          ].sort((a, b) => {
+            if (b.bestMatch !== a.bestMatch) return b.bestMatch - a.bestMatch;
+            if (a.ticket == null) return 1;
+            if (b.ticket == null) return -1;
+            return a.ticket - b.ticket;
+          });
           const drawNumbersDisplay = hasResult ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {detail.draw.numbers.map((n) => (
@@ -662,6 +767,43 @@ export default function LottoClient() {
             <span className="mt-2 inline-block rounded-full border border-dashed border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
               Result not in yet
             </span>
+          );
+          const renderAttemptRow = (attempt: LottoAttemptRow, matchCount: number) => (
+            <li
+              key={attempt.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <div className="flex flex-wrap items-center gap-1.5">
+                {attempt.numbers.map((n) => (
+                  <NumberBall
+                    key={n}
+                    n={n}
+                    variant={hasResult ? (drawSet.has(n) ? "match" : "miss") : "neutral"}
+                  />
+                ))}
+                <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  {hasResult ? `${matchCount}/6 matched` : "Awaiting result"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={saving}
+                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                  onClick={() => openEditAttempt(detail.draw.id, attempt)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                  onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
           );
           return (
             <section key={detail.draw.id} className={CARD_CLASSES}>
@@ -761,98 +903,49 @@ export default function LottoClient() {
                   )}
                 </div>
 
-                {!hasResult ? (
-                  <ul className="mt-3 flex flex-col gap-2">
-                    {detail.attempts.map((attempt) => (
-                      <li
-                        key={attempt.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
-                      >
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {attempt.numbers.map((n) => (
-                            <NumberBall key={n} n={n} variant="neutral" />
-                          ))}
-                          <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                            Awaiting result
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={saving}
-                            className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
-                            onClick={() => openEditAttempt(detail.draw.id, attempt)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            disabled={saving}
-                            className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
-                            onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="mt-3 flex flex-col gap-3">
-                    {attemptGroups.map((group) => (
+                <div className="mt-3 flex flex-col gap-3">
+                  {attemptClusters.map((cluster) =>
+                    cluster.ticket != null ? (
                       <div
-                        key={group.matchCount}
+                        key={`ticket-${cluster.ticket}`}
                         className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-900/40"
                       >
-                        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                          <span>{group.matchCount}/6 matched</span>
-                          <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
-                            {group.items.length}
+                        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                          <span className="font-semibold text-zinc-700 dark:text-zinc-200">
+                            Ticket {cluster.ticket}
                           </span>
+                          {hasResult && (
+                            <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                              best {cluster.bestMatch}/6
+                            </span>
+                          )}
+                          <span>
+                            {cluster.items.length} attempt{cluster.items.length === 1 ? "" : "s"}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={saving}
+                            className="ml-auto rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-normal dark:border-zinc-600"
+                            onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
+                          >
+                            + Add to this ticket
+                          </button>
                         </div>
                         <ul className="flex flex-col gap-2">
-                          {group.items.map(({ attempt, matchCount }) => (
-                            <li
-                              key={attempt.id}
-                              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
-                            >
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                {attempt.numbers.map((n) => (
-                                  <NumberBall
-                                    key={n}
-                                    n={n}
-                                    variant={drawSet.has(n) ? "match" : "miss"}
-                                  />
-                                ))}
-                                <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                                  {matchCount}/6 matched
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  disabled={saving}
-                                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
-                                  onClick={() => openEditAttempt(detail.draw.id, attempt)}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={saving}
-                                  className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
-                                  onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </li>
-                          ))}
+                          {cluster.items.map(({ attempt, matchCount }) =>
+                            renderAttemptRow(attempt, matchCount),
+                          )}
                         </ul>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ) : (
+                      <ul key={`loose-${cluster.items[0].attempt.id}`} className="flex flex-col gap-2">
+                        {cluster.items.map(({ attempt, matchCount }) =>
+                          renderAttemptRow(attempt, matchCount),
+                        )}
+                      </ul>
+                    ),
+                  )}
+                </div>
 
                 <button
                   type="button"
@@ -963,6 +1056,23 @@ export default function LottoClient() {
             />
             <span className="text-xs text-zinc-500">{NUMBERS_HELP}</span>
           </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">
+              Ticket # <span className="font-normal text-zinc-400">(optional)</span>
+            </span>
+            <input
+              type="text"
+              inputMode="numeric"
+              className={INPUT_CLASSES}
+              value={attemptModal.ticketText}
+              disabled={saving}
+              onChange={(e) => setAttemptModal((m) => ({ ...m, ticketText: e.target.value }))}
+            />
+            <span className="text-xs text-zinc-500">
+              Groups this with the other attempts on the same physical ticket, so they
+              cluster together — leave blank if it isn&apos;t part of a ticket.
+            </span>
+          </label>
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
               {saving ? "Saving…" : attemptModal.attemptId != null ? "Update" : "Add"}
@@ -1021,8 +1131,11 @@ export default function LottoClient() {
               onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
             />
             <span className="text-xs text-zinc-500">
-              One attempt per line, 6 numbers each (e.g. &quot;01 02 34 37 52 57&quot;) — every
-              line is added as an attempt against the draw date above.
+              6 numbers per line (e.g. &quot;01 02 34 37 52 57&quot;) — a blank line starts a
+              new ticket, so each group of lines becomes one ticket&apos;s attempts against
+              the draw date above. A group&apos;s first line may optionally read
+              &quot;ticket N&quot; to pin its number; otherwise tickets are numbered in
+              file order.
             </span>
           </label>
           <div className="flex flex-wrap gap-2">

@@ -374,6 +374,7 @@ _SCHEMA_STATEMENTS: list[str] = [
     CREATE TABLE IF NOT EXISTS lotto_attempt (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         draw_id INTEGER NOT NULL REFERENCES lotto_draw(id) ON DELETE CASCADE,
+        ticket INTEGER,
         n1 INTEGER NOT NULL,
         n2 INTEGER NOT NULL,
         n3 INTEGER NOT NULL,
@@ -446,11 +447,32 @@ def _migrate_lotto_draw_allow_pending() -> None:
         conn.close()
 
 
+def _migrate_lotto_attempt_add_ticket() -> None:
+    """Older DBs don't have the ``ticket`` column on ``lotto_attempt``. Attempts
+    uploaded together as one physical ticket (up to a handful of board plays)
+    share a ticket number so the UI can cluster them; existing attempts get
+    ``ticket = NULL`` (ungrouped) and can be assigned one later via edit."""
+    path = sqlite_path()
+    if not path.exists():
+        return  # fresh DB — the CREATE TABLE statement below defines it correctly
+    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
+    try:
+        cols = conn.execute("PRAGMA table_info(lotto_attempt)").fetchall()
+        if not cols:
+            return  # table doesn't exist yet
+        if any(c[1] == "ticket" for c in cols):
+            return  # already migrated
+        conn.execute("ALTER TABLE lotto_attempt ADD COLUMN ticket INTEGER")
+    finally:
+        conn.close()
+
+
 def init_schema() -> None:
     """Create every table/index that doesn't already exist. Idempotent and cheap
     enough to call on every startup — ``CREATE ... IF NOT EXISTS`` short-circuits
     once the schema is in place."""
     _migrate_lotto_draw_allow_pending()
+    _migrate_lotto_attempt_add_ticket()
     with get_connection() as conn:
         for stmt in _SCHEMA_STATEMENTS:
             conn.execute(stmt)
@@ -2009,7 +2031,7 @@ def delete_pay_period_start_override(
 
 
 _LOTTO_DRAW_COLS = "id, draw_date, n1, n2, n3, n4, n5, n6, created_at"
-_LOTTO_ATTEMPT_COLS = "id, draw_id, n1, n2, n3, n4, n5, n6, created_at"
+_LOTTO_ATTEMPT_COLS = "id, draw_id, ticket, n1, n2, n3, n4, n5, n6, created_at"
 
 
 def _lotto_attempts_rows(cur: Any, draw_id: int) -> list[dict[str, Any]]:
@@ -2129,18 +2151,22 @@ def delete_lotto_draw(draw_id: int) -> bool:
             return cur.rowcount > 0
 
 
-def insert_lotto_attempt(draw_id: int, numbers: list[int]) -> dict[str, Any] | None:
-    """Add one attempt under a draw and return the refreshed draw detail."""
+def insert_lotto_attempt(
+    draw_id: int, numbers: list[int], ticket: int | None = None
+) -> dict[str, Any] | None:
+    """Add one attempt under a draw and return the refreshed draw detail.
+    ``ticket`` groups this attempt with the other board plays on the same
+    physical ticket, so the UI can cluster them; leave it None otherwise."""
     n1, n2, n3, n4, n5, n6 = numbers
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 """
-                INSERT INTO lotto_attempt (draw_id, n1, n2, n3, n4, n5, n6)
-                SELECT ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM lotto_draw WHERE id = ?)
+                INSERT INTO lotto_attempt (draw_id, ticket, n1, n2, n3, n4, n5, n6)
+                SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM lotto_draw WHERE id = ?)
                 RETURNING id
                 """,
-                (draw_id, n1, n2, n3, n4, n5, n6, draw_id),
+                (draw_id, ticket, n1, n2, n3, n4, n5, n6, draw_id),
             )
             if not cur.fetchone():
                 return None
@@ -2148,18 +2174,18 @@ def insert_lotto_attempt(draw_id: int, numbers: list[int]) -> dict[str, Any] | N
 
 
 def update_lotto_attempt(
-    draw_id: int, attempt_id: int, numbers: list[int]
+    draw_id: int, attempt_id: int, numbers: list[int], ticket: int | None = None
 ) -> dict[str, Any] | None:
     n1, n2, n3, n4, n5, n6 = numbers
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 """
-                UPDATE lotto_attempt SET n1 = ?, n2 = ?, n3 = ?, n4 = ?, n5 = ?, n6 = ?
+                UPDATE lotto_attempt SET ticket = ?, n1 = ?, n2 = ?, n3 = ?, n4 = ?, n5 = ?, n6 = ?
                 WHERE id = ? AND draw_id = ?
                 RETURNING id
                 """,
-                (n1, n2, n3, n4, n5, n6, attempt_id, draw_id),
+                (ticket, n1, n2, n3, n4, n5, n6, attempt_id, draw_id),
             )
             if not cur.fetchone():
                 return None
