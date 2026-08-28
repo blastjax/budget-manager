@@ -179,6 +179,18 @@ function NumberBall({
   );
 }
 
+/** Moves the items matching `shouldBump` to the front, otherwise leaving the
+ * list exactly as it was — a stable partition, not a sort, so items never
+ * get reordered relative to their own kind. */
+function bumpMatches<T>(items: T[], shouldBump: (item: T) => boolean): T[] {
+  const bumped: T[] = [];
+  const rest: T[] = [];
+  for (const item of items) {
+    (shouldBump(item) ? bumped : rest).push(item);
+  }
+  return [...bumped, ...rest];
+}
+
 type DrawModalState = {
   open: boolean;
   drawId: number | null;
@@ -619,13 +631,14 @@ export default function LottoClient() {
           const collapsed = hasAttempts && collapsedIds.has(detail.draw.id);
           // Without a result yet, there's nothing to match attempts against —
           // matchCount is a placeholder (-1) rather than a false "0/6 matched".
+          // Order follows detail.attempts as logged (the sequence on the
+          // physical tickets) — see bumpMatches below for how strong matches
+          // surface without disturbing that order.
           const attemptsByMatch = hasResult
-            ? detail.attempts
-                .map((attempt) => ({
-                  attempt,
-                  matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
-                }))
-                .sort((a, b) => b.matchCount - a.matchCount)
+            ? detail.attempts.map((attempt) => ({
+                attempt,
+                matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
+              }))
             : detail.attempts.map((attempt) => ({ attempt, matchCount: -1 }));
           const matchBreakdown = hasResult
             ? [3, 4, 5, 6]
@@ -638,11 +651,12 @@ export default function LottoClient() {
 
           // Cluster attempts by ticket — up to a handful of board plays on
           // one physical ticket share a ticket number, so they're grouped
-          // together instead of scattered across a flat list. Ticket
-          // clusters are ordered by their best match (6/6 first), ticket
-          // number breaking ties; ungrouped attempts sit in their own
-          // section underneath (drag one onto a ticket, or onto another
-          // ungrouped attempt, to group it).
+          // together instead of scattered across a flat list. Clusters keep
+          // the order the tickets were logged in (that sequence is already
+          // right) — bumpMatches only lifts a 3/6-or-better ticket to the
+          // top, without otherwise reshuffling anything. Ungrouped attempts
+          // sit in their own section underneath (drag one onto a ticket, or
+          // onto another ungrouped attempt, to group it).
           type AttemptCluster = { ticket: number; items: typeof attemptsByMatch; bestMatch: number };
           const byTicket = new Map<number, typeof attemptsByMatch>();
           const looseItems: typeof attemptsByMatch = [];
@@ -656,16 +670,15 @@ export default function LottoClient() {
               looseItems.push(item);
             }
           }
-          looseItems.sort((a, b) => b.matchCount - a.matchCount);
-          const ticketClusters: AttemptCluster[] = Array.from(byTicket.entries())
-            .map(([ticket, items]) => ({
+          const orderedLooseItems = bumpMatches(looseItems, (i) => i.matchCount >= 3);
+          const ticketClusters: AttemptCluster[] = bumpMatches(
+            Array.from(byTicket.entries()).map(([ticket, items]) => ({
               ticket,
-              items: items.slice().sort((a, b) => b.matchCount - a.matchCount),
+              items,
               bestMatch: Math.max(...items.map((i) => i.matchCount)),
-            }))
-            .sort((a, b) =>
-              b.bestMatch !== a.bestMatch ? b.bestMatch - a.bestMatch : a.ticket - b.ticket,
-            );
+            })),
+            (c) => c.bestMatch >= 3,
+          );
           const drawNumbersDisplay = hasResult ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {detail.draw.numbers.map((n) => (
@@ -870,7 +883,7 @@ export default function LottoClient() {
                       </ul>
                     </div>
                   ))}
-                  {looseItems.length > 0 && (
+                  {orderedLooseItems.length > 0 && (
                     <div
                       className={
                         ticketClusters.length > 0
@@ -889,7 +902,7 @@ export default function LottoClient() {
                         </div>
                       )}
                       <ul className="flex flex-col gap-2">
-                        {looseItems.map(({ attempt, matchCount }) =>
+                        {orderedLooseItems.map(({ attempt, matchCount }) =>
                           renderAttemptRow(attempt, matchCount),
                         )}
                       </ul>
