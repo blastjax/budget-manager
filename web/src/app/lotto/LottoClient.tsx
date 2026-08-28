@@ -87,6 +87,25 @@ function parseOptionalNumbers(text: string): number[] | null {
   return parseNumbers(text);
 }
 
+/** One line of a .txt upload is one attempt's 6 numbers. */
+function parseAttemptsFile(text: string): number[][] {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  if (lines.length === 0) {
+    throw new Error("That file doesn't have any numbers in it.");
+  }
+  return lines.map((line, i) => {
+    try {
+      return parseNumbers(line);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Invalid numbers";
+      throw new Error(`Line ${i + 1}: ${msg}`);
+    }
+  });
+}
+
 function NumberBall({
   n,
   variant = "neutral",
@@ -126,6 +145,10 @@ type AttemptModalState = {
   attemptId: number | null;
   numbersText: string;
 };
+type UploadModalState = {
+  open: boolean;
+  drawDate: string;
+};
 
 const emptyDrawModal: DrawModalState = {
   open: false,
@@ -140,6 +163,7 @@ const emptyAttemptModal: AttemptModalState = {
   attemptId: null,
   numbersText: "",
 };
+const emptyUploadModal: UploadModalState = { open: false, drawDate: "" };
 
 export default function LottoClient() {
   const [draws, setDraws] = useState<LottoDrawDetail[]>([]);
@@ -179,6 +203,10 @@ export default function LottoClient() {
 
   const [attemptModal, setAttemptModal] = useState<AttemptModalState>(emptyAttemptModal);
   const [attemptFormError, setAttemptFormError] = useState<string | null>(null);
+
+  const [uploadModal, setUploadModal] = useState<UploadModalState>(emptyUploadModal);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFormError, setUploadFormError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -336,7 +364,64 @@ export default function LottoClient() {
     }
   };
 
-  const anyModalOpen = drawModal.open || attemptModal.open;
+  const openUpload = () => {
+    setUploadFormError(null);
+    setUploadFile(null);
+    setUploadModal({ open: true, drawDate: "" });
+  };
+
+  const closeUploadModal = () => {
+    setUploadModal(emptyUploadModal);
+    setUploadFile(null);
+    setUploadFormError(null);
+  };
+
+  const submitUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUploadFormError(null);
+    if (!uploadModal.drawDate) {
+      setUploadFormError("Enter a date.");
+      return;
+    }
+    if (!uploadFile) {
+      setUploadFormError("Choose a .txt file.");
+      return;
+    }
+    let drawDate: string;
+    let attempts: number[][];
+    try {
+      drawDate = parseDrawDate(uploadModal.drawDate);
+      attempts = parseAttemptsFile(await uploadFile.text());
+    } catch (err) {
+      setUploadFormError(err instanceof Error ? err.message : "Invalid input");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const existing = draws.find((d) => d.draw.draw_date === drawDate);
+      let drawId: number;
+      if (existing) {
+        drawId = existing.draw.id;
+      } else {
+        const created = await setLottoDraw(drawDate, null);
+        drawId = created.draw.id;
+        upsertLocalDraw(created);
+      }
+      let detail: LottoDrawDetail | null = null;
+      for (const numbers of attempts) {
+        detail = await createLottoAttempt(drawId, numbers);
+      }
+      if (detail) upsertLocalDraw(detail);
+      closeUploadModal();
+    } catch (err) {
+      setUploadFormError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const anyModalOpen = drawModal.open || attemptModal.open || uploadModal.open;
 
   // A few naive "next draw" picks, each a different frequency read of past
   // results — not real predictions of a random draw, just different lenses
@@ -431,13 +516,24 @@ export default function LottoClient() {
   return (
     <div className="relative mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
       <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Lotto
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Enter each date&apos;s result, then log your attempts underneath it — matching
-          numbers turn green.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Lotto
+            </h1>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Enter each date&apos;s result, then log your attempts underneath it — matching
+              numbers turn green.
+            </p>
+          </div>
+          <button
+            type="button"
+            className={`${SECONDARY_BUTTON_CLASSES} shrink-0 px-3 py-1.5 text-sm`}
+            onClick={openUpload}
+          >
+            Upload from txt
+          </button>
+        </div>
       </header>
 
       {drawPredictions.length > 0 && (
@@ -876,6 +972,68 @@ export default function LottoClient() {
               disabled={saving}
               className={SECONDARY_BUTTON_CLASSES}
               onClick={closeAttemptModal}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={uploadModal.open} onClose={closeUploadModal} ariaLabelledBy="lotto-upload-title">
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <h2 id="lotto-upload-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Upload from txt
+          </h2>
+          <button
+            type="button"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            onClick={closeUploadModal}
+          >
+            Close
+          </button>
+        </div>
+        <form onSubmit={submitUpload} className="flex flex-col gap-4">
+          {uploadFormError && (
+            <div className={ERROR_ALERT_CLASSES} role="alert">
+              {uploadFormError}
+            </div>
+          )}
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">Draw date</span>
+            <input
+              required
+              type="text"
+              className={INPUT_CLASSES}
+              value={uploadModal.drawDate}
+              disabled={saving}
+              onChange={(e) => setUploadModal((m) => ({ ...m, drawDate: e.target.value }))}
+            />
+            <span className="text-xs text-zinc-500">{DRAW_DATE_HELP}</span>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">Text file</span>
+            <input
+              required
+              type="file"
+              accept=".txt,text/plain"
+              disabled={saving}
+              className="text-sm text-zinc-700 file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-white file:px-2 file:py-1 file:text-xs file:font-medium file:text-zinc-700 dark:text-zinc-300 dark:file:border-zinc-600 dark:file:bg-zinc-900 dark:file:text-zinc-200"
+              onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+            />
+            <span className="text-xs text-zinc-500">
+              One attempt per line, 6 numbers each (e.g. &quot;01 02 34 37 52 57&quot;) — every
+              line is added as an attempt against the draw date above.
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
+              {saving ? "Uploading…" : "Upload"}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              className={SECONDARY_BUTTON_CLASSES}
+              onClick={closeUploadModal}
             >
               Cancel
             </button>
