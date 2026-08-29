@@ -14,6 +14,9 @@ type Status = "checking" | "unreachable" | "unauthenticated" | "authenticated";
 const CARD_CLASS =
   "w-full max-w-xs rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900";
 
+const FIELD_CLASS =
+  "mb-3 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100";
+
 function Screen({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen min-h-[100dvh] w-full items-center justify-center bg-[var(--background)] px-4">
@@ -24,7 +27,8 @@ function Screen({ children }: { children: React.ReactNode }) {
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>("checking");
-  const [code, setCode] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,8 +41,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { authenticated: boolean; otp_required: boolean };
-      if (!data.otp_required || data.authenticated) {
+      const data = (await res.json()) as {
+        authenticated: boolean;
+        login_required: boolean;
+      };
+      if (!data.login_required || data.authenticated) {
         setStatus("authenticated");
         return;
       }
@@ -67,22 +74,24 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`${dataApiBase()}/api/auth/verify`, {
+      const res = await fetch(`${dataApiBase()}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ username, password }),
       });
       const data = (await res.json().catch(() => null)) as
         | { token?: string; detail?: string }
         | null;
       if (!res.ok || !data?.token) {
-        throw new Error(typeof data?.detail === "string" ? data.detail : "Invalid code.");
+        throw new Error(
+          typeof data?.detail === "string" ? data.detail : "Invalid username or password.",
+        );
       }
       setSessionToken(data.token);
-      setCode("");
+      setPassword("");
       setStatus("authenticated");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid code.");
+      setError(err instanceof Error ? err.message : "Invalid username or password.");
     } finally {
       setSubmitting(false);
     }
@@ -117,30 +126,36 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       <Screen>
         <form onSubmit={handleSubmit} className={CARD_CLASS}>
           <h1 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Enter code
+            Log in
           </h1>
           <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-            Enter the 6-digit code from your authenticator app.
+            Enter your username and password.
           </p>
           <input
             autoFocus
-            autoComplete="one-time-code"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-            className="mb-3 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-center text-lg tracking-widest text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
+            autoComplete="username"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className={FIELD_CLASS}
+          />
+          <input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={FIELD_CLASS}
           />
           {error ? (
             <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>
           ) : null}
           <button
             type="submit"
-            disabled={submitting || code.length !== 6}
+            disabled={submitting || !username || !password}
             className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            {submitting ? "Checking…" : "Continue"}
+            {submitting ? "Checking…" : "Log in"}
           </button>
         </form>
       </Screen>

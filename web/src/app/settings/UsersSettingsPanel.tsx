@@ -178,8 +178,9 @@ export function UsersSettingsPanel() {
     <section className={CARD_CLASSES}>
       <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">Users</h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        Add or manage named users and their passwords. This doesn&apos;t change
-        how you sign in yet — the app is still gated by the shared login code.
+        Add or manage named users and their passwords. Each user&apos;s
+        username and password can log in to the app once they&apos;re added
+        here — the first user you add turns login on.
       </p>
 
       <div className="mt-6">

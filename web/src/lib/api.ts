@@ -1070,8 +1070,8 @@ export async function setLottoAttemptHidden(
 }
 
 /** An app-managed user account. Passwords are Argon2id-hashed server-side —
- * this type never carries one. Not wired into login yet (see Settings →
- * Users); the shared OTP session is still what gates the app. */
+ * this type never carries one. These are the credentials checked at login
+ * (see AuthGate) once at least one user exists; managed via Settings → Users. */
 export type AppUserRow = {
   id: number;
   username: string;

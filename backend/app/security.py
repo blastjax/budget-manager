@@ -1,16 +1,17 @@
-"""OTP (TOTP) session authentication.
+"""Username/password session authentication.
 
-Single-user app, so there's no user table: one shared TOTP secret
-(``BUDGET_OTP_SECRET``) enrolled in an authenticator app is the credential.
-A verified code mints an opaque session token. The frontend stores that token
-in ``sessionStorage`` rather than ``localStorage``, so it disappears — and a
-fresh code is required — whenever the browser restarts, while surviving
-reloads/tab switches within the same browser session. The TTL below is just a
-server-side safety net for that same lifetime, not the primary boundary.
+Credentials live in the ``app_user`` table (see ``db.py`` / Settings →
+Users), hashed with Argon2id (``app.passwords``). A successful login (see
+``app/routers/auth.py``) mints an opaque session token. The frontend stores
+that token in ``sessionStorage`` rather than ``localStorage``, so it
+disappears — and a fresh login is required — whenever the browser restarts,
+while surviving reloads/tab switches within the same browser session. The
+TTL below is just a server-side safety net for that same lifetime, not the
+primary boundary.
 
-If ``BUDGET_OTP_SECRET`` is unset, auth is treated as not configured and
+Until at least one user exists, auth is treated as not configured and
 ``require_session`` (see ``app.deps``) lets every request through — so a
-fresh checkout stays usable until OTP is deliberately turned on.
+fresh checkout stays usable until a user is deliberately added.
 """
 
 from __future__ import annotations
@@ -22,19 +23,11 @@ from typing import Any
 
 import cache
 
-_SESSION_PREFIX = "otp_session"
-_FAIL_PREFIX = "otp_fail"
-_USED_CODE_PREFIX = "otp_used"
+_SESSION_PREFIX = "auth_session"
+_FAIL_PREFIX = "auth_fail"
 
 _MAX_FAILED_ATTEMPTS = 8
 _FAIL_WINDOW_SECONDS = 15 * 60
-
-"""
-How long an accepted code stays un-reusable. Must outlive the window
-``verify_totp_code`` accepts (the current 30s step plus one step either side),
-or a sniffed code could be replayed just after its entry expires here.
-"""
-_USED_CODE_TTL_SECONDS = 120
 
 
 class _ExpiringStore:
@@ -42,7 +35,7 @@ class _ExpiringStore:
 
     Redis stays the primary store so sessions survive an API restart. This
     fallback exists because ``cache.*`` degrades to silent no-ops when Redis
-    is down, which previously made ``/api/auth/verify`` hand out tokens that
+    is down, which previously made ``/api/auth/login`` hand out tokens that
     could never validate — an unbreakable login loop with no error shown.
 
     Being per-process, it is only coherent while the API runs a single worker
@@ -103,33 +96,6 @@ def _store_delete(key: str) -> None:
 
 def _session_ttl_seconds() -> int:
     return int(os.environ.get("BUDGET_SESSION_TTL_SECONDS", str(12 * 3600)))
-
-
-def otp_secret() -> str | None:
-    return os.environ.get("BUDGET_OTP_SECRET") or None
-
-
-def verify_totp_code(code: str) -> bool:
-    """True if ``code`` is currently valid *and* hasn't already been used.
-
-    Rejecting reuse is what makes the code one-time: TOTP alone would accept
-    the same digits for the whole ~90s window this allows, so anyone who
-    observed them could replay them until it closed.
-    """
-    secret = otp_secret()
-    if not secret:
-        return False
-    import pyotp
-
-    cleaned = code.strip()
-    if not pyotp.TOTP(secret).verify(cleaned, valid_window=1):
-        return False
-
-    used_key = f"{_USED_CODE_PREFIX}:{cleaned}"
-    if _store_get(used_key) is not None:
-        return False
-    _store_set(used_key, True, _USED_CODE_TTL_SECONDS)
-    return True
 
 
 def create_session() -> str:

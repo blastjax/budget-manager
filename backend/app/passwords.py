@@ -27,9 +27,8 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, password_hash: str) -> bool:
     """True if ``password`` matches ``password_hash``.
 
-    Not wired into any login flow yet (see app/routers/auth.py for the
-    current OTP-only session auth) — kept here so the user table this
-    supports is ready for that once it's built.
+    Used both at login (see app/routers/auth.py) and by the Settings-only
+    "verify a password" check (app/routers/user.py).
     """
     try:
         return _hasher.verify(password_hash, password)

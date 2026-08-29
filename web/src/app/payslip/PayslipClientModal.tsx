@@ -624,7 +624,7 @@ function PayslipPdfPanel({
   // Bumped on upload/replace so the blob fetch below re-runs instead of
   // showing a cached copy of the previous PDF.
   const [version, setVersion] = useState(0);
-  // The PDF route requires the OTP session header, which a plain <iframe>/<a>
+  // The PDF route requires the session header, which a plain <iframe>/<a>
   // src can't carry — so it's fetched through apiFetch and rendered from a
   // blob: URL instead of pointing straight at the API URL.
   const [blobUrl, setBlobUrl] = useState<string | null>(null);

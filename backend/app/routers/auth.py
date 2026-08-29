@@ -1,4 +1,4 @@
-"""OTP login/logout endpoints (single shared TOTP secret, no user table)."""
+"""Username/password login/logout endpoints, backed by the app_user table."""
 
 from __future__ import annotations
 
@@ -6,17 +6,17 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.schemas.auth import OtpVerifyBody
+from app.passwords import verify_password
+from app.schemas.auth import LoginBody
 from app.security import (
     clear_failed_attempts,
     create_session,
-    otp_secret,
     record_failed_attempt,
     revoke_session,
     session_is_valid,
     too_many_failed_attempts,
-    verify_totp_code,
 )
+from db import any_app_users, get_app_user_by_username
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -32,21 +32,19 @@ def _client_ip(request: Request) -> str:
 
 @router.get("/config")
 def auth_config() -> dict[str, Any]:
-    return {"otp_required": otp_secret() is not None}
+    return {"login_required": any_app_users()}
 
 
-@router.post("/verify")
-def auth_verify(body: OtpVerifyBody, request: Request) -> dict[str, Any]:
-    if otp_secret() is None:
-        raise HTTPException(status_code=503, detail="BUDGET_OTP_SECRET is not set.")
-
+@router.post("/login")
+def auth_login(body: LoginBody, request: Request) -> dict[str, Any]:
     ip = _client_ip(request)
     if too_many_failed_attempts(ip):
         raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
 
-    if not verify_totp_code(body.code):
+    row = get_app_user_by_username(body.username.strip())
+    if row is None or not verify_password(body.password, row["password_hash"]):
         record_failed_attempt(ip)
-        raise HTTPException(status_code=401, detail="Invalid or expired code.")
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
 
     clear_failed_attempts(ip)
     return {"token": create_session()}
@@ -54,9 +52,9 @@ def auth_verify(body: OtpVerifyBody, request: Request) -> dict[str, Any]:
 
 @router.get("/status")
 def auth_status(request: Request) -> dict[str, Any]:
-    if otp_secret() is None:
-        return {"authenticated": True, "otp_required": False}
-    return {"authenticated": session_is_valid(_bearer_token(request)), "otp_required": True}
+    if not any_app_users():
+        return {"authenticated": True, "login_required": False}
+    return {"authenticated": session_is_valid(_bearer_token(request)), "login_required": True}
 
 
 @router.post("/logout")

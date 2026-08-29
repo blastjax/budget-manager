@@ -1,7 +1,8 @@
 """App user management (Settings → Users). Multiple named users can be added,
-each with an Argon2id-hashed password (see app/passwords.py). Not wired into
-login yet — every protected route (this one included) still gates on the
-single shared OTP session from app/routers/auth.py."""
+each with an Argon2id-hashed password (see app/passwords.py) — these are the
+same credentials app/routers/auth.py checks at login. This router (like every
+other protected router) still gates on a valid session via require_session,
+so managing users itself still requires being logged in."""
 
 from __future__ import annotations
 
@@ -51,8 +52,8 @@ def users_verify(body: AppUserVerify) -> dict[str, Any]:
     """Check a username/password pair against the stored hash.
 
     A Settings convenience — confirms a password was typed and saved
-    correctly — not a login: it doesn't mint a session, and this whole
-    router already sits behind the shared OTP session via ``require_session``.
+    correctly — not a login itself: it doesn't mint a session, and this
+    whole router already sits behind a valid session via ``require_session``.
     """
     row = get_app_user_by_username(body.username.strip())
     valid = row is not None and verify_password(body.password, row["password_hash"])

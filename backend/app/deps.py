@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request
 
-from app.security import otp_secret, session_is_valid
-from db import cloud_database_url
+from app.security import session_is_valid
+from db import any_app_users, cloud_database_url
 
 
 def require_db() -> None:
@@ -22,15 +22,16 @@ def require_db() -> None:
 
 
 def require_session(request: Request) -> None:
-    """Reject requests without a valid OTP session token.
+    """Reject requests without a valid login session token.
 
     Applied once, to every protected router, via ``include_router(...,
     dependencies=[Depends(require_session)])`` in the app factory — no-op
-    when ``BUDGET_OTP_SECRET`` isn't set, so OTP is opt-in.
+    until at least one user has been added (Settings → Users), so login is
+    opt-in the same way OTP used to be.
     """
-    if otp_secret() is None:
+    if not any_app_users():
         return
     header = request.headers.get("authorization") or ""
     token = header[7:] if header.lower().startswith("bearer ") else ""
     if not session_is_valid(token):
-        raise HTTPException(status_code=401, detail="OTP session required.")
+        raise HTTPException(status_code=401, detail="Login required.")

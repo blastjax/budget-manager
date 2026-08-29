@@ -51,7 +51,6 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       REDIS_CACHE_TTL: ${REDIS_CACHE_TTL:-300}
       BUDGET_CORS_ORIGINS: ${BUDGET_CORS_ORIGINS:-}
-      BUDGET_OTP_SECRET: ${BUDGET_OTP_SECRET:-}
       BUDGET_SESSION_TTL_SECONDS: ${BUDGET_SESSION_TTL_SECONDS:-43200}
     volumes:
       - ./data:/app/data

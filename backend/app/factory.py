@@ -130,8 +130,8 @@ def create_app() -> FastAPI:
         user,
     )
 
-    # health and auth stay open — everything else requires an OTP session
-    # (see require_session; it's a no-op until BUDGET_OTP_SECRET is set).
+    # health and auth stay open — everything else requires a login session
+    # (see require_session; it's a no-op until a user exists — Settings → Users).
     app.include_router(health.router)
     app.include_router(auth.router)
 

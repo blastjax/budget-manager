@@ -84,14 +84,15 @@ This starts the backend and web (uses `venv` under the project root when present
 
 ## Configuration
 
+Login is opt-in and needs no environment variable: the app is open until you add at least one user under **Settings → Users** in the web app, after which every screen requires that username/password to log in (passwords are hashed with Argon2id).
+
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | Optional; SQLite file location (see `.env.example`). Defaults to `data/budget.sqlite`. |
 | `NEXT_PUBLIC_API_URL` | Optional; override API base URL for the web app (default `http://127.0.0.1:8000`). Omit or leave blank to keep the default. |
 | `NEXT_PUBLIC_BASE_PATH` | Optional; set at **build** time with `STATIC_EXPORT=1` when the app is served under a subpath. |
 | `BUDGET_CORS_ORIGINS` | Optional; comma-separated extra browser origins allowed by the API. |
-| `BUDGET_OTP_SECRET` | Optional; TOTP secret. When set, the API and web app require a 6-digit authenticator-app code to log in (a new browser session always re-prompts). Generate one with `python -c "import pyotp; print(pyotp.random_base32())"`. |
-| `BUDGET_SESSION_TTL_SECONDS` | Optional; server-side session cap in seconds once `BUDGET_OTP_SECRET` is set. Defaults to 43200 (12h). |
+| `BUDGET_SESSION_TTL_SECONDS` | Optional; server-side session cap in seconds once at least one user has been added (Settings → Users). Defaults to 43200 (12h). |
 | `WEB_PORT` | Optional; host port `docker-compose` publishes the web container on. Defaults to 3000; set to 80 in the server's `.env` for a plain-HTTP deployment. |
 | `API_UID` / `API_GID` | Optional; uid:gid the api container runs as (default `1000:1000`). Only needed if the bind-mounted `data/` directory is owned by another user. |
 
@@ -108,7 +109,7 @@ One-time setup on the EC2 instance:
 
 ### Before exposing this publicly
 
-- **Terminate TLS.** With `WEB_PORT=80` the OTP code and the session token cross the network in cleartext, so anyone on the path can capture a session. Put a reverse proxy (Caddy or nginx + Let's Encrypt) in front and serve HTTPS — a domain name is the only prerequisite.
+- **Terminate TLS.** With `WEB_PORT=80` the login password and the session token cross the network in cleartext, so anyone on the path can capture a session. Put a reverse proxy (Caddy or nginx + Let's Encrypt) in front and serve HTTPS — a domain name is the only prerequisite.
 - **Restrict the security group** to your own IP where practical. Compose publishes Redis on loopback only, but port 8000 (the API) must stay reachable by browsers as long as `NEXT_PUBLIC_API_URL` points straight at it.
 - Serving the API under the same origin as the web app (proxying `/api` to port 8000) avoids CORS entirely and means `NEXT_PUBLIC_API_URL` can just be the site's own URL.
 

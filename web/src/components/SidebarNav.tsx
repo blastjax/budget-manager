@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 const sidebarNavInactiveHover =
   "hover:bg-zinc-100 dark:hover:bg-zinc-800/80";
+import { dataApiBase } from "@/lib/api";
+import { clearSessionToken, getSessionToken } from "@/lib/auth";
 import { useShellLayout } from "@/lib/shellLayoutContext";
 import { useLgUp } from "@/lib/useLgUp";
 
@@ -63,12 +65,31 @@ export function SidebarNav() {
   const pathname = usePathname();
   const lgUp = useLgUp();
   const { leftWidth, mobileNavOpen, closeMobileNav } = useShellLayout();
+  // Set only when a login session is actually active — this component only
+  // ever mounts once AuthGate has already decided the app is reachable
+  // (login not required, or required and satisfied), so this value is
+  // correct for the component's whole lifetime.
+  const [hasSession] = useState(() => getSessionToken() !== null);
 
   useEffect(() => {
     closeMobileNav();
   }, [pathname, closeMobileNav]);
 
   const activeHref = matchingNavHref(pathname, LINKS);
+
+  async function handleLogout() {
+    const token = getSessionToken();
+    try {
+      await fetch(`${dataApiBase()}/api/auth/logout`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+    } catch {
+      /* best effort — clear the local token and reload regardless */
+    }
+    clearSessionToken();
+    window.location.reload();
+  }
 
   return (
     <aside
@@ -133,6 +154,18 @@ export function SidebarNav() {
             </div>
           ))}
         </nav>
+
+        {hasSession && (
+          <div className="mt-2 shrink-0 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-700 transition dark:text-zinc-300 ${sidebarNavInactiveHover}`}
+            >
+              Log out
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

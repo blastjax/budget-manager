@@ -132,7 +132,6 @@ jobs:
           export WEB_IMAGE='${{ env.WEB_IMAGE }}'
           export WEB_PORT='${{ secrets.WEB_PORT || 3000 }}'
           export BUDGET_CORS_ORIGINS='${{ secrets.BUDGET_CORS_ORIGINS }}'
-          export BUDGET_OTP_SECRET='${{ secrets.BUDGET_OTP_SECRET }}'
           # --policy always: api/web define both `image:` and `build:` (the
           # build: block is for local `docker compose build` only, per
           # docker/README.md), so a plain `pull` skips them as "buildable"

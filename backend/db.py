@@ -2256,6 +2256,19 @@ def set_lotto_attempt_hidden(
 _APP_USER_PUBLIC_COLS = "id, username, created_at"
 
 
+def any_app_users() -> bool:
+    """True once at least one user has been added (Settings → Users).
+
+    Login is opt-in the same way OTP used to be: ``require_session`` (see
+    app/deps.py) only starts requiring a session once this flips to True, so
+    a fresh checkout stays usable until someone deliberately adds a user.
+    """
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute("SELECT 1 FROM app_user LIMIT 1")
+            return cur.fetchone() is not None
+
+
 def list_app_users() -> list[dict[str, Any]]:
     """All app users, newest first. Never includes ``password_hash``."""
     with get_connection() as conn:

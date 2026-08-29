@@ -28,7 +28,7 @@ import {
 const NUMBERS_HELP =
   "6 unique numbers, 1-58 — separate with commas, spaces, or dashes (e.g. 3, 17, 29, 42, 58, 1 or 03-17-29-42-58-01)";
 
-const DRAW_DATE_HELP = "YYYY-MM-DD or M/D/YYYY (e.g. 2026-07-07 or 7/7/2026)";
+const DRAW_DATE_HELP = "MM/DD/YYYY (e.g. 8/28/2026)";
 
 /** Turns a validated y/m/d into "YYYY-MM-DD", rejecting dates like Feb 30. */
 function toIsoDate(year: number, month: number, day: number): string {
@@ -45,15 +45,16 @@ function toIsoDate(year: number, month: number, day: number): string {
   return `${year}-${mm}-${dd}`;
 }
 
-/** Accepts "YYYY-MM-DD" (what a native date picker produces) as well as a
- * typed "M/D/YYYY" (e.g. 7/7/2026). */
+/** The stored "YYYY-MM-DD" -> "M/D/YYYY", for pre-filling the date field
+ * when editing an existing draw. */
+function isoToUsDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${m}/${d}/${y}`;
+}
+
+/** Accepts a typed "MM/DD/YYYY" (e.g. 8/28/2026). */
 function parseDrawDate(text: string): string {
   const trimmed = text.trim();
-  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
-  if (iso) {
-    const [, y, m, d] = iso;
-    return toIsoDate(Number(y), Number(m), Number(d));
-  }
   const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
   if (us) {
     const [, m, d, y] = us;
@@ -335,7 +336,7 @@ export default function LottoClient() {
     setDrawModal({
       open: true,
       drawId: detail.draw.id,
-      drawDate: detail.draw.draw_date,
+      drawDate: isoToUsDate(detail.draw.draw_date),
       numbersText: numbersToText(detail.draw.numbers),
       isEdit: true,
     });

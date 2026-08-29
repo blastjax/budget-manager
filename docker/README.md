@@ -10,7 +10,7 @@ and writes too — nothing to provision or migrate before starting the container
 `DATABASE_URL` in `.env` (left over from local dev, say) pointing anywhere else would silently not persist
 across container restarts.
 
-Every other setting the `api` container receives (`REDIS_URL`, `BUDGET_CORS_ORIGINS`, `BUDGET_OTP_SECRET`, …) is
+Every other setting the `api` container receives (`REDIS_URL`, `BUDGET_CORS_ORIGINS`, `BUDGET_SESSION_TTL_SECONDS`, …) is
 listed explicitly under that service's `environment:` in `docker-compose.yml`, each as `${VAR:-default}`. There's
 no `env_file: .env` passing the whole file through — compose only auto-loads `.env` from the repo root to fill in
 those `${...}` placeholders (nothing is copied into the image or container), so adding a new setting means adding
