@@ -33,8 +33,10 @@ import {
   loadPayslipDefaultsBundle,
   payslipDefaultsFormForSlotHalf,
   PAYSLIP_DEFAULTS_SAVED_EVENT,
+  refreshPayslipDefaultsBundle,
   tryParseFormStateJson,
   type FormState,
+  type PayslipDefaultsBundle,
 } from "./payslipModalForm";
 import type { Nav } from "./payslipNav";
 import { PayslipClientModal } from "./PayslipClientModal";
@@ -360,6 +362,25 @@ export default function PayslipClient() {
     }
   };
 
+  /** Prefill form for the "add" / "manual" nav screens given a defaults bundle; `null` for any other screen. */
+  const formForNavDefaults = useCallback(
+    (n: Nav, b: PayslipDefaultsBundle): FormState | null => {
+      if (n.screen === "add") {
+        return initialAddPayslipForm(
+          n.year,
+          n.month,
+          n.half,
+          payslipDefaultsFormForSlotHalf(b, n.half),
+        );
+      }
+      if (n.screen === "manual") {
+        return initialManualPayslipForm(b);
+      }
+      return null;
+    },
+    [],
+  );
+
   // Sync modal form when entering edit/add/manual (restore session draft if present)
   useEffect(() => {
     if (!nav) return;
@@ -373,40 +394,32 @@ export default function PayslipClient() {
         }
       }
       setModalForm(formFromRow(nav.row));
-    } else if (nav.screen === "add") {
-      const b = loadPayslipDefaultsBundle();
-      setModalForm(
-        initialAddPayslipForm(
-          nav.year,
-          nav.month,
-          nav.half,
-          payslipDefaultsFormForSlotHalf(b, nav.half),
-        ),
-      );
-    } else if (nav.screen === "manual") {
-      const b = loadPayslipDefaultsBundle();
-      setModalForm(initialManualPayslipForm(b.formFirst, b.formSecond));
+    } else {
+      const f = formForNavDefaults(nav, loadPayslipDefaultsBundle());
+      if (f) setModalForm(f);
     }
-  }, [nav]);
+  }, [nav, formForNavDefaults]);
+
+  // The in-memory defaults cache starts out as builtin fallback values until
+  // this resolves — fetch once on mount and re-apply to an already-open
+  // add/manual modal so it doesn't stay stuck showing the fallback.
+  useEffect(() => {
+    void refreshPayslipDefaultsBundle().then((b) => {
+      const n = navRef.current;
+      if (!n) return;
+      const f = formForNavDefaults(n, b);
+      if (f) setModalForm(f);
+    });
+  }, [formForNavDefaults]);
 
   useEffect(() => {
     const onDefaultsSaved = () => {
       const n = navRef.current;
       if (!n || (n.screen !== "add" && n.screen !== "manual")) return;
+      const f = formForNavDefaults(n, loadPayslipDefaultsBundle());
+      if (!f) return;
       clearPayslipModalDraft(n);
-      const b = loadPayslipDefaultsBundle();
-      if (n.screen === "add") {
-        setModalForm(
-          initialAddPayslipForm(
-            n.year,
-            n.month,
-            n.half,
-            payslipDefaultsFormForSlotHalf(b, n.half),
-          ),
-        );
-      } else {
-        setModalForm(initialManualPayslipForm(b.formFirst, b.formSecond));
-      }
+      setModalForm(f);
     };
     window.addEventListener(PAYSLIP_DEFAULTS_SAVED_EVENT, onDefaultsSaved);
     return () => {
@@ -415,7 +428,7 @@ export default function PayslipClient() {
         onDefaultsSaved,
       );
     };
-  }, []);
+  }, [formForNavDefaults]);
 
   useEffect(() => {
     if (!nav || nav.screen !== "detail") return;

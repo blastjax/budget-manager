@@ -5,8 +5,8 @@ import { CARD_CLASSES, PRIMARY_BUTTON_CLASSES } from "@/lib/ui";
 import { PayslipFormFields } from "../payslip/PayslipFormFields";
 import {
   getPayslipDefaultsBundleFallback,
-  loadPayslipDefaultsBundle,
   notifyPayslipDefaultsSaved,
+  refreshPayslipDefaultsBundle,
   savePayslipDefaultsBundle,
   type FormState,
   type PayslipPrefillHalfMode,
@@ -39,6 +39,8 @@ export function PayslipDefaultsPanel() {
     second: FormState;
   }>(() => normalizeStoredForms(fb));
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const displayedForm =
     activeHalf === "first" ? formByHalf.first : formByHalf.second;
@@ -59,9 +61,15 @@ export function PayslipDefaultsPanel() {
   );
 
   useEffect(() => {
-    const b = loadPayslipDefaultsBundle();
-    setActiveHalf(b.settingsHalf);
-    setFormByHalf(normalizeStoredForms(b));
+    let cancelled = false;
+    void refreshPayslipDefaultsBundle().then((b) => {
+      if (cancelled) return;
+      setActiveHalf(b.settingsHalf);
+      setFormByHalf(normalizeStoredForms(b));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -119,18 +127,27 @@ export function PayslipDefaultsPanel() {
         <button
           type="button"
           className={PRIMARY_BUTTON_CLASSES}
-          onClick={() => {
+          disabled={busy}
+          onClick={async () => {
             const normalized = normalizeStoredForms({
               formFirst: formByHalf.first,
               formSecond: formByHalf.second,
             });
-            savePayslipDefaultsBundle({
-              formFirst: normalized.first,
-              formSecond: normalized.second,
-              settingsHalf: activeHalf,
-            });
-            setFormByHalf(normalized);
-            setSaveMsg("Defaults saved. Open add modals were updated.");
+            setBusy(true);
+            setErrorMsg(null);
+            try {
+              const saved = await savePayslipDefaultsBundle({
+                formFirst: normalized.first,
+                formSecond: normalized.second,
+                settingsHalf: activeHalf,
+              });
+              setFormByHalf(normalizeStoredForms(saved));
+              setSaveMsg("Defaults saved. Open add modals were updated.");
+            } catch (e) {
+              setErrorMsg(e instanceof Error ? e.message : "Save failed");
+            } finally {
+              setBusy(false);
+            }
           }}
         >
           Save defaults
@@ -138,12 +155,21 @@ export function PayslipDefaultsPanel() {
         <button
           type="button"
           className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
-          onClick={() => {
-            const b = loadPayslipDefaultsBundle();
-            setActiveHalf(b.settingsHalf);
-            setFormByHalf(normalizeStoredForms(b));
-            setSaveMsg("Reloaded saved defaults.");
-            notifyPayslipDefaultsSaved();
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setErrorMsg(null);
+            try {
+              const b = await refreshPayslipDefaultsBundle();
+              setActiveHalf(b.settingsHalf);
+              setFormByHalf(normalizeStoredForms(b));
+              setSaveMsg("Reloaded saved defaults.");
+              notifyPayslipDefaultsSaved();
+            } catch (e) {
+              setErrorMsg(e instanceof Error ? e.message : "Reload failed");
+            } finally {
+              setBusy(false);
+            }
           }}
         >
           Reload saved
@@ -151,6 +177,11 @@ export function PayslipDefaultsPanel() {
         {saveMsg && (
           <span className="text-sm text-emerald-700 dark:text-emerald-400">
             {saveMsg}
+          </span>
+        )}
+        {errorMsg && (
+          <span className="text-sm text-red-700 dark:text-red-400">
+            {errorMsg}
           </span>
         )}
       </div>

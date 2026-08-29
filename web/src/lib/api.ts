@@ -870,6 +870,44 @@ export async function upsertPayPeriodStartOverride(body: {
   );
 }
 
+/** Wire shape for a Settings → Payslip defaults template (Payslip's `FormState` minus `period_half`). */
+export type PayslipDefaultFormDto = {
+  period_year: string;
+  period_month: string;
+  total: string;
+  basic_salary: string;
+  commission: string;
+  reimbursement: string;
+  medical_reimbursement: string;
+  others: string;
+  mp2: string;
+  allowances: string;
+  thirteenth_month: string;
+  notes: string;
+  withholding_tax: string;
+  sss_contribution: string;
+  philhealth: string;
+  pag_ibig: string;
+};
+
+export type PayslipDefaultsBundleDto = {
+  formFirst: Record<string, unknown>;
+  formSecond: Record<string, unknown>;
+  settingsHalf: string;
+};
+
+export async function getPayslipDefaults() {
+  return getJson<PayslipDefaultsBundleDto>("/api/payslip-defaults");
+}
+
+export async function savePayslipDefaults(body: {
+  form_first: PayslipDefaultFormDto;
+  form_second: PayslipDefaultFormDto;
+  settings_half: "first" | "second";
+}) {
+  return sendJson<PayslipDefaultsBundleDto>("PUT", "/api/payslip-defaults", body);
+}
+
 export async function deletePayPeriodStartOverride(
   periodYear: number,
   periodMonth: number,

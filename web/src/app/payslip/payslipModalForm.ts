@@ -1,3 +1,4 @@
+import { getPayslipDefaults, savePayslipDefaults } from "@/lib/api";
 import { parseFormNumber } from "@/lib/parseFormNumber";
 
 export type FormState = {
@@ -79,7 +80,10 @@ export function tryParseFormStateJson(raw: string): FormState | null {
   }
 }
 
-const LS_PAYSLIP_MODAL_DEFAULTS = "budgetapp:payslip:modalDefaults";
+/** Pre-database storage location (browser-local, per-device). Read once, on
+ * the first successful fetch from the database, to migrate any values a
+ * user had already customized there — then left alone. */
+const LS_PAYSLIP_MODAL_DEFAULTS_LEGACY = "budgetapp:payslip:modalDefaults";
 
 const BUILTIN_MODAL_DEFAULTS: Pick<FormState, "mp2" | "allowances"> = {
   mp2: "5,000.00",
@@ -110,7 +114,7 @@ function formSecondFallback(): FormState {
   return { ...defaultFormWithBuiltin(), period_half: "2" };
 }
 
-/** Same values as `loadPayslipDefaultsBundle()` when localStorage is empty/unavailable (SSR-safe). */
+/** Same values `loadPayslipDefaultsBundle()` returns before the database fetch resolves (SSR-safe). */
 export function getPayslipDefaultsBundleFallback(): PayslipDefaultsBundle {
   return {
     formFirst: formFirstFallback(),
@@ -156,22 +160,23 @@ export function payslipDefaultsFormForSlotHalf(
   return half === 1 ? bundle.formFirst : bundle.formSecond;
 }
 
-/** Loads saved form defaults (separate first- and second-half templates). */
-export function loadPayslipDefaultsBundle(): PayslipDefaultsBundle {
-  const fallback = getPayslipDefaultsBundleFallback();
+/** Reads the legacy browser-local bundle (pre-database storage). Used once,
+ * to migrate a user's already-customized values into the database. */
+function tryLoadLegacyLocalBundle(): PayslipDefaultsBundle | null {
+  if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(LS_PAYSLIP_MODAL_DEFAULTS);
-    if (!raw) return fallback;
+    const raw = localStorage.getItem(LS_PAYSLIP_MODAL_DEFAULTS_LEGACY);
+    if (!raw) return null;
     const o = JSON.parse(raw) as unknown;
-    if (!o || typeof o !== "object") return fallback;
+    if (!o || typeof o !== "object") return null;
     const rec = o as Record<string, unknown>;
 
     const ff = parseFormField(rec, "formFirst");
     const fs = parseFormField(rec, "formSecond");
     if (ff && fs) {
       return {
-        formFirst: ff,
-        formSecond: fs,
+        formFirst: { ...ff, period_half: "1" },
+        formSecond: { ...fs, period_half: "2" },
         settingsHalf: parseSettingsHalf(rec),
       };
     }
@@ -179,11 +184,10 @@ export function loadPayslipDefaultsBundle(): PayslipDefaultsBundle {
     if ("form" in rec && rec.form && typeof rec.form === "object") {
       const form = tryParseFormStateJson(JSON.stringify(rec.form));
       const merged = { ...defaultFormWithBuiltin(), ...(form ?? {}) };
-      const mode = parseSettingsHalf(rec);
       return {
         formFirst: { ...merged, period_half: "1" },
         formSecond: { ...merged, period_half: "2" },
-        settingsHalf: mode,
+        settingsHalf: parseSettingsHalf(rec),
       };
     }
 
@@ -199,23 +203,94 @@ export function loadPayslipDefaultsBundle(): PayslipDefaultsBundle {
   } catch {
     /* ignore */
   }
-  return fallback;
+  return null;
 }
 
-export function savePayslipDefaultsBundle(bundle: PayslipDefaultsBundle): void {
+function bundlesEqual(a: PayslipDefaultsBundle, b: PayslipDefaultsBundle): boolean {
+  return (
+    a.settingsHalf === b.settingsHalf &&
+    JSON.stringify(a.formFirst) === JSON.stringify(b.formFirst) &&
+    JSON.stringify(a.formSecond) === JSON.stringify(b.formSecond)
+  );
+}
+
+function bundleFromApiResponse(resp: {
+  formFirst: Record<string, unknown>;
+  formSecond: Record<string, unknown>;
+  settingsHalf: string;
+}): PayslipDefaultsBundle {
+  const fallback = getPayslipDefaultsBundleFallback();
+  const ff = tryParseFormStateJson(JSON.stringify(resp.formFirst));
+  const fs = tryParseFormStateJson(JSON.stringify(resp.formSecond));
+  return {
+    formFirst: ff ? { ...ff, period_half: "1" } : fallback.formFirst,
+    formSecond: fs ? { ...fs, period_half: "2" } : fallback.formSecond,
+    settingsHalf: resp.settingsHalf === "second" ? "second" : "first",
+  };
+}
+
+function stripHalf(f: FormState): Omit<FormState, "period_half"> {
+  const { period_half: _period_half, ...rest } = f;
+  return rest;
+}
+
+let cachedDefaultsBundle: PayslipDefaultsBundle | null = null;
+
+/**
+ * Best-known form defaults, read synchronously from an in-memory cache
+ * populated by `refreshPayslipDefaultsBundle()`. Falls back to the builtin
+ * defaults (SSR-safe) until that first fetch from the database resolves.
+ */
+export function loadPayslipDefaultsBundle(): PayslipDefaultsBundle {
+  return cachedDefaultsBundle ?? getPayslipDefaultsBundleFallback();
+}
+
+/**
+ * Fetches the saved defaults bundle from the database and refreshes the
+ * in-memory cache `loadPayslipDefaultsBundle()` reads from. The first time
+ * this resolves to an unsaved (still-fallback) database bundle, it migrates
+ * any pre-database browser-local values found so they aren't silently lost.
+ */
+export async function refreshPayslipDefaultsBundle(): Promise<PayslipDefaultsBundle> {
+  let bundle: PayslipDefaultsBundle;
   try {
-    localStorage.setItem(
-      LS_PAYSLIP_MODAL_DEFAULTS,
-      JSON.stringify({
-        formFirst: bundle.formFirst,
-        formSecond: bundle.formSecond,
-        settingsHalf: bundle.settingsHalf,
-      }),
-    );
-    notifyPayslipDefaultsSaved();
+    bundle = bundleFromApiResponse(await getPayslipDefaults());
   } catch {
-    /* quota / private mode */
+    return loadPayslipDefaultsBundle();
   }
+
+  if (bundlesEqual(bundle, getPayslipDefaultsBundleFallback())) {
+    const legacy = tryLoadLegacyLocalBundle();
+    if (legacy && !bundlesEqual(legacy, getPayslipDefaultsBundleFallback())) {
+      bundle = legacy;
+      void savePayslipDefaultsBundle(legacy).catch(() => {
+        /* migration best-effort; keep using the legacy values locally either way */
+      });
+    }
+  }
+  try {
+    localStorage.removeItem(LS_PAYSLIP_MODAL_DEFAULTS_LEGACY);
+  } catch {
+    /* ignore */
+  }
+
+  cachedDefaultsBundle = bundle;
+  return bundle;
+}
+
+/** Saves both half templates and the active-half toggle to the database. */
+export async function savePayslipDefaultsBundle(
+  bundle: PayslipDefaultsBundle,
+): Promise<PayslipDefaultsBundle> {
+  const resp = await savePayslipDefaults({
+    form_first: stripHalf(bundle.formFirst),
+    form_second: stripHalf(bundle.formSecond),
+    settings_half: bundle.settingsHalf,
+  });
+  const saved = bundleFromApiResponse(resp);
+  cachedDefaultsBundle = saved;
+  notifyPayslipDefaultsSaved();
+  return saved;
 }
 
 export function payPeriodFromToday(): Pick<
@@ -269,12 +344,11 @@ export function initialAddPayslipForm(
 }
 
 export function initialManualPayslipForm(
-  formFirst: FormState,
-  formSecond: FormState,
+  bundle: PayslipDefaultsBundle,
 ): FormState {
   const today = payPeriodFromToday();
-  const halfNum: 1 | 2 = today.period_half === "2" ? 2 : 1;
-  const defaults = halfNum === 1 ? formFirst : formSecond;
+  const halfNum: 1 | 2 = bundle.settingsHalf === "second" ? 2 : 1;
+  const defaults = halfNum === 1 ? bundle.formFirst : bundle.formSecond;
   const halfStr: "1" | "2" = halfNum === 2 ? "2" : "1";
   const fromDefaults = payPeriodFromDefaultsIfComplete(defaults);
   const period =

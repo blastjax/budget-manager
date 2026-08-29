@@ -338,6 +338,37 @@ _SCHEMA_STATEMENTS: list[str] = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS payslip_default (
+        half INTEGER PRIMARY KEY,
+        period_year TEXT NOT NULL DEFAULT '',
+        period_month TEXT NOT NULL DEFAULT '',
+        total TEXT NOT NULL DEFAULT '',
+        basic_salary TEXT NOT NULL DEFAULT '',
+        commission TEXT NOT NULL DEFAULT '',
+        reimbursement TEXT NOT NULL DEFAULT '',
+        medical_reimbursement TEXT NOT NULL DEFAULT '',
+        others TEXT NOT NULL DEFAULT '',
+        mp2 TEXT NOT NULL DEFAULT '',
+        allowances TEXT NOT NULL DEFAULT '',
+        thirteenth_month TEXT NOT NULL DEFAULT '',
+        notes TEXT NOT NULL DEFAULT '',
+        withholding_tax TEXT NOT NULL DEFAULT '',
+        sss_contribution TEXT NOT NULL DEFAULT '',
+        philhealth TEXT NOT NULL DEFAULT '',
+        pag_ibig TEXT NOT NULL DEFAULT '',
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (half IN (1, 2))
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS payslip_default_settings (
+        id INTEGER PRIMARY KEY,
+        settings_half TEXT NOT NULL DEFAULT 'first',
+        CHECK (id = 1),
+        CHECK (settings_half IN ('first', 'second'))
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS credit_card_payment (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         credit_card_id INTEGER NOT NULL REFERENCES credit_card(id) ON DELETE CASCADE,
@@ -2058,6 +2089,86 @@ def delete_pay_period_start_override(
                 (period_year, period_month, period_half),
             )
             return cur.fetchone() is not None
+
+
+_PAYSLIP_DEFAULT_FORM_COLS = (
+    "period_year",
+    "period_month",
+    "total",
+    "basic_salary",
+    "commission",
+    "reimbursement",
+    "medical_reimbursement",
+    "others",
+    "mp2",
+    "allowances",
+    "thirteenth_month",
+    "notes",
+    "withholding_tax",
+    "sss_contribution",
+    "philhealth",
+    "pag_ibig",
+)
+
+
+def _payslip_default_row_to_form(row: dict[str, Any] | None, half: int) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    out = {k: row.get(k) or "" for k in _PAYSLIP_DEFAULT_FORM_COLS}
+    out["period_half"] = str(half)
+    return out
+
+
+def get_payslip_defaults() -> dict[str, Any]:
+    """Saved Settings → Payslip defaults templates, keyed by half (1st/2nd).
+
+    Returns ``None`` for a half or for ``settings_half`` when nothing has
+    been saved yet — the router fills in the builtin fallback."""
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                f"SELECT half, {', '.join(_PAYSLIP_DEFAULT_FORM_COLS)} FROM payslip_default"
+            )
+            rows_by_half = {
+                r["half"]: r for r in (_row_to_dict(cur, row) for row in cur.fetchall())
+            }
+            cur.execute("SELECT settings_half FROM payslip_default_settings WHERE id = 1")
+            settings_row = cur.fetchone()
+            settings_half = _row_to_dict(cur, settings_row)["settings_half"] if settings_row else None
+    return {
+        "form_first": _payslip_default_row_to_form(rows_by_half.get(1), 1),
+        "form_second": _payslip_default_row_to_form(rows_by_half.get(2), 2),
+        "settings_half": settings_half,
+    }
+
+
+def save_payslip_defaults(
+    form_first: dict[str, Any], form_second: dict[str, Any], settings_half: str
+) -> None:
+    """Upsert both half templates and the active-half toggle in one transaction."""
+    cols_sql = ", ".join(_PAYSLIP_DEFAULT_FORM_COLS)
+    placeholders_sql = ", ".join("?" for _ in _PAYSLIP_DEFAULT_FORM_COLS)
+    updates_sql = ", ".join(f"{c} = excluded.{c}" for c in _PAYSLIP_DEFAULT_FORM_COLS)
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            for half, form in ((1, form_first), (2, form_second)):
+                values = [str(form.get(c) or "") for c in _PAYSLIP_DEFAULT_FORM_COLS]
+                cur.execute(
+                    f"""
+                    INSERT INTO payslip_default (half, {cols_sql})
+                    VALUES (?, {placeholders_sql})
+                    ON CONFLICT (half) DO UPDATE SET {updates_sql}
+                    """,
+                    (half, *values),
+                )
+            cur.execute(
+                """
+                INSERT INTO payslip_default_settings (id, settings_half)
+                VALUES (1, ?)
+                ON CONFLICT (id) DO UPDATE SET settings_half = excluded.settings_half
+                """,
+                (settings_half,),
+            )
 
 
 _LOTTO_DRAW_COLS = "id, draw_date, n1, n2, n3, n4, n5, n6, created_at"

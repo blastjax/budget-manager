@@ -1,0 +1,76 @@
+"""Payslip default-template endpoints (Settings → Payslip defaults).
+
+Stores the two prefill templates (first-half / second-half) used when
+opening the payslip "add" / "new entry" modals, plus which of the two is
+currently active. Previously lived in browser localStorage only.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Depends
+
+import cache
+from app.deps import require_db
+from app.schemas.payslip_default import PayslipDefaultsUpsert
+from db import get_payslip_defaults, save_payslip_defaults
+
+router = APIRouter(tags=["payslip_default"], dependencies=[Depends(require_db)])
+
+# Matches the frontend's builtin fallback (payslipModalForm.ts) so a fresh
+# database and a fresh browser start out showing the same values.
+_BUILTIN = {"mp2": "5,000.00", "allowances": "1,108.30"}
+
+
+def _fallback_form(half: int) -> dict[str, Any]:
+    return {
+        "period_year": "",
+        "period_month": "",
+        "period_half": str(half),
+        "total": "",
+        "basic_salary": "",
+        "commission": "",
+        "reimbursement": "",
+        "medical_reimbursement": "",
+        "others": "",
+        "mp2": _BUILTIN["mp2"],
+        "allowances": _BUILTIN["allowances"],
+        "thirteenth_month": "",
+        "notes": "",
+        "withholding_tax": "",
+        "sss_contribution": "",
+        "philhealth": "",
+        "pag_ibig": "",
+    }
+
+
+@router.get("/api/payslip-defaults")
+def payslip_defaults_get() -> dict[str, Any]:
+    key = "payslip_default:bundle"
+    hit = cache.get(key)
+    if hit is not None:
+        return hit
+    saved = get_payslip_defaults()
+    result = {
+        "formFirst": saved["form_first"] or _fallback_form(1),
+        "formSecond": saved["form_second"] or _fallback_form(2),
+        "settingsHalf": saved["settings_half"] or "first",
+    }
+    cache.set(key, result)
+    return result
+
+
+@router.put("/api/payslip-defaults")
+def payslip_defaults_put(body: PayslipDefaultsUpsert) -> dict[str, Any]:
+    save_payslip_defaults(
+        body.form_first.model_dump(), body.form_second.model_dump(), body.settings_half
+    )
+    # Echo back what was just saved instead of re-reading through the (not
+    # yet invalidated) cache — the app-wide write middleware busts it after
+    # this response returns.
+    return {
+        "formFirst": {**body.form_first.model_dump(), "period_half": "1"},
+        "formSecond": {**body.form_second.model_dump(), "period_half": "2"},
+        "settingsHalf": body.settings_half,
+    }
