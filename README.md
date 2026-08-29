@@ -100,12 +100,13 @@ Login is opt-in and needs no environment variable: the app is open until you add
 
 ## Deploying to EC2
 
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on every push to `main` (or manual dispatch). It first runs [`checks.yml`](.github/workflows/checks.yml) (web typecheck + lint + production build, backend compile + app import); only if those pass does it SSH in, `git pull --ff-only`, rebuild, and restart the stack. It then waits for both containers to report **healthy** and fails the job otherwise, so a red run means "not deployed" rather than "deployed and broken". Deploys are serialized via a `concurrency` group, and the image is built on the instance — no registry involved.
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on every push to `main` (or manual dispatch). It builds the API and web images on GitHub-hosted runners and pushes them to GHCR, then deploys via **AWS SSM** (no SSH/port 22 required): it `git pull --ff-only`s on the instance, pulls the new images, and restarts the stack. It then waits for both containers to report **healthy** and fails the job otherwise, so a red run means "not deployed" rather than "deployed and broken". Deploys are serialized via a `concurrency` group.
 
 One-time setup on the EC2 instance:
 1. Clone this repo and create `.env` (see `.env.example`) at the path you'll use below, including `WEB_PORT=80` and a `NEXT_PUBLIC_API_URL` that points at the instance's public address (not `127.0.0.1` — that build arg is baked into the browser bundle, so it must be reachable from the visitor's machine, not just from the instance).
 2. Install Docker + the Compose plugin, and run `docker compose up -d` once by hand to confirm it works.
-3. Ensure the deploy user has passwordless `sudo` (the workflow runs `sudo chown -R 1000:1000 data`, because the api container runs unprivileged as uid 1000 and the `data/` bind mount keeps host ownership — a directory left behind by an older root-run container would otherwise be unwritable).
+3. Ensure the SSM agent is running and the instance has an IAM role allowing it, and that the GitHub Actions role (`vars.AWS_DEPLOY_ROLE_ARN`, assumed via OIDC) can call `ssm:SendCommand` / `ssm:GetCommandInvocation` on it.
+4. The deploy script runs as root via SSM and needs passwordless access to `chown -R 1000:1000 data`, because the api container runs unprivileged as uid 1000 and the `data/` bind mount keeps host ownership — a directory left behind by an older root-run container would otherwise be unwritable.
 
 ### Before exposing this publicly
 
@@ -117,16 +118,18 @@ Repository secrets (**Settings → Secrets and variables → Actions → Secrets
 
 | Secret | Purpose |
 |--------|---------|
-| `EC2_HOST` | Public IP or hostname of the instance. |
-| `EC2_USERNAME` | SSH user (e.g. `ubuntu`). |
-| `EC2_SSH_KEY` | Private key matching a public key in the instance's `~/.ssh/authorized_keys`. |
+| `APP_DIR` | Absolute path to the cloned repo on the instance, e.g. `/home/ubuntu/budgetapp`. |
+| `WEB_PORT` | Host port `docker compose` publishes the web container on (see `WEB_PORT` below; `.env` on the box only matters for manual runs). |
+| `BUDGET_CORS_ORIGINS` | Optional; comma-separated extra browser origins allowed by the API (see below). |
+| `NEXT_PUBLIC_API_URL` | Build-time API base URL baked into the web image; must be reachable from visitors, not just the instance. |
 
 Repository variables (**...Actions → Variables**):
 
 | Variable | Purpose |
 |----------|---------|
-| `APP_DIR` | Absolute path to the cloned repo on the instance, e.g. `/home/ubuntu/budgetapp`. |
-| `EC2_SSH_PORT` | Optional; SSH port if not 22. |
+| `AWS_DEPLOY_ROLE_ARN` | ARN of the IAM role the workflow assumes (via OIDC) to call SSM against the instance. |
+| `AWS_REGION` | AWS region the instance and SSM calls run in. |
+| `EC2_INSTANCE_ID` | Instance ID (`i-...`) the deploy targets. |
 
 ## Project layout
 
