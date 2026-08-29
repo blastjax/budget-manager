@@ -234,12 +234,22 @@ export default function LottoClient() {
   const [error, setError] = useState<string | null>(null);
 
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
-  // Hidden attempts are tucked out of view by default across every draw;
-  // this flips them all back into view at once.
-  const [showHiddenAttempts, setShowHiddenAttempts] = useState(false);
+  // Hidden attempts are tucked out of view by default. This tracks which
+  // draws currently have theirs revealed — per-draw, so one draw's hidden
+  // attempts can be shown without exposing every other draw's too.
+  const [shownHiddenDrawIds, setShownHiddenDrawIds] = useState<Set<number>>(new Set());
 
   const toggleCollapsed = (drawId: number) => {
     setCollapsedIds((s) => {
+      const next = new Set(s);
+      if (next.has(drawId)) next.delete(drawId);
+      else next.add(drawId);
+      return next;
+    });
+  };
+
+  const toggleShowHiddenForDraw = (drawId: number) => {
+    setShownHiddenDrawIds((s) => {
       const next = new Set(s);
       if (next.has(drawId)) next.delete(drawId);
       else next.add(drawId);
@@ -251,10 +261,20 @@ export default function LottoClient() {
   // collapsible — only draws with attempts participate in collapse state.
   const collapsibleDraws = draws.filter((d) => d.attempts.length > 0);
 
+  const drawsWithHidden = draws.filter((d) => d.attempts.some((a) => a.hidden));
   const totalHiddenAttempts = draws.reduce(
     (sum, d) => sum + d.attempts.filter((a) => a.hidden).length,
     0,
   );
+  const allHiddenShown =
+    drawsWithHidden.length > 0 && drawsWithHidden.every((d) => shownHiddenDrawIds.has(d.draw.id));
+
+  const toggleShowHiddenAll = () => {
+    setShownHiddenDrawIds((s) => {
+      const allShown = drawsWithHidden.every((d) => s.has(d.draw.id));
+      return allShown ? new Set() : new Set(drawsWithHidden.map((d) => d.draw.id));
+    });
+  };
 
   const allCollapsed =
     collapsibleDraws.length > 0 && collapsibleDraws.every((d) => collapsedIds.has(d.draw.id));
@@ -666,9 +686,9 @@ export default function LottoClient() {
             <button
               type="button"
               className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
-              onClick={() => setShowHiddenAttempts((s) => !s)}
+              onClick={toggleShowHiddenAll}
             >
-              {showHiddenAttempts
+              {allHiddenShown
                 ? "Hide hidden attempts"
                 : `Show hidden attempts (${totalHiddenAttempts})`}
             </button>
@@ -696,11 +716,13 @@ export default function LottoClient() {
             detail.attempts.flatMap((a) => (a.ticket != null ? [a.ticket] : [])),
           ).size;
           // Hidden attempts stay in the data (nothing is deleted) but drop
-          // out of the normal view until "Show hidden" is switched on.
-          const visibleAttempts = showHiddenAttempts
+          // out of the normal view until this draw's "Show hidden" is
+          // switched on.
+          const showHiddenForDraw = shownHiddenDrawIds.has(detail.draw.id);
+          const rawHiddenCount = detail.attempts.filter((a) => a.hidden).length;
+          const visibleAttempts = showHiddenForDraw
             ? detail.attempts
             : detail.attempts.filter((a) => !a.hidden);
-          const hiddenCount = totalAttempts - visibleAttempts.length;
           const hasAttempts = totalAttempts > 0;
           const collapsed = hasAttempts && collapsedIds.has(detail.draw.id);
           // Without a result yet, there's nothing to match attempts against —
@@ -714,14 +736,20 @@ export default function LottoClient() {
                 matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
               }))
             : visibleAttempts.map((attempt) => ({ attempt, matchCount: -1 }));
-          const matchBreakdown = hasResult
-            ? [3, 4, 5, 6]
-                .map((tier) => ({
+          // Always all six tiers, zero counts included, so the row of badges
+          // lines up in the same place on every card instead of shifting
+          // around based on which tiers that draw happened to hit. Counts
+          // every attempt (hidden or not) — the breakdown is a summary of
+          // the whole draw, not just what "Show hidden" currently reveals.
+          const matchBreakdown =
+            hasResult && totalAttempts > 0
+              ? [1, 2, 3, 4, 5, 6].map((tier) => ({
                   tier,
-                  count: attemptsByMatch.filter((a) => a.matchCount === tier).length,
+                  count: detail.attempts.filter(
+                    (a) => a.numbers.filter((n) => drawSet.has(n)).length === tier,
+                  ).length,
                 }))
-                .filter((b) => b.count > 0)
-            : [];
+              : [];
 
           // Cluster attempts by ticket — up to a handful of board plays on
           // one physical ticket share a ticket number, so they're grouped
@@ -821,7 +849,7 @@ export default function LottoClient() {
                 <button
                   type="button"
                   disabled={saving}
-                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
                   onClick={() => openEditAttempt(detail.draw.id, attempt)}
                 >
                   Edit
@@ -829,7 +857,7 @@ export default function LottoClient() {
                 <button
                   type="button"
                   disabled={saving}
-                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
                   onClick={() => void onToggleAttemptHidden(detail.draw.id, attempt)}
                 >
                   {attempt.hidden ? "Unhide" : "Hide"}
@@ -837,7 +865,7 @@ export default function LottoClient() {
                 <button
                   type="button"
                   disabled={saving}
-                  className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                  className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
                   onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
                 >
                   Delete
@@ -845,64 +873,67 @@ export default function LottoClient() {
               </div>
             </li>
           );
+          const matchBreakdownDisplay = matchBreakdown.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {matchBreakdown.map(({ tier, count }) => (
+                <span
+                  key={tier}
+                  className={`rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 ${
+                    count === 0 ? "opacity-40" : ""
+                  }`}
+                >
+                  {tier}/6 &times;{count}
+                </span>
+              ))}
+            </div>
+          );
           return (
             <section key={detail.draw.id} className={CARD_CLASSES}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                {hasAttempts ? (
-                  <button
-                    type="button"
-                    className="flex min-w-0 items-start gap-2 text-left"
-                    aria-expanded={!collapsed}
-                    onClick={() => toggleCollapsed(detail.draw.id)}
+              <div
+                className={`group -m-1 flex flex-wrap items-start justify-between gap-3 rounded-lg p-1 transition-colors ${
+                  hasAttempts ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60" : ""
+                }`}
+                role={hasAttempts ? "button" : undefined}
+                tabIndex={hasAttempts ? 0 : undefined}
+                aria-expanded={hasAttempts ? !collapsed : undefined}
+                onClick={() => {
+                  if (hasAttempts) toggleCollapsed(detail.draw.id);
+                }}
+                onKeyDown={(e) => {
+                  if (!hasAttempts) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleCollapsed(detail.draw.id);
+                  }
+                }}
+              >
+                <div className="min-w-0">
+                  <h2
+                    className={`text-lg font-medium text-zinc-900 dark:text-zinc-50 ${
+                      hasAttempts
+                        ? "transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                        : ""
+                    }`}
                   >
-                    <span
-                      className={`mt-1.5 inline-block shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
-                        collapsed ? "-rotate-90" : ""
-                      }`}
-                      aria-hidden
-                    >
-                      ▾
-                    </span>
-                    <div>
-                      <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                        {formatDate(detail.draw.draw_date)}
-                        {collapsed && (
-                          <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
-                            ({totalAttempts} attempt
-                            {totalAttempts === 1 ? "" : "s"}
-                            {ticketCount > 0
-                              ? `, ${ticketCount} ticket${ticketCount === 1 ? "" : "s"}`
-                              : ""}
-                            )
-                          </span>
-                        )}
-                      </h2>
-                      {drawNumbersDisplay}
-                    </div>
-                  </button>
-                ) : (
-                  <div className="flex min-w-0 items-start gap-2">
-                    <div>
-                      <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                        {formatDate(detail.draw.draw_date)}
-                      </h2>
-                      {drawNumbersDisplay}
-                    </div>
-                  </div>
-                )}
-                {matchBreakdown.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {matchBreakdown.map(({ tier, count }) => (
-                      <span
-                        key={tier}
-                        className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                      >
-                        {tier}/6 &times;{count}
+                    {formatDate(detail.draw.draw_date)}
+                    {collapsed && (
+                      <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                        ({totalAttempts} attempt
+                        {totalAttempts === 1 ? "" : "s"}
+                        {ticketCount > 0
+                          ? `, ${ticketCount} ticket${ticketCount === 1 ? "" : "s"}`
+                          : ""}
+                        )
                       </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
+                    )}
+                  </h2>
+                  {drawNumbersDisplay}
+                  {matchBreakdownDisplay}
+                </div>
+                <div
+                  className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <button
                     type="button"
                     disabled={saving}
@@ -922,7 +953,7 @@ export default function LottoClient() {
                   <button
                     type="button"
                     disabled={saving}
-                    className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 dark:border-red-900 dark:text-red-300 sm:px-3 sm:text-sm"
+                    className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
                     onClick={() => void onDeleteDraw(detail.draw.id)}
                   >
                     Delete
@@ -941,15 +972,22 @@ export default function LottoClient() {
                       {ticketCount} ticket{ticketCount === 1 ? "" : "s"}
                     </span>
                   )}
-                  {hiddenCount > 0 && !showHiddenAttempts && (
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      ({hiddenCount} hidden)
-                    </span>
+                  {rawHiddenCount > 0 && (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      className="rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-medium text-zinc-500 transition hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                      onClick={() => toggleShowHiddenForDraw(detail.draw.id)}
+                    >
+                      {showHiddenForDraw
+                        ? "Hide hidden"
+                        : `Show hidden (${rawHiddenCount})`}
+                    </button>
                   )}
                   {matchBreakdown.length > 0 && (
                     <span className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                       {matchBreakdown.map(({ tier, count }) => (
-                        <span key={tier}>
+                        <span key={tier} className={count === 0 ? "opacity-40" : ""}>
                           {tier}/6 &times;{count}
                         </span>
                       ))}
@@ -989,7 +1027,7 @@ export default function LottoClient() {
                           <button
                             type="button"
                             disabled={saving}
-                            className="rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-normal dark:border-zinc-600"
+                            className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
                             onClick={() =>
                               void onToggleTicketHidden(
                                 detail.draw.id,
@@ -1003,7 +1041,7 @@ export default function LottoClient() {
                           <button
                             type="button"
                             disabled={saving}
-                            className="rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-normal dark:border-zinc-600"
+                            className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
                             onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
                           >
                             + Add to this ticket
@@ -1066,7 +1104,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeDrawModal}
           >
             Close
@@ -1129,7 +1167,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeAttemptModal}
           >
             Close
@@ -1193,7 +1231,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeUploadModal}
           >
             Close
