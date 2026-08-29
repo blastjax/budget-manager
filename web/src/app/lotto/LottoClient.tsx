@@ -462,6 +462,31 @@ export default function LottoClient() {
     }
   };
 
+  /** Hides or unhides every board play on a physical ticket in one go,
+   * instead of one attempt at a time. Attempts already at the target state
+   * are skipped. */
+  const onToggleTicketHidden = async (
+    drawId: number,
+    items: { attempt: LottoAttemptRow }[],
+    hidden: boolean,
+  ) => {
+    const targets = items.filter(({ attempt }) => attempt.hidden !== hidden);
+    if (targets.length === 0) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let detail: LottoDrawDetail | null = null;
+      for (const { attempt } of targets) {
+        detail = await setLottoAttemptHidden(drawId, attempt.id, hidden);
+      }
+      if (detail) upsertLocalDraw(detail);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update ticket");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   /** The first unused ticket number for a draw, so a freshly-grouped pair
    * gets a ticket that doesn't collide with any existing one. */
   const nextTicketNumber = (attempts: LottoAttemptRow[]): number =>
@@ -706,7 +731,16 @@ export default function LottoClient() {
           // top, without otherwise reshuffling anything. Ungrouped attempts
           // sit in their own section underneath (drag one onto a ticket, or
           // onto another ungrouped attempt, to group it).
-          type AttemptCluster = { ticket: number; items: typeof attemptsByMatch; bestMatch: number };
+          type AttemptCluster = {
+            ticket: number;
+            items: typeof attemptsByMatch;
+            bestMatch: number;
+            // True only when every item currently shown for this ticket is
+            // hidden — with "Show hidden" off, a partly-hidden ticket only
+            // shows its visible attempts, so this reads false until they're
+            // revealed (there'd be nothing to "unhide" from this view yet).
+            allHidden: boolean;
+          };
           const byTicket = new Map<number, typeof attemptsByMatch>();
           const looseItems: typeof attemptsByMatch = [];
           for (const item of attemptsByMatch) {
@@ -725,6 +759,7 @@ export default function LottoClient() {
               ticket,
               items,
               bestMatch: Math.max(...items.map((i) => i.matchCount)),
+              allHidden: items.every((i) => i.attempt.hidden),
             })),
             (c) => c.bestMatch >= 3,
           );
@@ -945,14 +980,35 @@ export default function LottoClient() {
                         <span>
                           {cluster.items.length} attempt{cluster.items.length === 1 ? "" : "s"}
                         </span>
-                        <button
-                          type="button"
-                          disabled={saving}
-                          className="ml-auto rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-normal dark:border-zinc-600"
-                          onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
-                        >
-                          + Add to this ticket
-                        </button>
+                        {cluster.allHidden && (
+                          <span className="rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                            Hidden
+                          </span>
+                        )}
+                        <div className="ml-auto flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={saving}
+                            className="rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-normal dark:border-zinc-600"
+                            onClick={() =>
+                              void onToggleTicketHidden(
+                                detail.draw.id,
+                                cluster.items,
+                                !cluster.allHidden,
+                              )
+                            }
+                          >
+                            {cluster.allHidden ? "Unhide ticket" : "Hide ticket"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={saving}
+                            className="rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-normal dark:border-zinc-600"
+                            onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
+                          >
+                            + Add to this ticket
+                          </button>
+                        </div>
                       </div>
                       <ul className="flex flex-col gap-2">
                         {cluster.items.map(({ attempt, matchCount }) =>
