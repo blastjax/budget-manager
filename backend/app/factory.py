@@ -127,6 +127,7 @@ def create_app() -> FastAPI:
         mosaic,
         pay_period_start_override,
         payslip,
+        user,
     )
 
     # health and auth stay open — everything else requires an OTP session
@@ -147,6 +148,7 @@ def create_app() -> FastAPI:
         pay_period_start_override.router,
         mosaic.router,
         mambo.router,
+        user.router,
     ):
         app.include_router(router, dependencies=[Depends(require_session)])
 

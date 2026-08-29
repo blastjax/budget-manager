@@ -1068,3 +1068,47 @@ export async function setLottoAttemptHidden(
     { hidden },
   );
 }
+
+/** An app-managed user account. Passwords are Argon2id-hashed server-side —
+ * this type never carries one. Not wired into login yet (see Settings →
+ * Users); the shared OTP session is still what gates the app. */
+export type AppUserRow = {
+  id: number;
+  username: string;
+  created_at: string;
+};
+
+export type AppUserCreateBody = {
+  username: string;
+  password: string;
+};
+
+export type AppUserUpdateBody = {
+  username?: string;
+  password?: string;
+};
+
+export async function getAppUsers() {
+  return getJson<{ users: AppUserRow[] }>("/api/users");
+}
+
+export async function createAppUser(body: AppUserCreateBody) {
+  return sendJson<{ user: AppUserRow }>("POST", "/api/users", body);
+}
+
+export async function updateAppUser(id: number, body: AppUserUpdateBody) {
+  return sendJson<{ user: AppUserRow }>("PUT", `/api/users/${id}`, body);
+}
+
+export async function deleteAppUser(id: number) {
+  return sendJson<{ ok: boolean }>("DELETE", `/api/users/${id}`);
+}
+
+/** Checks a username/password pair against the stored hash. Doesn't sign
+ * anyone in — just confirms a password was saved correctly. */
+export async function verifyAppUserPassword(username: string, password: string) {
+  return sendJson<{ valid: boolean }>("POST", "/api/users/verify", {
+    username,
+    password,
+  });
+}

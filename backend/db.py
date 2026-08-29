@@ -387,6 +387,15 @@ _SCHEMA_STATEMENTS: list[str] = [
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_lotto_attempt_parent ON lotto_attempt (draw_id, created_at)",
+    """
+    CREATE TABLE IF NOT EXISTS app_user (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        password_hash TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (length(trim(username)) > 0)
+    )
+    """,
 ]
 
 
@@ -2242,3 +2251,86 @@ def set_lotto_attempt_hidden(
             if not cur.fetchone():
                 return None
             return _lotto_draw_detail(cur, draw_id)
+
+
+_APP_USER_PUBLIC_COLS = "id, username, created_at"
+
+
+def list_app_users() -> list[dict[str, Any]]:
+    """All app users, newest first. Never includes ``password_hash``."""
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                f"SELECT {_APP_USER_PUBLIC_COLS} FROM app_user ORDER BY username COLLATE NOCASE ASC"
+            )
+            return [_row_to_dict(cur, r) for r in cur.fetchall()]
+
+
+def insert_app_user(username: str, password_hash: str) -> dict[str, Any]:
+    """Insert one user and return the public row (no ``password_hash``).
+
+    Raises ``sqlite3.IntegrityError`` if ``username`` (case-insensitively)
+    already exists — the caller turns that into a 409.
+    """
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                f"""
+                INSERT INTO app_user (username, password_hash)
+                VALUES (?, ?)
+                RETURNING {_APP_USER_PUBLIC_COLS}
+                """,
+                (username, password_hash),
+            )
+            return _row_to_dict(cur, cur.fetchone())
+
+
+def get_app_user_by_username(username: str) -> dict[str, Any] | None:
+    """Full row (including ``password_hash``) for credential checks. Not used
+    by any endpoint yet — kept for the login wiring this table is meant for."""
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                "SELECT id, username, password_hash, created_at FROM app_user "
+                "WHERE username = ? COLLATE NOCASE",
+                (username,),
+            )
+            row = cur.fetchone()
+            return _row_to_dict(cur, row) if row else None
+
+
+def update_app_user(
+    user_id: int,
+    username: str | None,
+    password_hash: str | None,
+) -> dict[str, Any] | None:
+    """Update whichever of ``username``/``password_hash`` is not None and
+    return the refreshed public row (or ``None`` if no such user).
+
+    Raises ``sqlite3.IntegrityError`` on a username collision.
+    """
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            if username is not None:
+                cur.execute(
+                    "UPDATE app_user SET username = ? WHERE id = ?",
+                    (username, user_id),
+                )
+            if password_hash is not None:
+                cur.execute(
+                    "UPDATE app_user SET password_hash = ? WHERE id = ?",
+                    (password_hash, user_id),
+                )
+            cur.execute(
+                f"SELECT {_APP_USER_PUBLIC_COLS} FROM app_user WHERE id = ?",
+                (user_id,),
+            )
+            row = cur.fetchone()
+            return _row_to_dict(cur, row) if row else None
+
+
+def delete_app_user(user_id: int) -> bool:
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute("DELETE FROM app_user WHERE id = ?", (user_id,))
+            return cur.rowcount > 0

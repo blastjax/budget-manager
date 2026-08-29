@@ -9,8 +9,9 @@ import {
 } from "@/lib/ui";
 import { ChartColorsSettingsPanel } from "./ChartColorsSettingsPanel";
 import { PayslipDefaultsPanel } from "./PayslipDefaultsPanel";
+import { UsersSettingsPanel } from "./UsersSettingsPanel";
 
-type SettingsTab = "payslip" | "charts";
+type SettingsTab = "payslip" | "charts" | "users";
 
 export default function SettingsClient() {
   const [tab, setTab] = useState<SettingsTab>("payslip");
@@ -24,7 +25,7 @@ export default function SettingsClient() {
               Settings
             </h1>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Manage payslip defaults and chart colors.
+              Manage payslip defaults, chart colors, and users.
             </p>
           </div>
           <div
@@ -58,12 +59,26 @@ export default function SettingsClient() {
             >
               Charts
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "users"}
+              className={`${SEGMENTED_BUTTON_CLASSES} ${
+                tab === "users"
+                  ? SEGMENTED_BUTTON_ACTIVE_CLASSES
+                  : SEGMENTED_BUTTON_INACTIVE_CLASSES
+              }`}
+              onClick={() => setTab("users")}
+            >
+              Users
+            </button>
           </div>
         </div>
       </header>
 
       {tab === "payslip" && <PayslipDefaultsPanel />}
       {tab === "charts" && <ChartColorsSettingsPanel />}
+      {tab === "users" && <UsersSettingsPanel />}
     </div>
   );
 }
