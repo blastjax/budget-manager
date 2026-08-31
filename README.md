@@ -1,12 +1,13 @@
-# Budget manager
+# blastjax
 
-Personal budget app: browse and edit transactions in a web UI, with calendar views, category stats, accounts, installments, and payslip helpers. The **API reads from a local SQLite file**; payslips can be bulk-imported from nested JSON (`POST /api/payslip/import-json`).
+Personal dashboard app: browse and edit transactions in a web UI, with calendar views, category stats, accounts, installments, and payslip helpers, plus blood-pressure tracking and a handful of small games. The **API reads from a local SQLite file**; payslips can be bulk-imported from nested JSON (`POST /api/payslip/import-json`).
 
 ## Stack
 
 - **Backend:** Python, FastAPI, Uvicorn (`backend/`)
 - **Frontend:** Next.js 15, React 19, TypeScript (`web/`)
 - **Data:** SQLite (`data/budget.sqlite`, self-creating; override with `DATABASE_URL` in `.env`)
+- **Cache:** Redis (optional; speeds up repeated reads, defaults to `localhost:6379` / the `redis` compose service)
 
 ## Prerequisites
 
@@ -48,9 +49,7 @@ Personal budget app: browse and edit transactions in a web UI, with calendar vie
 
 ## Run locally
 
-The UI expects the API at **`http://127.0.0.1:8000`** unless you set `NEXT_PUBLIC_API_URL` for the Next.js app.
-
-**Option A — two terminals**
+The UI expects the API at **`http://127.0.0.1:8000`** unless you set `NEXT_PUBLIC_API_URL` for the Next.js app. Run both in two terminals:
 
 1. Backend (from `backend/`):
 
@@ -68,19 +67,9 @@ The UI expects the API at **`http://127.0.0.1:8000`** unless you set `NEXT_PUBLI
 
 Then open the URL Next.js prints (usually `http://localhost:3000`).
 
-**Option B — Git Bash on Windows**
-
-From the project root:
-
-```bash
-./dev.sh
-```
-
-This starts the backend and web (uses `venv` under the project root when present).
-
 ## Docker
 
-`docker compose` builds the API and web images and publishes ports **8000** and **3000**. The API container reads/writes the same `data/budget.sqlite` file as local runs, bind-mounted from the repo root. See [`docker/README.md`](docker/README.md) for commands and environment variables.
+`docker-compose.yml` is tuned for the EC2/Caddy deploy: **Caddy** is the sole public entry point (ports **80**/**443**, auto-HTTPS), and the `api`/`web` containers publish no host ports of their own. For a local run, `docker-compose.override.yml` is auto-merged in and adds direct host ports for `web` (**3000**) and `api` (**8000**) so you don't need Caddy or a domain — just run `docker compose up --build` from the repo root. The API container reads/writes the same `data/budget.sqlite` file as local runs, bind-mounted from the repo root. See [`docker/README.md`](docker/README.md) for commands and environment variables.
 
 ## Configuration
 
@@ -93,7 +82,8 @@ Login is opt-in and needs no environment variable: the app is open until you add
 | `NEXT_PUBLIC_BASE_PATH` | Optional; set at **build** time with `STATIC_EXPORT=1` when the app is served under a subpath. |
 | `BUDGET_CORS_ORIGINS` | Optional; comma-separated extra browser origins allowed by the API. |
 | `BUDGET_SESSION_TTL_SECONDS` | Optional; server-side session cap in seconds once at least one user has been added (Settings → Users). Defaults to 43200 (12h). |
-| `WEB_PORT` | Optional; host port `docker-compose` publishes the web container on. Defaults to 3000; set to 80 in the server's `.env` for a plain-HTTP deployment. |
+| `REDIS_URL` | Optional; Redis connection string for the API's cache. Defaults to `redis://localhost:6379` for a bare `uvicorn` run, `redis://redis:6379` for the `api` container. |
+| `REDIS_CACHE_TTL` | Optional; cache entry lifetime in seconds. Defaults to 300. |
 | `API_UID` / `API_GID` | Optional; uid:gid the api container runs as (default `1000:1000`). Only needed if the bind-mounted `data/` directory is owned by another user. |
 
 > **Note:** `.env` is loaded with `override=True`, so values in the file win over variables already exported in the environment. Change the file, not the shell, when a setting doesn't seem to take effect.
@@ -103,23 +93,22 @@ Login is opt-in and needs no environment variable: the app is open until you add
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on every push to `main` (or manual dispatch). It builds the API and web images on GitHub-hosted runners and pushes them to GHCR, then deploys via **AWS SSM** (no SSH/port 22 required): it `git pull --ff-only`s on the instance, pulls the new images, and restarts the stack. It then waits for both containers to report **healthy** and fails the job otherwise, so a red run means "not deployed" rather than "deployed and broken". Deploys are serialized via a `concurrency` group.
 
 One-time setup on the EC2 instance:
-1. Clone this repo and create `.env` (see `.env.example`) at the path you'll use below, including `WEB_PORT=80` and a `NEXT_PUBLIC_API_URL` that points at the instance's public address (not `127.0.0.1` — that build arg is baked into the browser bundle, so it must be reachable from the visitor's machine, not just from the instance).
+1. Clone this repo at the path you'll use below, point the domain in [`docker/Caddyfile`](docker/Caddyfile) at the instance, and create `.env` (see `.env.example`) if you need to override any defaults — `NEXT_PUBLIC_API_URL` is normally left unset so the built-in web image build arg (`http://127.0.0.1:8000`) is overridden instead by `secrets.NEXT_PUBLIC_API_URL` at build time in CI, set to the site's own public URL (see "Before exposing this publicly" below).
 2. Install Docker + the Compose plugin, and run `docker compose up -d` once by hand to confirm it works.
 3. Ensure the SSM agent is running and the instance has an IAM role allowing it, and that the GitHub Actions role (`vars.AWS_DEPLOY_ROLE_ARN`, assumed via OIDC) can call `ssm:SendCommand` / `ssm:GetCommandInvocation` on it.
 4. The deploy script runs as root via SSM and needs passwordless access to `chown -R 1000:1000 data`, because the api container runs unprivileged as uid 1000 and the `data/` bind mount keeps host ownership — a directory left behind by an older root-run container would otherwise be unwritable.
 
 ### Before exposing this publicly
 
-- **Terminate TLS.** With `WEB_PORT=80` the login password and the session token cross the network in cleartext, so anyone on the path can capture a session. Put a reverse proxy (Caddy or nginx + Let's Encrypt) in front and serve HTTPS — a domain name is the only prerequisite.
-- **Restrict the security group** to your own IP where practical. Compose publishes Redis on loopback only, but port 8000 (the API) must stay reachable by browsers as long as `NEXT_PUBLIC_API_URL` points straight at it.
-- Serving the API under the same origin as the web app (proxying `/api` to port 8000) avoids CORS entirely and means `NEXT_PUBLIC_API_URL` can just be the site's own URL.
+- **TLS is already terminated by Caddy** (see `docker/Caddyfile`), which auto-provisions and renews a Let's Encrypt cert for the domain configured there and proxies `/api/*` to the `api` service, everything else to `web` — a domain name pointed at the instance is the only prerequisite. `api` and `web` publish no host ports of their own in `docker-compose.yml`, so they're only reachable through Caddy.
+- **Restrict the security group** to just ports 80/443 (and 22/SSM as needed) — Redis is published loopback-only and the API/web containers aren't exposed directly.
+- Because the API is proxied under the same origin as the web app, set `NEXT_PUBLIC_API_URL` to the site's own URL (e.g. `https://blastjax.example.com`) — this avoids CORS entirely.
 
 Repository secrets (**Settings → Secrets and variables → Actions → Secrets**):
 
 | Secret | Purpose |
 |--------|---------|
-| `APP_DIR` | Absolute path to the cloned repo on the instance, e.g. `/home/ubuntu/budgetapp`. |
-| `WEB_PORT` | Host port `docker compose` publishes the web container on (see `WEB_PORT` below; `.env` on the box only matters for manual runs). |
+| `APP_DIR` | Absolute path to the cloned repo on the instance, e.g. `/home/ubuntu/blastjax`. |
 | `BUDGET_CORS_ORIGINS` | Optional; comma-separated extra browser origins allowed by the API (see below). |
 | `NEXT_PUBLIC_API_URL` | Build-time API base URL baked into the web image; must be reachable from visitors, not just the instance. |
 
@@ -136,8 +125,8 @@ Repository variables (**...Actions → Variables**):
 | Path | Contents |
 |------|----------|
 | `backend/` | FastAPI app, DB layer, routers |
-| `web/` | Next.js app (dashboard, calendar, stats, settings, …) |
-| `dev.sh` | Convenience script to run API + web |
+| `web/` | Next.js app (dashboard, calendar, stats, health, games, settings, …) |
+| `docker/` | Dockerfiles, Caddyfile, docker docs |
 
 ## License
 

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const staticExport = process.env.STATIC_EXPORT === "1";
-/** Slug only (e.g. ``budgetapp``); leading ``/`` is added here so Git Bash does not rewrite ``/repo`` paths. */
+/** Slug only (e.g. ``blastjax``); leading ``/`` is added here so Git Bash does not rewrite ``/repo`` paths. */
 const basePathRaw = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").trim().replace(/^\/+/, "").replace(/\/+$/, "");
 const basePath = basePathRaw ? `/${basePathRaw}` : "";
 

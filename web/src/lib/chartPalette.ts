@@ -33,7 +33,7 @@ export const CHART_SERIES_LABEL: Record<ChartSeriesColorKey, string> = {
   pag_ibig: "Pag-ibig",
 };
 
-const LS_CHART_PALETTE = "budgetapp:chartPalette:v1";
+const LS_CHART_PALETTE = "blastjax:chartPalette:v1";
 
 export type ChartPaletteByTheme = Record<
   BudgetTheme,

@@ -12,10 +12,10 @@ import {
   type SetStateAction,
 } from "react";
 
-const LS_LEFT_COLLAPSED = "budgetapp:shell:leftCollapsed";
-const LS_LEFT_WIDTH = "budgetapp:shell:leftWidth";
-const LS_RIGHT_COLLAPSED = "budgetapp:shell:rightCollapsed";
-const LS_RIGHT_WIDTH = "budgetapp:shell:rightWidth";
+const LS_LEFT_COLLAPSED = "blastjax:shell:leftCollapsed";
+const LS_LEFT_WIDTH = "blastjax:shell:leftWidth";
+const LS_RIGHT_COLLAPSED = "blastjax:shell:rightCollapsed";
+const LS_RIGHT_WIDTH = "blastjax:shell:rightWidth";
 
 export const LEFT_MIN = 160;
 export const LEFT_MAX = 420;

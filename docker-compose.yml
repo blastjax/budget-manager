@@ -28,7 +28,7 @@ services:
     restart: always
     # image: pulled from GHCR on the EC2 host (see deploy.yml); the build:
     # block below is only exercised by a local `docker compose build`.
-    image: ${API_IMAGE:-budgetapp-api}:latest
+    image: ${API_IMAGE:-blastjax-api}:latest
     build:
       context: ./backend
       dockerfile: ../docker/Dockerfile.backend
@@ -75,7 +75,7 @@ services:
     restart: always
     # image: pulled from GHCR on the EC2 host (see deploy.yml); the build:
     # block below is only exercised by a local `docker compose build`.
-    image: ${WEB_IMAGE:-budgetapp-web}:latest
+    image: ${WEB_IMAGE:-blastjax-web}:latest
     build:
       context: ./web
       dockerfile: ../docker/Dockerfile.web

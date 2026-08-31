@@ -83,7 +83,7 @@ export function tryParseFormStateJson(raw: string): FormState | null {
 /** Pre-database storage location (browser-local, per-device). Read once, on
  * the first successful fetch from the database, to migrate any values a
  * user had already customized there — then left alone. */
-const LS_PAYSLIP_MODAL_DEFAULTS_LEGACY = "budgetapp:payslip:modalDefaults";
+const LS_PAYSLIP_MODAL_DEFAULTS_LEGACY = "blastjax:payslip:modalDefaults";
 
 const BUILTIN_MODAL_DEFAULTS: Pick<FormState, "mp2" | "allowances"> = {
   mp2: "5,000.00",
@@ -123,7 +123,7 @@ export function getPayslipDefaultsBundleFallback(): PayslipDefaultsBundle {
   };
 }
 
-export const PAYSLIP_DEFAULTS_SAVED_EVENT = "budgetapp:payslip-defaults-saved";
+export const PAYSLIP_DEFAULTS_SAVED_EVENT = "blastjax:payslip-defaults-saved";
 
 export function notifyPayslipDefaultsSaved(): void {
   if (typeof window === "undefined") return;

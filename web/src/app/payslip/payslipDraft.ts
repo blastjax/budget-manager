@@ -7,9 +7,9 @@ function fmtOptAmount(n: number | null | undefined): string {
   return n != null ? formatAmountNumber(n) : "";
 }
 
-const PAYSLIP_DRAFT_EDIT_PREFIX = "budgetapp:payslip:draft:edit:";
-const PAYSLIP_DRAFT_ADD_PREFIX = "budgetapp:payslip:draft:add:";
-export const PAYSLIP_DRAFT_MANUAL = "budgetapp:payslip:draft:manual";
+const PAYSLIP_DRAFT_EDIT_PREFIX = "blastjax:payslip:draft:edit:";
+const PAYSLIP_DRAFT_ADD_PREFIX = "blastjax:payslip:draft:add:";
+export const PAYSLIP_DRAFT_MANUAL = "blastjax:payslip:draft:manual";
 
 export function payslipDraftKeyEdit(id: number): string {
   return `${PAYSLIP_DRAFT_EDIT_PREFIX}${id}`;

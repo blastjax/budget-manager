@@ -47,7 +47,7 @@ import { CARD_CLASSES, ERROR_ALERT_CLASSES } from "@/lib/ui";
 import { PdfBulkUploadClient } from "./pdfs/PdfBulkUploadClient";
 
 /** localStorage key for the show/hide-gross toggle on the calendar. */
-const LS_PAYSLIP_SHOW_GROSS = "budgetapp:payslip:showGross";
+const LS_PAYSLIP_SHOW_GROSS = "blastjax:payslip:showGross";
 
 function PdfUploadIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
