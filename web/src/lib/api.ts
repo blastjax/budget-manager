@@ -1174,3 +1174,195 @@ export async function verifyAppUserPassword(username: string, password: string) 
     password,
   });
 }
+
+/** A trip is filed under an entry year + month, like a journal entry. */
+export type TravelTripRow = {
+  id: number;
+  title: string;
+  entry_year: number;
+  entry_month: number;
+  notes: string | null;
+  created_at: string;
+};
+
+export type TravelFlightRow = {
+  id: number;
+  trip_id: number;
+  flight_number: string;
+  flight_date: string | null;
+  departure_time: string | null;
+  arrival_time: string | null;
+  from_location: string | null;
+  /** Custom Google Maps link; when unset the UI builds a search link from `from_location`. */
+  from_map_url: string | null;
+  to_location: string | null;
+  /** Custom Google Maps link; when unset the UI builds a search link from `to_location`. */
+  to_map_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type TravelItineraryRow = {
+  id: number;
+  trip_id: number;
+  item_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  activity: string;
+  location_name: string | null;
+  /** Custom Google Maps link; when unset the UI builds a search link from `location_name`. */
+  location_map_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type TravelAccommodationRow = {
+  id: number;
+  trip_id: number;
+  name: string;
+  checkin_date: string;
+  checkout_date: string;
+  checkin_time: string | null;
+  checkout_time: string | null;
+  /** Derived from checkin/checkout on every read — never stored. */
+  nights: number;
+  days: number;
+  booking_confirmation: string | null;
+  instructions: string | null;
+  location_name: string | null;
+  /** Custom Google Maps link; when unset the UI builds a search link from `location_name`. */
+  location_map_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type TravelTripDetail = {
+  trip: TravelTripRow;
+  flights: TravelFlightRow[];
+  itinerary: TravelItineraryRow[];
+  accommodations: TravelAccommodationRow[];
+};
+
+export type TravelTripCreateBody = {
+  title: string;
+  entry_year: number;
+  entry_month: number;
+  notes?: string | null;
+};
+
+export type TravelFlightBody = {
+  flight_number: string;
+  flight_date?: string | null;
+  departure_time?: string | null;
+  arrival_time?: string | null;
+  from_location?: string | null;
+  from_map_url?: string | null;
+  to_location?: string | null;
+  to_map_url?: string | null;
+  notes?: string | null;
+};
+
+export type TravelItineraryBody = {
+  item_date: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  activity: string;
+  location_name?: string | null;
+  location_map_url?: string | null;
+  notes?: string | null;
+};
+
+export type TravelAccommodationBody = {
+  name: string;
+  checkin_date: string;
+  checkout_date: string;
+  checkin_time?: string | null;
+  checkout_time?: string | null;
+  booking_confirmation?: string | null;
+  instructions?: string | null;
+  location_name?: string | null;
+  location_map_url?: string | null;
+  notes?: string | null;
+};
+
+export async function getTravelTrips(limit?: number) {
+  return getJson<{ trips: TravelTripDetail[] }>("/api/travel", { limit });
+}
+
+export async function createTravelTrip(body: TravelTripCreateBody) {
+  return sendJson<TravelTripDetail>("POST", "/api/travel", body);
+}
+
+export async function updateTravelTrip(tripId: number, body: TravelTripCreateBody) {
+  return sendJson<TravelTripDetail>("PUT", `/api/travel/${tripId}`, body);
+}
+
+export async function deleteTravelTrip(tripId: number) {
+  return sendJson<{ ok: boolean }>("DELETE", `/api/travel/${tripId}`);
+}
+
+export async function createTravelFlight(tripId: number, body: TravelFlightBody) {
+  return sendJson<TravelTripDetail>("POST", `/api/travel/${tripId}/flights`, body);
+}
+
+export async function updateTravelFlight(
+  tripId: number,
+  flightId: number,
+  body: TravelFlightBody,
+) {
+  return sendJson<TravelTripDetail>(
+    "PUT",
+    `/api/travel/${tripId}/flights/${flightId}`,
+    body,
+  );
+}
+
+export async function deleteTravelFlight(tripId: number, flightId: number) {
+  return sendJson<TravelTripDetail>("DELETE", `/api/travel/${tripId}/flights/${flightId}`);
+}
+
+export async function createTravelItinerary(tripId: number, body: TravelItineraryBody) {
+  return sendJson<TravelTripDetail>("POST", `/api/travel/${tripId}/itinerary`, body);
+}
+
+export async function updateTravelItinerary(
+  tripId: number,
+  itemId: number,
+  body: TravelItineraryBody,
+) {
+  return sendJson<TravelTripDetail>(
+    "PUT",
+    `/api/travel/${tripId}/itinerary/${itemId}`,
+    body,
+  );
+}
+
+export async function deleteTravelItinerary(tripId: number, itemId: number) {
+  return sendJson<TravelTripDetail>("DELETE", `/api/travel/${tripId}/itinerary/${itemId}`);
+}
+
+export async function createTravelAccommodation(
+  tripId: number,
+  body: TravelAccommodationBody,
+) {
+  return sendJson<TravelTripDetail>("POST", `/api/travel/${tripId}/accommodations`, body);
+}
+
+export async function updateTravelAccommodation(
+  tripId: number,
+  accommodationId: number,
+  body: TravelAccommodationBody,
+) {
+  return sendJson<TravelTripDetail>(
+    "PUT",
+    `/api/travel/${tripId}/accommodations/${accommodationId}`,
+    body,
+  );
+}
+
+export async function deleteTravelAccommodation(tripId: number, accommodationId: number) {
+  return sendJson<TravelTripDetail>(
+    "DELETE",
+    `/api/travel/${tripId}/accommodations/${accommodationId}`,
+  );
+}

@@ -97,10 +97,27 @@ export function formatMonthYearShortFromKey(key: string): string {
   return p ? formatMonthYearShort(p.y, p.m) : key;
 }
 
+/** Local (non-UTC) "YYYY-MM-DD" for a `Date` — the inverse of `parseDateOnlyLocal`,
+ * used by the calendar pickers to turn a clicked day back into a plain date string. */
+export function toIsoDateLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Adds `delta` months to a year/(1-12)month pair, wrapping the year — used to step a
+ * calendar picker's visible month(s) forward/back without hitting `Date`'s own
+ * month-rollover quirks (e.g. Feb 30 -> Mar 2). */
+export function addMonths(year: number, month: number, delta: number): { y: number; m: number } {
+  const total = year * 12 + (month - 1) + delta;
+  return { y: Math.floor(total / 12), m: (((total % 12) + 12) % 12) + 1 };
+}
+
 /** Parses a leading "YYYY-MM-DD" as a *local* calendar date (ignores any time/timezone
  * component), so a bare date string never shifts to the previous/next day depending on
  * the reader's timezone offset. */
-function parseDateOnlyLocal(iso: string): Date | null {
+export function parseDateOnlyLocal(iso: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!m) return null;
   const y = Number(m[1]);

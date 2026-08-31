@@ -40,6 +40,7 @@ _CACHE_PREFIXES: dict[str, str] = {
     "/api/credit-card": "credit_card",
     "/api/pay-period-start-override": "pay_period_start_override",
     "/api/payslip-defaults": "payslip_default",
+    "/api/travel": "travel",
 }
 
 
@@ -129,6 +130,7 @@ def create_app() -> FastAPI:
         pay_period_start_override,
         payslip,
         payslip_default,
+        travel,
         user,
     )
 
@@ -151,6 +153,7 @@ def create_app() -> FastAPI:
         payslip_default.router,
         mosaic.router,
         mambo.router,
+        travel.router,
         user.router,
     ):
         app.include_router(router, dependencies=[Depends(require_session)])

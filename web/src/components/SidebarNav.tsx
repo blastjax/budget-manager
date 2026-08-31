@@ -32,6 +32,10 @@ const NAV_SEGMENTS: readonly { title: string | null; links: readonly NavLink[] }
     links: [{ href: "/blood-pressure", label: "Overall Health" }],
   },
   {
+    title: "Travels",
+    links: [{ href: "/travels", label: "Travels" }],
+  },
+  {
     title: "Games",
     links: [
       { href: "/games/mosaic", label: "Mosaic" },
