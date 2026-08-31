@@ -803,6 +803,11 @@ export default function LottoClient() {
         {yearGroups.map((group) => {
           const isCurrentYear = group.year === currentYear;
           const expanded = isCurrentYear || expandedYears.has(group.year);
+          // `group.items` is newest-first, so the first entry is this year's
+          // most recent draw — shown as a preview on the collapsed card
+          // instead of making someone expand it just to see the latest result.
+          const latestDraw = group.items[0];
+          const latestHasResult = latestDraw.draw.numbers.length === 6;
           const yearBody = (
             <div
               className={
@@ -1227,14 +1232,31 @@ export default function LottoClient() {
                 aria-expanded={expanded}
                 onClick={() => toggleYearExpanded(group.year)}
               >
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                  {group.year}
-                </h2>
+                <div>
+                  <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                    {group.year}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    Latest: {formatDate(latestDraw.draw.draw_date)}
+                  </p>
+                </div>
                 <span className="text-sm text-zinc-500 dark:text-zinc-400">
                   {group.items.length} draw{group.items.length === 1 ? "" : "s"} ·{" "}
                   {expanded ? "Collapse" : "Expand"}
                 </span>
               </button>
+              {!expanded &&
+                (latestHasResult ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {latestDraw.draw.numbers.map((n) => (
+                      <NumberBall key={n} n={n} variant="result" />
+                    ))}
+                  </div>
+                ) : (
+                  <span className="mt-2 inline-block rounded-full border border-dashed border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                    Result not in yet
+                  </span>
+                ))}
               {expanded && yearBody}
             </section>
           );
