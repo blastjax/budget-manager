@@ -729,6 +729,410 @@ export default function LottoClient() {
     }
   };
 
+  const renderDrawCard = (detail: LottoDrawDetail) => {
+    const hasResult = detail.draw.numbers.length === 6;
+    const drawSet = new Set(detail.draw.numbers);
+    // The card's own header counts every attempt, hidden or not — only
+    // the list below it is filtered by "Show hidden".
+    const totalAttempts = detail.attempts.length;
+    const ticketCount = new Set(
+      detail.attempts.flatMap((a) => (a.ticket != null ? [a.ticket] : [])),
+    ).size;
+    // Hidden attempts stay in the data (nothing is deleted) but drop
+    // out of the normal view until this draw's "Show hidden" is
+    // switched on.
+    const showHiddenForDraw = shownHiddenDrawIds.has(detail.draw.id);
+    const rawHiddenCount = detail.attempts.filter((a) => a.hidden).length;
+    const visibleAttempts = showHiddenForDraw
+      ? detail.attempts
+      : detail.attempts.filter((a) => !a.hidden);
+    const hasAttempts = totalAttempts > 0;
+    const collapsed = hasAttempts && collapsedIds.has(detail.draw.id);
+    // Without a result yet, there's nothing to match attempts against —
+    // matchCount is a placeholder (-1) rather than a false "0/6 matched".
+    // Order follows visibleAttempts as logged (the sequence on the
+    // physical tickets) — see bumpMatches below for how strong matches
+    // surface without disturbing that order.
+    const attemptsByMatch = hasResult
+      ? visibleAttempts.map((attempt) => ({
+          attempt,
+          matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
+        }))
+      : visibleAttempts.map((attempt) => ({ attempt, matchCount: -1 }));
+    // Always all six tiers, zero counts included, so the row of badges
+    // lines up in the same place on every card instead of shifting
+    // around based on which tiers that draw happened to hit. Counts
+    // every attempt (hidden or not) — the breakdown is a summary of
+    // the whole draw, not just what "Show hidden" currently reveals.
+    const matchBreakdown =
+      hasResult && totalAttempts > 0
+        ? [1, 2, 3, 4, 5, 6].map((tier) => ({
+            tier,
+            count: detail.attempts.filter(
+              (a) => a.numbers.filter((n) => drawSet.has(n)).length === tier,
+            ).length,
+          }))
+        : [];
+
+    // Cluster attempts by ticket — up to a handful of board plays on
+    // one physical ticket share a ticket number, so they're grouped
+    // together instead of scattered across a flat list. Clusters keep
+    // the order the tickets were logged in (that sequence is already
+    // right) — bumpMatches only lifts a 3/6-or-better ticket to the
+    // top, without otherwise reshuffling anything. Ungrouped attempts
+    // sit in their own section underneath (drag one onto a ticket, or
+    // onto another ungrouped attempt, to group it).
+    type AttemptCluster = {
+      ticket: number;
+      items: typeof attemptsByMatch;
+      bestMatch: number;
+      // True only when every item currently shown for this ticket is
+      // hidden — with "Show hidden" off, a partly-hidden ticket only
+      // shows its visible attempts, so this reads false until they're
+      // revealed (there'd be nothing to "unhide" from this view yet).
+      allHidden: boolean;
+    };
+    const byTicket = new Map<number, typeof attemptsByMatch>();
+    const looseItems: typeof attemptsByMatch = [];
+    for (const item of attemptsByMatch) {
+      const ticket = item.attempt.ticket;
+      if (ticket != null) {
+        const arr = byTicket.get(ticket);
+        if (arr) arr.push(item);
+        else byTicket.set(ticket, [item]);
+      } else {
+        looseItems.push(item);
+      }
+    }
+    const orderedLooseItems = bumpMatches(looseItems, (i) => i.matchCount >= 3);
+    const ticketClusters: AttemptCluster[] = bumpMatches(
+      Array.from(byTicket.entries()).map(([ticket, items]) => ({
+        ticket,
+        items,
+        bestMatch: Math.max(...items.map((i) => i.matchCount)),
+        allHidden: items.every((i) => i.attempt.hidden),
+      })),
+      (c) => c.bestMatch >= 3,
+    );
+    const drawNumbersDisplay = hasResult ? (
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {detail.draw.numbers.map((n) => (
+          <NumberBall key={n} n={n} variant="result" />
+        ))}
+      </div>
+    ) : (
+      <span className="mt-2 inline-block rounded-full border border-dashed border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+        Result not in yet
+      </span>
+    );
+    const jackpotDisplay = (detail.draw.jackpot_prize != null || detail.draw.winners > 0) && (
+      <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+        {detail.draw.jackpot_prize != null && (
+          <>Jackpot {fmtAmountOrDash(detail.draw.jackpot_prize)}</>
+        )}
+        {detail.draw.jackpot_prize != null && detail.draw.winners > 0 && " · "}
+        {detail.draw.winners > 0 && (
+          <>
+            {fmtCount(detail.draw.winners)} winner{detail.draw.winners === 1 ? "" : "s"}
+          </>
+        )}
+      </p>
+    );
+    const renderAttemptRow = (attempt: LottoAttemptRow, matchCount: number) => (
+      <li
+        key={attempt.id}
+        draggable
+        title="Drag onto another attempt or ticket to group them"
+        className={`flex cursor-grab flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950 ${
+          attempt.hidden ? "opacity-50" : ""
+        }`}
+        onDragStart={(e) => {
+          const el = e.target as HTMLElement | null;
+          if (!el || el.closest("button")) {
+            e.preventDefault();
+            return;
+          }
+          e.dataTransfer.setData("text/plain", String(attempt.id));
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }}
+        onDrop={(e) => {
+          e.stopPropagation();
+          void onDropOnAttempt(detail.draw.id, attempt, e);
+        }}
+      >
+        <div className="flex flex-wrap items-center gap-1.5">
+          {attempt.numbers.map((n) => (
+            <NumberBall
+              key={n}
+              n={n}
+              variant={hasResult ? (drawSet.has(n) ? "match" : "miss") : "neutral"}
+            />
+          ))}
+          <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            {hasResult ? `${matchCount}/6 matched` : "Awaiting result"}
+          </span>
+          {attempt.hidden && (
+            <span className="ml-1 rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+              Hidden
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={saving}
+            className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            onClick={() => openEditAttempt(detail.draw.id, attempt)}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            onClick={() => void onToggleAttemptHidden(detail.draw.id, attempt)}
+          >
+            {attempt.hidden ? "Unhide" : "Hide"}
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+            onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
+          >
+            Delete
+          </button>
+        </div>
+      </li>
+    );
+    const matchBreakdownDisplay = matchBreakdown.length > 0 && (
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {matchBreakdown.map(({ tier, count }) => (
+          <span
+            key={tier}
+            className={`rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 ${
+              count === 0 ? "opacity-40" : ""
+            }`}
+          >
+            {tier}/6 &times;{count}
+          </span>
+        ))}
+      </div>
+    );
+    return (
+      <section key={detail.draw.id} className={CARD_CLASSES}>
+        <div
+          className={`group -m-1 flex flex-wrap items-start justify-between gap-3 rounded-lg p-1 transition-colors ${
+            hasAttempts ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60" : ""
+          }`}
+          role={hasAttempts ? "button" : undefined}
+          tabIndex={hasAttempts ? 0 : undefined}
+          aria-expanded={hasAttempts ? !collapsed : undefined}
+          onClick={() => {
+            if (hasAttempts) toggleCollapsed(detail.draw.id);
+          }}
+          onKeyDown={(e) => {
+            if (!hasAttempts) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggleCollapsed(detail.draw.id);
+            }
+          }}
+        >
+          <div className="min-w-0">
+            <h2
+              className={`text-lg font-medium text-zinc-900 dark:text-zinc-50 ${
+                hasAttempts
+                  ? "transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                  : ""
+              }`}
+            >
+              {formatDate(detail.draw.draw_date)}
+              {collapsed && (
+                <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                  ({totalAttempts} attempt
+                  {totalAttempts === 1 ? "" : "s"}
+                  {ticketCount > 0
+                    ? `, ${ticketCount} ticket${ticketCount === 1 ? "" : "s"}`
+                    : ""}
+                  )
+                </span>
+              )}
+            </h2>
+            {drawNumbersDisplay}
+            {jackpotDisplay}
+            {matchBreakdownDisplay}
+          </div>
+          <div
+            className="flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              disabled={saving}
+              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+              onClick={() => openAddAttempt(detail.draw.id)}
+            >
+              + Add attempt
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+              onClick={() => openEditDraw(detail)}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
+              onClick={() => void onDeleteDraw(detail.draw.id)}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+
+        {!collapsed && hasAttempts && (
+        <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Attempts
+            </h3>
+            {ticketCount > 0 && (
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {ticketCount} ticket{ticketCount === 1 ? "" : "s"}
+              </span>
+            )}
+            {rawHiddenCount > 0 && (
+              <button
+                type="button"
+                disabled={saving}
+                className="rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-medium text-zinc-500 transition hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                onClick={() => toggleShowHiddenForDraw(detail.draw.id)}
+              >
+                {showHiddenForDraw
+                  ? "Hide hidden"
+                  : `Show hidden (${rawHiddenCount})`}
+              </button>
+            )}
+            {matchBreakdown.length > 0 && (
+              <span className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                {matchBreakdown.map(({ tier, count }) => (
+                  <span key={tier} className={count === 0 ? "opacity-40" : ""}>
+                    {tier}/6 &times;{count}
+                  </span>
+                ))}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-col gap-3">
+            {ticketClusters.map((cluster) => (
+              <div
+                key={`ticket-${cluster.ticket}`}
+                className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-900/40"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => void onDropOnTicket(detail.draw.id, cluster.ticket, e)}
+              >
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-200">
+                    Ticket {cluster.ticket}
+                  </span>
+                  {hasResult && (
+                    <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                      best {cluster.bestMatch}/6
+                    </span>
+                  )}
+                  <span>
+                    {cluster.items.length} attempt{cluster.items.length === 1 ? "" : "s"}
+                  </span>
+                  {cluster.allHidden && (
+                    <span className="rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                      Hidden
+                    </span>
+                  )}
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={saving}
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                      onClick={() =>
+                        void onToggleTicketHidden(
+                          detail.draw.id,
+                          cluster.items,
+                          !cluster.allHidden,
+                        )
+                      }
+                    >
+                      {cluster.allHidden ? "Unhide ticket" : "Hide ticket"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                      onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
+                    >
+                      + Add to this ticket
+                    </button>
+                  </div>
+                </div>
+                <ul className="flex flex-col gap-2">
+                  {cluster.items.map(({ attempt, matchCount }) =>
+                    renderAttemptRow(attempt, matchCount),
+                  )}
+                </ul>
+              </div>
+            ))}
+            {orderedLooseItems.length > 0 && (
+              <div
+                className={
+                  ticketClusters.length > 0
+                    ? "rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700"
+                    : ""
+                }
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => void onDropToUngroup(detail.draw.id, e)}
+              >
+                {ticketClusters.length > 0 && (
+                  <div className="mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                    Ungrouped — drag onto a ticket (or another attempt) to group
+                  </div>
+                )}
+                <ul className="flex flex-col gap-2">
+                  {orderedLooseItems.map(({ attempt, matchCount }) =>
+                    renderAttemptRow(attempt, matchCount),
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            disabled={saving}
+            className={`${SECONDARY_BUTTON_CLASSES} mt-3 px-2 py-1 text-xs`}
+            onClick={() => openAddAttempt(detail.draw.id)}
+          >
+            + Add attempt
+          </button>
+        </div>
+        )}
+      </section>
+    );
+  };
+
   const anyModalOpen = drawModal.open || attemptModal.open || uploadModal.open || importModal.open;
 
   return (
@@ -802,428 +1206,13 @@ export default function LottoClient() {
       <div className="flex flex-col gap-8">
         {yearGroups.map((group) => {
           const isCurrentYear = group.year === currentYear;
-          const expanded = isCurrentYear || expandedYears.has(group.year);
-          // `group.items` is newest-first, so the first entry is this year's
-          // most recent draw — shown as a preview on the collapsed card
-          // instead of making someone expand it just to see the latest result.
+          const expanded = expandedYears.has(group.year);
+          // `group.items` is newest-first, so the first entry is this
+          // year's most recent draw. The current year's card always shows
+          // just that one; past years show nothing until expanded, then
+          // list every draw from that year.
           const latestDraw = group.items[0];
-          const latestHasResult = latestDraw.draw.numbers.length === 6;
-          const yearBody = (
-            <div
-              className={
-                isCurrentYear
-                  ? "flex flex-col gap-5"
-                  : "mt-4 flex flex-col gap-5 border-t border-zinc-200 pt-4 dark:border-zinc-800"
-              }
-            >
-              {group.items.map((detail) => {
-          const hasResult = detail.draw.numbers.length === 6;
-          const drawSet = new Set(detail.draw.numbers);
-          // The card's own header counts every attempt, hidden or not — only
-          // the list below it is filtered by "Show hidden".
-          const totalAttempts = detail.attempts.length;
-          const ticketCount = new Set(
-            detail.attempts.flatMap((a) => (a.ticket != null ? [a.ticket] : [])),
-          ).size;
-          // Hidden attempts stay in the data (nothing is deleted) but drop
-          // out of the normal view until this draw's "Show hidden" is
-          // switched on.
-          const showHiddenForDraw = shownHiddenDrawIds.has(detail.draw.id);
-          const rawHiddenCount = detail.attempts.filter((a) => a.hidden).length;
-          const visibleAttempts = showHiddenForDraw
-            ? detail.attempts
-            : detail.attempts.filter((a) => !a.hidden);
-          const hasAttempts = totalAttempts > 0;
-          const collapsed = hasAttempts && collapsedIds.has(detail.draw.id);
-          // Without a result yet, there's nothing to match attempts against —
-          // matchCount is a placeholder (-1) rather than a false "0/6 matched".
-          // Order follows visibleAttempts as logged (the sequence on the
-          // physical tickets) — see bumpMatches below for how strong matches
-          // surface without disturbing that order.
-          const attemptsByMatch = hasResult
-            ? visibleAttempts.map((attempt) => ({
-                attempt,
-                matchCount: attempt.numbers.filter((n) => drawSet.has(n)).length,
-              }))
-            : visibleAttempts.map((attempt) => ({ attempt, matchCount: -1 }));
-          // Always all six tiers, zero counts included, so the row of badges
-          // lines up in the same place on every card instead of shifting
-          // around based on which tiers that draw happened to hit. Counts
-          // every attempt (hidden or not) — the breakdown is a summary of
-          // the whole draw, not just what "Show hidden" currently reveals.
-          const matchBreakdown =
-            hasResult && totalAttempts > 0
-              ? [1, 2, 3, 4, 5, 6].map((tier) => ({
-                  tier,
-                  count: detail.attempts.filter(
-                    (a) => a.numbers.filter((n) => drawSet.has(n)).length === tier,
-                  ).length,
-                }))
-              : [];
-
-          // Cluster attempts by ticket — up to a handful of board plays on
-          // one physical ticket share a ticket number, so they're grouped
-          // together instead of scattered across a flat list. Clusters keep
-          // the order the tickets were logged in (that sequence is already
-          // right) — bumpMatches only lifts a 3/6-or-better ticket to the
-          // top, without otherwise reshuffling anything. Ungrouped attempts
-          // sit in their own section underneath (drag one onto a ticket, or
-          // onto another ungrouped attempt, to group it).
-          type AttemptCluster = {
-            ticket: number;
-            items: typeof attemptsByMatch;
-            bestMatch: number;
-            // True only when every item currently shown for this ticket is
-            // hidden — with "Show hidden" off, a partly-hidden ticket only
-            // shows its visible attempts, so this reads false until they're
-            // revealed (there'd be nothing to "unhide" from this view yet).
-            allHidden: boolean;
-          };
-          const byTicket = new Map<number, typeof attemptsByMatch>();
-          const looseItems: typeof attemptsByMatch = [];
-          for (const item of attemptsByMatch) {
-            const ticket = item.attempt.ticket;
-            if (ticket != null) {
-              const arr = byTicket.get(ticket);
-              if (arr) arr.push(item);
-              else byTicket.set(ticket, [item]);
-            } else {
-              looseItems.push(item);
-            }
-          }
-          const orderedLooseItems = bumpMatches(looseItems, (i) => i.matchCount >= 3);
-          const ticketClusters: AttemptCluster[] = bumpMatches(
-            Array.from(byTicket.entries()).map(([ticket, items]) => ({
-              ticket,
-              items,
-              bestMatch: Math.max(...items.map((i) => i.matchCount)),
-              allHidden: items.every((i) => i.attempt.hidden),
-            })),
-            (c) => c.bestMatch >= 3,
-          );
-          const drawNumbersDisplay = hasResult ? (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {detail.draw.numbers.map((n) => (
-                <NumberBall key={n} n={n} variant="result" />
-              ))}
-            </div>
-          ) : (
-            <span className="mt-2 inline-block rounded-full border border-dashed border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-              Result not in yet
-            </span>
-          );
-          const jackpotDisplay = (detail.draw.jackpot_prize != null || detail.draw.winners > 0) && (
-            <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-              {detail.draw.jackpot_prize != null && (
-                <>Jackpot {fmtAmountOrDash(detail.draw.jackpot_prize)}</>
-              )}
-              {detail.draw.jackpot_prize != null && detail.draw.winners > 0 && " · "}
-              {detail.draw.winners > 0 && (
-                <>
-                  {fmtCount(detail.draw.winners)} winner{detail.draw.winners === 1 ? "" : "s"}
-                </>
-              )}
-            </p>
-          );
-          const renderAttemptRow = (attempt: LottoAttemptRow, matchCount: number) => (
-            <li
-              key={attempt.id}
-              draggable
-              title="Drag onto another attempt or ticket to group them"
-              className={`flex cursor-grab flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950 ${
-                attempt.hidden ? "opacity-50" : ""
-              }`}
-              onDragStart={(e) => {
-                const el = e.target as HTMLElement | null;
-                if (!el || el.closest("button")) {
-                  e.preventDefault();
-                  return;
-                }
-                e.dataTransfer.setData("text/plain", String(attempt.id));
-                e.dataTransfer.effectAllowed = "move";
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-              }}
-              onDrop={(e) => {
-                e.stopPropagation();
-                void onDropOnAttempt(detail.draw.id, attempt, e);
-              }}
-            >
-              <div className="flex flex-wrap items-center gap-1.5">
-                {attempt.numbers.map((n) => (
-                  <NumberBall
-                    key={n}
-                    n={n}
-                    variant={hasResult ? (drawSet.has(n) ? "match" : "miss") : "neutral"}
-                  />
-                ))}
-                <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {hasResult ? `${matchCount}/6 matched` : "Awaiting result"}
-                </span>
-                {attempt.hidden && (
-                  <span className="ml-1 rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
-                    Hidden
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={saving}
-                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-                  onClick={() => openEditAttempt(detail.draw.id, attempt)}
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-                  onClick={() => void onToggleAttemptHidden(detail.draw.id, attempt)}
-                >
-                  {attempt.hidden ? "Unhide" : "Hide"}
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
-                  onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          );
-          const matchBreakdownDisplay = matchBreakdown.length > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {matchBreakdown.map(({ tier, count }) => (
-                <span
-                  key={tier}
-                  className={`rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 ${
-                    count === 0 ? "opacity-40" : ""
-                  }`}
-                >
-                  {tier}/6 &times;{count}
-                </span>
-              ))}
-            </div>
-          );
-          return (
-            <section key={detail.draw.id} className={CARD_CLASSES}>
-              <div
-                className={`group -m-1 flex flex-wrap items-start justify-between gap-3 rounded-lg p-1 transition-colors ${
-                  hasAttempts ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60" : ""
-                }`}
-                role={hasAttempts ? "button" : undefined}
-                tabIndex={hasAttempts ? 0 : undefined}
-                aria-expanded={hasAttempts ? !collapsed : undefined}
-                onClick={() => {
-                  if (hasAttempts) toggleCollapsed(detail.draw.id);
-                }}
-                onKeyDown={(e) => {
-                  if (!hasAttempts) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleCollapsed(detail.draw.id);
-                  }
-                }}
-              >
-                <div className="min-w-0">
-                  <h2
-                    className={`text-lg font-medium text-zinc-900 dark:text-zinc-50 ${
-                      hasAttempts
-                        ? "transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                        : ""
-                    }`}
-                  >
-                    {formatDate(detail.draw.draw_date)}
-                    {collapsed && (
-                      <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
-                        ({totalAttempts} attempt
-                        {totalAttempts === 1 ? "" : "s"}
-                        {ticketCount > 0
-                          ? `, ${ticketCount} ticket${ticketCount === 1 ? "" : "s"}`
-                          : ""}
-                        )
-                      </span>
-                    )}
-                  </h2>
-                  {drawNumbersDisplay}
-                  {jackpotDisplay}
-                  {matchBreakdownDisplay}
-                </div>
-                <div
-                  className="flex items-center gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    disabled={saving}
-                    className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
-                    onClick={() => openAddAttempt(detail.draw.id)}
-                  >
-                    + Add attempt
-                  </button>
-                  <button
-                    type="button"
-                    disabled={saving}
-                    className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
-                    onClick={() => openEditDraw(detail)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    disabled={saving}
-                    className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
-                    onClick={() => void onDeleteDraw(detail.draw.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-
-              {!collapsed && hasAttempts && (
-              <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Attempts
-                  </h3>
-                  {ticketCount > 0 && (
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {ticketCount} ticket{ticketCount === 1 ? "" : "s"}
-                    </span>
-                  )}
-                  {rawHiddenCount > 0 && (
-                    <button
-                      type="button"
-                      disabled={saving}
-                      className="rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-medium text-zinc-500 transition hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                      onClick={() => toggleShowHiddenForDraw(detail.draw.id)}
-                    >
-                      {showHiddenForDraw
-                        ? "Hide hidden"
-                        : `Show hidden (${rawHiddenCount})`}
-                    </button>
-                  )}
-                  {matchBreakdown.length > 0 && (
-                    <span className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      {matchBreakdown.map(({ tier, count }) => (
-                        <span key={tier} className={count === 0 ? "opacity-40" : ""}>
-                          {tier}/6 &times;{count}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-3 flex flex-col gap-3">
-                  {ticketClusters.map((cluster) => (
-                    <div
-                      key={`ticket-${cluster.ticket}`}
-                      className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-900/40"
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                      }}
-                      onDrop={(e) => void onDropOnTicket(detail.draw.id, cluster.ticket, e)}
-                    >
-                      <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                        <span className="font-semibold text-zinc-700 dark:text-zinc-200">
-                          Ticket {cluster.ticket}
-                        </span>
-                        {hasResult && (
-                          <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
-                            best {cluster.bestMatch}/6
-                          </span>
-                        )}
-                        <span>
-                          {cluster.items.length} attempt{cluster.items.length === 1 ? "" : "s"}
-                        </span>
-                        {cluster.allHidden && (
-                          <span className="rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
-                            Hidden
-                          </span>
-                        )}
-                        <div className="ml-auto flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={saving}
-                            className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-                            onClick={() =>
-                              void onToggleTicketHidden(
-                                detail.draw.id,
-                                cluster.items,
-                                !cluster.allHidden,
-                              )
-                            }
-                          >
-                            {cluster.allHidden ? "Unhide ticket" : "Hide ticket"}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={saving}
-                            className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-                            onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
-                          >
-                            + Add to this ticket
-                          </button>
-                        </div>
-                      </div>
-                      <ul className="flex flex-col gap-2">
-                        {cluster.items.map(({ attempt, matchCount }) =>
-                          renderAttemptRow(attempt, matchCount),
-                        )}
-                      </ul>
-                    </div>
-                  ))}
-                  {orderedLooseItems.length > 0 && (
-                    <div
-                      className={
-                        ticketClusters.length > 0
-                          ? "rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700"
-                          : ""
-                      }
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                      }}
-                      onDrop={(e) => void onDropToUngroup(detail.draw.id, e)}
-                    >
-                      {ticketClusters.length > 0 && (
-                        <div className="mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                          Ungrouped — drag onto a ticket (or another attempt) to group
-                        </div>
-                      )}
-                      <ul className="flex flex-col gap-2">
-                        {orderedLooseItems.map(({ attempt, matchCount }) =>
-                          renderAttemptRow(attempt, matchCount),
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  disabled={saving}
-                  className={`${SECONDARY_BUTTON_CLASSES} mt-3 px-2 py-1 text-xs`}
-                  onClick={() => openAddAttempt(detail.draw.id)}
-                >
-                  + Add attempt
-                </button>
-              </div>
-              )}
-            </section>
-          );
-              })}
-            </div>
-          );
-          if (isCurrentYear) {
-            return <div key={group.year}>{yearBody}</div>;
-          }
+          const restItems = isCurrentYear ? group.items.slice(1) : group.items;
           return (
             <section key={group.year} className={CARD_CLASSES}>
               <button
@@ -1232,32 +1221,30 @@ export default function LottoClient() {
                 aria-expanded={expanded}
                 onClick={() => toggleYearExpanded(group.year)}
               >
-                <div>
-                  <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                    {group.year}
-                  </h2>
-                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                    Latest: {formatDate(latestDraw.draw.draw_date)}
-                  </p>
-                </div>
-                <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {group.items.length} draw{group.items.length === 1 ? "" : "s"} ·{" "}
-                  {expanded ? "Collapse" : "Expand"}
+                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                  {group.year}
+                </h2>
+                <span
+                  aria-hidden
+                  className={`text-zinc-400 transition-transform dark:text-zinc-500 ${
+                    expanded ? "rotate-90" : ""
+                  }`}
+                >
+                  ›
                 </span>
               </button>
-              {!expanded &&
-                (latestHasResult ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {latestDraw.draw.numbers.map((n) => (
-                      <NumberBall key={n} n={n} variant="result" />
-                    ))}
-                  </div>
-                ) : (
-                  <span className="mt-2 inline-block rounded-full border border-dashed border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                    Result not in yet
-                  </span>
-                ))}
-              {expanded && yearBody}
+              {isCurrentYear && <div className="mt-4">{renderDrawCard(latestDraw)}</div>}
+              {expanded && restItems.length > 0 && (
+                <div
+                  className={`flex flex-col gap-5 ${
+                    isCurrentYear
+                      ? "mt-4"
+                      : "mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800"
+                  }`}
+                >
+                  {restItems.map((detail) => renderDrawCard(detail))}
+                </div>
+              )}
             </section>
           );
         })}
