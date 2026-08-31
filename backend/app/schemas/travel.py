@@ -32,6 +32,9 @@ class TravelTripCreate(BaseModel):
     title: str = Field(min_length=1)
     entry_year: int = Field(ge=1900, le=2999)
     entry_month: int = Field(ge=1, le=12)
+    # Inclusive end month, same year — a trip can span several consecutive
+    # months; equal to entry_month for the (default) single-month case.
+    entry_month_end: int = Field(ge=1, le=12)
     notes: str | None = None
 
     @field_validator("title")
@@ -43,6 +46,12 @@ class TravelTripCreate(BaseModel):
     @classmethod
     def _notes(cls, v: str | None) -> str | None:
         return _clean_optional(v)
+
+    @model_validator(mode="after")
+    def _end_after_start(self) -> "TravelTripCreate":
+        if self.entry_month_end < self.entry_month:
+            raise ValueError("End month must be on or after the start month.")
+        return self
 
 
 class TravelFlightCreate(BaseModel):

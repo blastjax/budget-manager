@@ -428,10 +428,16 @@ _SCHEMA_STATEMENTS: list[str] = [
         title TEXT NOT NULL,
         entry_year INTEGER NOT NULL,
         entry_month INTEGER NOT NULL,
+        -- Inclusive end month, same year, for a trip spanning several
+        -- consecutive months. Equal to entry_month for a single-month trip
+        -- (the default the "Add trip" form starts you on).
+        entry_month_end INTEGER NOT NULL,
         notes TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CHECK (length(trim(title)) > 0),
-        CHECK (entry_month BETWEEN 1 AND 12)
+        CHECK (entry_month BETWEEN 1 AND 12),
+        CHECK (entry_month_end BETWEEN 1 AND 12),
+        CHECK (entry_month_end >= entry_month)
     )
     """,
     """
@@ -633,6 +639,26 @@ def _migrate_lotto_draw_add_jackpot_winners() -> None:
         conn.close()
 
 
+def _migrate_travel_trip_add_month_end() -> None:
+    """Older DBs don't have ``entry_month_end`` on ``travel_trip``. Existing
+    (single-month) trips get ``entry_month_end = entry_month`` — the same
+    default a freshly-created trip starts with."""
+    path = sqlite_path()
+    if not path.exists():
+        return  # fresh DB — the CREATE TABLE statement below defines it correctly
+    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
+    try:
+        cols = conn.execute("PRAGMA table_info(travel_trip)").fetchall()
+        if not cols:
+            return  # table doesn't exist yet
+        if any(c[1] == "entry_month_end" for c in cols):
+            return  # already migrated
+        conn.execute("ALTER TABLE travel_trip ADD COLUMN entry_month_end INTEGER")
+        conn.execute("UPDATE travel_trip SET entry_month_end = entry_month WHERE entry_month_end IS NULL")
+    finally:
+        conn.close()
+
+
 def init_schema() -> None:
     """Create every table/index that doesn't already exist. Idempotent and cheap
     enough to call on every startup — ``CREATE ... IF NOT EXISTS`` short-circuits
@@ -641,6 +667,7 @@ def init_schema() -> None:
     _migrate_lotto_attempt_add_ticket()
     _migrate_lotto_attempt_add_hidden()
     _migrate_lotto_draw_add_jackpot_winners()
+    _migrate_travel_trip_add_month_end()
     with get_connection() as conn:
         for stmt in _SCHEMA_STATEMENTS:
             conn.execute(stmt)
@@ -2634,7 +2661,7 @@ def delete_app_user(user_id: int) -> bool:
             return cur.rowcount > 0
 
 
-_TRAVEL_TRIP_COLS = "id, title, entry_year, entry_month, notes, created_at"
+_TRAVEL_TRIP_COLS = "id, title, entry_year, entry_month, entry_month_end, notes, created_at"
 _TRAVEL_FLIGHT_COLS = (
     "id, trip_id, flight_number, flight_date, departure_time, arrival_time, "
     "from_location, from_map_url, to_location, to_map_url, notes, created_at"
@@ -2771,17 +2798,21 @@ def list_travel_trips(limit: int = 500) -> list[dict[str, Any]]:
 
 
 def insert_travel_trip(
-    title: str, entry_year: int, entry_month: int, notes: str | None
+    title: str,
+    entry_year: int,
+    entry_month: int,
+    entry_month_end: int,
+    notes: str | None,
 ) -> dict[str, Any]:
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 """
-                INSERT INTO travel_trip (title, entry_year, entry_month, notes)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO travel_trip (title, entry_year, entry_month, entry_month_end, notes)
+                VALUES (?, ?, ?, ?, ?)
                 RETURNING id
                 """,
-                (title, entry_year, entry_month, notes),
+                (title, entry_year, entry_month, entry_month_end, notes),
             )
             trip_id = cur.fetchone()[0]
             detail = _travel_trip_detail(cur, trip_id)
@@ -2790,17 +2821,23 @@ def insert_travel_trip(
 
 
 def update_travel_trip(
-    trip_id: int, title: str, entry_year: int, entry_month: int, notes: str | None
+    trip_id: int,
+    title: str,
+    entry_year: int,
+    entry_month: int,
+    entry_month_end: int,
+    notes: str | None,
 ) -> dict[str, Any] | None:
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 """
-                UPDATE travel_trip SET title = ?, entry_year = ?, entry_month = ?, notes = ?
+                UPDATE travel_trip SET
+                    title = ?, entry_year = ?, entry_month = ?, entry_month_end = ?, notes = ?
                 WHERE id = ?
                 RETURNING id
                 """,
-                (title, entry_year, entry_month, notes, trip_id),
+                (title, entry_year, entry_month, entry_month_end, notes, trip_id),
             )
             if not cur.fetchone():
                 return None

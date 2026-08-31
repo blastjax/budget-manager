@@ -1175,12 +1175,15 @@ export async function verifyAppUserPassword(username: string, password: string) 
   });
 }
 
-/** A trip is filed under an entry year + month, like a journal entry. */
+/** A trip is filed under an entry year + start/end month (like a journal
+ * entry, but spanning several consecutive months for a longer trip —
+ * `entry_month_end` equals `entry_month` for the default single-month case). */
 export type TravelTripRow = {
   id: number;
   title: string;
   entry_year: number;
   entry_month: number;
+  entry_month_end: number;
   notes: string | null;
   created_at: string;
 };
@@ -1247,6 +1250,7 @@ export type TravelTripCreateBody = {
   title: string;
   entry_year: number;
   entry_month: number;
+  entry_month_end: number;
   notes?: string | null;
 };
 

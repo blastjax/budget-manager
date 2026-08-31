@@ -113,6 +113,7 @@ def _serialize_trip(row: dict[str, Any]) -> dict[str, Any]:
         "title": row["title"],
         "entry_year": row["entry_year"],
         "entry_month": row["entry_month"],
+        "entry_month_end": row["entry_month_end"],
         "notes": row["notes"],
         "created_at": row["created_at"],
     }
@@ -141,14 +142,21 @@ def travel_list(limit: int = Query(default=500, ge=1, le=2000)) -> dict[str, Any
 
 @router.post("/api/travel")
 def travel_create_trip(body: TravelTripCreate) -> dict[str, Any]:
-    detail = insert_travel_trip(body.title, body.entry_year, body.entry_month, body.notes)
+    detail = insert_travel_trip(
+        body.title, body.entry_year, body.entry_month, body.entry_month_end, body.notes
+    )
     return _serialize_detail(detail)
 
 
 @router.put("/api/travel/{trip_id}")
 def travel_update_trip(trip_id: int, body: TravelTripCreate) -> dict[str, Any]:
     detail = update_travel_trip(
-        trip_id, body.title, body.entry_year, body.entry_month, body.notes
+        trip_id,
+        body.title,
+        body.entry_year,
+        body.entry_month,
+        body.entry_month_end,
+        body.notes,
     )
     if detail is None:
         raise HTTPException(status_code=404, detail="Trip not found.")

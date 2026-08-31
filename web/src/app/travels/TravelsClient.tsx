@@ -6,6 +6,7 @@ import { DateRangePickerField } from "@/components/DateRangePickerField";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import { TimeField } from "@/components/TimeField";
+import { TripCalendar, type TripCalendarMarks, type TripCalendarMonth } from "@/components/TripCalendar";
 import {
   createTravelAccommodation,
   createTravelFlight,
@@ -25,7 +26,7 @@ import {
   type TravelItineraryRow,
   type TravelTripDetail,
 } from "@/lib/api";
-import { formatDate, MONTH_NAMES_FULL } from "@/lib/dateFormat";
+import { formatDate, monthKey, MONTH_NAMES_FULL, toIsoDateLocal } from "@/lib/dateFormat";
 import { mapsUrlFor } from "@/lib/maps";
 import {
   CARD_CLASSES,
@@ -81,6 +82,65 @@ function previewNightsDays(checkin: string, checkout: string): { nights: number;
   if (Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime())) return null;
   const nights = Math.max(0, Math.round((co.getTime() - ci.getTime()) / 86_400_000));
   return { nights, days: nights + 1 };
+}
+
+/** Every "YYYY-MM-DD" from `startIso` to `endIso`, inclusive. Empty if
+ * either date is invalid or the range runs backwards. */
+function eachDateInRange(startIso: string, endIso: string): string[] {
+  const start = new Date(`${startIso}T00:00:00`);
+  const end = new Date(`${endIso}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return [];
+  const out: string[] = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    out.push(toIsoDateLocal(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+/** The months + color-coded day marks for a trip's calendar: every month
+ * touched by an actual flight/itinerary/accommodation date, widened to
+ * always include the trip's declared start..end month span (so a
+ * freshly-created trip with no events yet still shows something). */
+function buildTripCalendar(
+  detail: TravelTripDetail,
+): { months: TripCalendarMonth[]; marks: TripCalendarMarks } {
+  const flights = new Set<string>();
+  const itinerary = new Set<string>();
+  const accommodations = new Set<string>();
+  const monthKeys = new Set<string>();
+
+  for (const f of detail.flights) {
+    if (f.flight_date) {
+      flights.add(f.flight_date);
+      monthKeys.add(f.flight_date.slice(0, 7));
+    }
+  }
+  for (const item of detail.itinerary) {
+    itinerary.add(item.item_date);
+    monthKeys.add(item.item_date.slice(0, 7));
+  }
+  for (const a of detail.accommodations) {
+    for (const iso of eachDateInRange(a.checkin_date, a.checkout_date)) {
+      accommodations.add(iso);
+      monthKeys.add(iso.slice(0, 7));
+    }
+  }
+
+  const { entry_year, entry_month, entry_month_end } = detail.trip;
+  for (let m = entry_month; m <= entry_month_end; m++) {
+    monthKeys.add(monthKey(entry_year, m));
+  }
+
+  const months = Array.from(monthKeys)
+    .sort()
+    .map((k) => {
+      const [y, m] = k.split("-").map(Number);
+      return { year: y, month: m };
+    });
+
+  return { months, marks: { flights, itinerary, accommodations } };
 }
 
 function LocationLink({ name, url }: { name: string | null; url: string | null }) {
@@ -144,6 +204,9 @@ type TripFormState = {
   title: string;
   entryYear: string;
   entryMonth: string;
+  /** Inclusive end month, same year — a trip can span several consecutive
+   * months. Defaults equal to `entryMonth` (the single-month case). */
+  entryMonthEnd: string;
   notes: string;
 };
 const emptyTripForm = (): TripFormState => ({
@@ -152,6 +215,7 @@ const emptyTripForm = (): TripFormState => ({
   title: "",
   entryYear: String(new Date().getFullYear()),
   entryMonth: String(new Date().getMonth() + 1),
+  entryMonthEnd: String(new Date().getMonth() + 1),
   notes: "",
 });
 
@@ -340,6 +404,7 @@ export default function TravelsClient() {
       title: detail.trip.title,
       entryYear: String(detail.trip.entry_year),
       entryMonth: String(detail.trip.entry_month),
+      entryMonthEnd: String(detail.trip.entry_month_end),
       notes: detail.trip.notes ?? "",
     });
   };
@@ -353,6 +418,7 @@ export default function TravelsClient() {
     const title = tripModal.title.trim();
     const entryYear = Number(tripModal.entryYear);
     const entryMonth = Number(tripModal.entryMonth);
+    const entryMonthEnd = Number(tripModal.entryMonthEnd);
     if (!title) {
       setTripError("Enter a title.");
       return;
@@ -361,12 +427,17 @@ export default function TravelsClient() {
       setTripError("Enter a valid year.");
       return;
     }
+    if (entryMonthEnd < entryMonth) {
+      setTripError("End month must be on or after the start month.");
+      return;
+    }
     setSaving(true);
     try {
       const body = {
         title,
         entry_year: entryYear,
         entry_month: entryMonth,
+        entry_month_end: entryMonthEnd,
         notes: optOrUndefined(tripModal.notes) ?? null,
       };
       const detail =
@@ -683,6 +754,7 @@ export default function TravelsClient() {
 
   const renderTripCard = (detail: TravelTripDetail) => {
     const { trip, flights, itinerary, accommodations } = detail;
+    const { months: calendarMonths, marks: calendarMarks } = buildTripCalendar(detail);
     return (
       <div
         key={trip.id}
@@ -715,6 +787,12 @@ export default function TravelsClient() {
               Delete
             </button>
           </div>
+        </div>
+
+        {/* Calendar */}
+        <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <h5 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">Calendar</h5>
+          <TripCalendar months={calendarMonths} marks={calendarMarks} />
         </div>
 
         {/* Flights */}
@@ -1009,7 +1087,7 @@ export default function TravelsClient() {
               onChange={(e) => setTripModal((m) => ({ ...m, title: e.target.value }))}
             />
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-zinc-600 dark:text-zinc-400">Year</span>
               <input
@@ -1022,12 +1100,22 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">Month</span>
+              <span className="text-zinc-600 dark:text-zinc-400">Start month</span>
               <select
                 className={INPUT_CLASSES}
                 value={tripModal.entryMonth}
                 disabled={saving}
-                onChange={(e) => setTripModal((m) => ({ ...m, entryMonth: e.target.value }))}
+                onChange={(e) =>
+                  setTripModal((m) => {
+                    const entryMonth = e.target.value;
+                    // Keep the end month from trailing behind a later start
+                    // month — most trips are a single month, so this keeps
+                    // that the common case without an extra click.
+                    const entryMonthEnd =
+                      Number(m.entryMonthEnd) < Number(entryMonth) ? entryMonth : m.entryMonthEnd;
+                    return { ...m, entryMonth, entryMonthEnd };
+                  })
+                }
               >
                 {MONTH_NAMES_FULL.map((name, i) => (
                   <option key={name} value={i + 1}>
@@ -1036,7 +1124,30 @@ export default function TravelsClient() {
                 ))}
               </select>
             </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">End month</span>
+              <select
+                className={INPUT_CLASSES}
+                value={tripModal.entryMonthEnd}
+                disabled={saving}
+                onChange={(e) => setTripModal((m) => ({ ...m, entryMonthEnd: e.target.value }))}
+              >
+                {MONTH_NAMES_FULL.map((name, i) => (
+                  <option
+                    key={name}
+                    value={i + 1}
+                    disabled={i + 1 < Number(tripModal.entryMonth)}
+                  >
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+          <p className="-mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            A trip usually files under one month — pick a later end month only if it spans
+            several.
+          </p>
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-zinc-600 dark:text-zinc-400">
               Notes <span className="font-normal text-zinc-400">(optional)</span>
