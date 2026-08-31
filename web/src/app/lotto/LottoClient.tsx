@@ -263,6 +263,21 @@ export default function LottoClient() {
     });
   };
 
+  // Draws are grouped into one card per year so a history spanning many
+  // years doesn't render as one endless flat list — only the current year
+  // stays uncarded, its draws listed plainly like the page always has.
+  // Past years start collapsed and expand on click.
+  const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
+
+  const toggleYearExpanded = (year: string) => {
+    setExpandedYears((s) => {
+      const next = new Set(s);
+      if (next.has(year)) next.delete(year);
+      else next.add(year);
+      return next;
+    });
+  };
+
   // A draw with no attempts has nothing to collapse, so it's never
   // collapsible — only draws with attempts participate in collapse state.
   const collapsibleDraws = draws.filter((d) => d.attempts.length > 0);
@@ -292,6 +307,20 @@ export default function LottoClient() {
       return allAreCollapsed ? new Set() : new Set(collapsibleDraws.map((d) => d.draw.id));
     });
   };
+
+  // `draws` is already sorted newest-first, so same-year draws are always
+  // contiguous — one pass buckets them into ordered year groups.
+  const currentYear = String(new Date().getFullYear());
+  const yearGroups: { year: string; items: LottoDrawDetail[] }[] = [];
+  for (const detail of draws) {
+    const year = detail.draw.draw_date.slice(0, 4);
+    const last = yearGroups[yearGroups.length - 1];
+    if (last && last.year === year) {
+      last.items.push(detail);
+    } else {
+      yearGroups.push({ year, items: [detail] });
+    }
+  }
 
   const [drawModal, setDrawModal] = useState<DrawModalState>(emptyDrawModal);
   const [drawFormError, setDrawFormError] = useState<string | null>(null);
@@ -770,8 +799,19 @@ export default function LottoClient() {
         </div>
       )}
 
-      <div className="flex flex-col gap-5">
-        {draws.map((detail) => {
+      <div className="flex flex-col gap-8">
+        {yearGroups.map((group) => {
+          const isCurrentYear = group.year === currentYear;
+          const expanded = isCurrentYear || expandedYears.has(group.year);
+          const yearBody = (
+            <div
+              className={
+                isCurrentYear
+                  ? "flex flex-col gap-5"
+                  : "mt-4 flex flex-col gap-5 border-t border-zinc-200 pt-4 dark:border-zinc-800"
+              }
+            >
+              {group.items.map((detail) => {
           const hasResult = detail.draw.numbers.length === 6;
           const drawSet = new Set(detail.draw.numbers);
           // The card's own header counts every attempt, hidden or not — only
@@ -1171,6 +1211,31 @@ export default function LottoClient() {
                 </button>
               </div>
               )}
+            </section>
+          );
+              })}
+            </div>
+          );
+          if (isCurrentYear) {
+            return <div key={group.year}>{yearBody}</div>;
+          }
+          return (
+            <section key={group.year} className={CARD_CLASSES}>
+              <button
+                type="button"
+                className="-m-1 flex w-full flex-wrap items-center justify-between gap-3 rounded-lg p-1 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                aria-expanded={expanded}
+                onClick={() => toggleYearExpanded(group.year)}
+              >
+                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                  {group.year}
+                </h2>
+                <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {group.items.length} draw{group.items.length === 1 ? "" : "s"} ·{" "}
+                  {expanded ? "Collapse" : "Expand"}
+                </span>
+              </button>
+              {expanded && yearBody}
             </section>
           );
         })}
