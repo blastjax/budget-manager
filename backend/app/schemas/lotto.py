@@ -30,6 +30,10 @@ class LottoDrawCreate(BaseModel):
     # Optional: a draw can be logged by date alone before its winning numbers
     # are announced, so attempts can be recorded ahead of the actual draw.
     numbers: list[int] | None = None
+    # Optional: the jackpot at stake for this draw, and how many tickets
+    # matched all 6 numbers. Both fill in once the result is announced.
+    jackpot_prize: float | None = None
+    winners: int = 0
 
     @field_validator("numbers")
     @classmethod
@@ -43,6 +47,20 @@ class LottoDrawCreate(BaseModel):
         if len(set(v)) != len(v):
             raise ValueError("Numbers must be unique.")
         return sorted(v)
+
+    @field_validator("jackpot_prize")
+    @classmethod
+    def _check_jackpot(cls, v: float | None) -> float | None:
+        if v is not None and v < 0:
+            raise ValueError("Jackpot prize must be zero or greater.")
+        return v
+
+    @field_validator("winners")
+    @classmethod
+    def _check_winners(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("Winners must be zero or greater.")
+        return v
 
 
 class LottoAttemptCreate(LottoNumbers):

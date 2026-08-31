@@ -393,11 +393,15 @@ _SCHEMA_STATEMENTS: list[str] = [
         n4 INTEGER,
         n5 INTEGER,
         n6 INTEGER,
+        jackpot_prize REAL,
+        winners INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CHECK (
             (n1 IS NULL AND n2 IS NULL AND n3 IS NULL AND n4 IS NULL AND n5 IS NULL AND n6 IS NULL)
             OR (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
-        )
+        ),
+        CHECK (jackpot_prize IS NULL OR jackpot_prize >= 0),
+        CHECK (winners >= 0)
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_lotto_draw_date ON lotto_draw (draw_date DESC)",
@@ -527,6 +531,29 @@ def _migrate_lotto_attempt_add_hidden() -> None:
         conn.close()
 
 
+def _migrate_lotto_draw_add_jackpot_winners() -> None:
+    """Older DBs don't have ``jackpot_prize``/``winners`` on ``lotto_draw``.
+    Existing draws get ``jackpot_prize = NULL`` and ``winners = 0`` until
+    backfilled (e.g. via the historic-results import)."""
+    path = sqlite_path()
+    if not path.exists():
+        return  # fresh DB — the CREATE TABLE statement below defines it correctly
+    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
+    try:
+        cols = conn.execute("PRAGMA table_info(lotto_draw)").fetchall()
+        if not cols:
+            return  # table doesn't exist yet
+        names = {c[1] for c in cols}
+        if "jackpot_prize" not in names:
+            conn.execute("ALTER TABLE lotto_draw ADD COLUMN jackpot_prize REAL")
+        if "winners" not in names:
+            conn.execute(
+                "ALTER TABLE lotto_draw ADD COLUMN winners INTEGER NOT NULL DEFAULT 0"
+            )
+    finally:
+        conn.close()
+
+
 def init_schema() -> None:
     """Create every table/index that doesn't already exist. Idempotent and cheap
     enough to call on every startup — ``CREATE ... IF NOT EXISTS`` short-circuits
@@ -534,6 +561,7 @@ def init_schema() -> None:
     _migrate_lotto_draw_allow_pending()
     _migrate_lotto_attempt_add_ticket()
     _migrate_lotto_attempt_add_hidden()
+    _migrate_lotto_draw_add_jackpot_winners()
     with get_connection() as conn:
         for stmt in _SCHEMA_STATEMENTS:
             conn.execute(stmt)
@@ -2171,7 +2199,9 @@ def save_payslip_defaults(
             )
 
 
-_LOTTO_DRAW_COLS = "id, draw_date, n1, n2, n3, n4, n5, n6, created_at"
+_LOTTO_DRAW_COLS = (
+    "id, draw_date, n1, n2, n3, n4, n5, n6, jackpot_prize, winners, created_at"
+)
 _LOTTO_ATTEMPT_COLS = "id, draw_id, ticket, n1, n2, n3, n4, n5, n6, hidden, created_at"
 
 
@@ -2234,25 +2264,84 @@ def list_lotto_draws(limit: int = 200) -> list[dict[str, Any]]:
             ]
 
 
-def upsert_lotto_draw(draw_date: Any, numbers: list[int] | None) -> dict[str, Any]:
+def upsert_lotto_draw(
+    draw_date: Any,
+    numbers: list[int] | None,
+    jackpot_prize: float | None = None,
+    winners: int = 0,
+) -> dict[str, Any]:
     """Create the result for a date, or overwrite it if one already exists.
-    ``numbers`` may be None to log just the date before the result is known."""
+    ``numbers`` may be None to log just the date before the result is known.
+    Overwrites ``jackpot_prize``/``winners`` too, same as the numbers — posting
+    the same date again replaces that date's result wholesale."""
     n1, n2, n3, n4, n5, n6 = numbers if numbers is not None else (None,) * 6
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 """
-                INSERT INTO lotto_draw (draw_date, n1, n2, n3, n4, n5, n6)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO lotto_draw (draw_date, n1, n2, n3, n4, n5, n6, jackpot_prize, winners)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (draw_date) DO UPDATE SET
                     n1 = excluded.n1, n2 = excluded.n2, n3 = excluded.n3,
-                    n4 = excluded.n4, n5 = excluded.n5, n6 = excluded.n6
+                    n4 = excluded.n4, n5 = excluded.n5, n6 = excluded.n6,
+                    jackpot_prize = excluded.jackpot_prize, winners = excluded.winners
                 RETURNING id
                 """,
-                (draw_date, n1, n2, n3, n4, n5, n6),
+                (draw_date, n1, n2, n3, n4, n5, n6, jackpot_prize, winners),
             )
             draw_id = cur.fetchone()[0]
             return _lotto_draw_detail(cur, draw_id)
+
+
+def upsert_lotto_draws_bulk(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Bulk-upsert draws by date in one transaction (the whole batch commits or
+    none of it does) — used by the historic-results text import. Each row:
+    ``{"draw_date": iso date str, "numbers": [n1..n6], "jackpot_prize": float | None,
+    "winners": int}``. Re-uploading the same date overwrites it, so importing
+    the same file twice (or a file that repeats a date) is safe.
+    """
+    if not rows:
+        return {"inserted": 0, "updated": 0, "total": 0}
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            dates = [r["draw_date"] for r in rows]
+            placeholders = ",".join("?" * len(dates))
+            cur.execute(
+                f"SELECT draw_date FROM lotto_draw WHERE draw_date IN ({placeholders})",
+                dates,
+            )
+            seen = {r[0] for r in cur.fetchall()}
+            inserted = updated = 0
+            for row in rows:
+                draw_date = row["draw_date"]
+                n1, n2, n3, n4, n5, n6 = row["numbers"]
+                cur.execute(
+                    """
+                    INSERT INTO lotto_draw (draw_date, n1, n2, n3, n4, n5, n6, jackpot_prize, winners)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (draw_date) DO UPDATE SET
+                        n1 = excluded.n1, n2 = excluded.n2, n3 = excluded.n3,
+                        n4 = excluded.n4, n5 = excluded.n5, n6 = excluded.n6,
+                        jackpot_prize = excluded.jackpot_prize, winners = excluded.winners
+                    """,
+                    (
+                        draw_date,
+                        n1,
+                        n2,
+                        n3,
+                        n4,
+                        n5,
+                        n6,
+                        row.get("jackpot_prize"),
+                        row.get("winners", 0),
+                    ),
+                )
+                if draw_date in seen:
+                    updated += 1
+                else:
+                    inserted += 1
+                    seen.add(draw_date)
+            return {"inserted": inserted, "updated": updated, "total": len(rows)}
 
 
 def get_lotto_draw_id_by_date(draw_date: Any) -> int | None:
@@ -2264,20 +2353,26 @@ def get_lotto_draw_id_by_date(draw_date: Any) -> int | None:
 
 
 def update_lotto_draw(
-    draw_id: int, draw_date: Any, numbers: list[int] | None
+    draw_id: int,
+    draw_date: Any,
+    numbers: list[int] | None,
+    jackpot_prize: float | None = None,
+    winners: int = 0,
 ) -> dict[str, Any] | None:
-    """Update an existing draw's date and numbers in place, keeping its id and
-    attempts. ``numbers`` may be None to clear/leave the result unset."""
+    """Update an existing draw's date, numbers, jackpot prize, and winner count
+    in place, keeping its id and attempts. ``numbers`` may be None to
+    clear/leave the result unset."""
     n1, n2, n3, n4, n5, n6 = numbers if numbers is not None else (None,) * 6
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 """
-                UPDATE lotto_draw SET draw_date = ?, n1 = ?, n2 = ?, n3 = ?, n4 = ?, n5 = ?, n6 = ?
+                UPDATE lotto_draw SET draw_date = ?, n1 = ?, n2 = ?, n3 = ?, n4 = ?, n5 = ?, n6 = ?,
+                    jackpot_prize = ?, winners = ?
                 WHERE id = ?
                 RETURNING id
                 """,
-                (draw_date, n1, n2, n3, n4, n5, n6, draw_id),
+                (draw_date, n1, n2, n3, n4, n5, n6, jackpot_prize, winners, draw_id),
             )
             row = cur.fetchone()
             if row is None:

@@ -8,6 +8,7 @@ import {
   deleteLottoAttempt,
   deleteLottoDraw,
   getLottoDraws,
+  importLottoDrawResults,
   setLottoAttemptHidden,
   setLottoDraw,
   updateLottoAttempt,
@@ -16,6 +17,7 @@ import {
   type LottoDrawDetail,
 } from "@/lib/api";
 import { formatDate } from "@/lib/dateFormat";
+import { fmtAmountOrDash, fmtCount } from "@/lib/formatNumber";
 import {
   CARD_CLASSES,
   DASHED_EMPTY_CLASSES,
@@ -211,6 +213,8 @@ type UploadModalState = {
   open: boolean;
   drawDate: string;
 };
+type ImportModalState = { open: boolean };
+type ImportSummary = { inserted: number; updated: number; total: number; errors: string[] };
 
 const emptyDrawModal: DrawModalState = {
   open: false,
@@ -227,6 +231,7 @@ const emptyAttemptModal: AttemptModalState = {
   ticketText: "",
 };
 const emptyUploadModal: UploadModalState = { open: false, drawDate: "" };
+const emptyImportModal: ImportModalState = { open: false };
 
 export default function LottoClient() {
   const [draws, setDraws] = useState<LottoDrawDetail[]>([]);
@@ -297,6 +302,11 @@ export default function LottoClient() {
   const [uploadModal, setUploadModal] = useState<UploadModalState>(emptyUploadModal);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadFormError, setUploadFormError] = useState<string | null>(null);
+
+  const [importModal, setImportModal] = useState<ImportModalState>(emptyImportModal);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importFormError, setImportFormError] = useState<string | null>(null);
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -646,7 +656,51 @@ export default function LottoClient() {
     }
   };
 
-  const anyModalOpen = drawModal.open || attemptModal.open || uploadModal.open;
+  const openImport = () => {
+    setImportFormError(null);
+    setImportSummary(null);
+    setImportFile(null);
+    setImportModal({ open: true });
+  };
+
+  const closeImportModal = () => {
+    setImportModal(emptyImportModal);
+    setImportFile(null);
+    setImportFormError(null);
+    setImportSummary(null);
+  };
+
+  /** Bulk-loads historic results (date, numbers, jackpot, winners) from a
+   * pipe-delimited text file via `POST /api/lotto/import` — each row is
+   * upserted by date, so re-uploading backfills jackpot/winners onto draws
+   * that already exist instead of duplicating them. */
+  const submitImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setImportFormError(null);
+    setImportSummary(null);
+    if (!importFile) {
+      setImportFormError("Choose a .txt file.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await importLottoDrawResults(importFile);
+      setImportSummary({
+        inserted: result.inserted,
+        updated: result.updated,
+        total: result.total,
+        errors: result.errors,
+      });
+      await load();
+    } catch (err) {
+      setImportFormError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const anyModalOpen = drawModal.open || attemptModal.open || uploadModal.open || importModal.open;
 
   return (
     <div className="relative mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
@@ -661,13 +715,23 @@ export default function LottoClient() {
               numbers turn green.
             </p>
           </div>
-          <button
-            type="button"
-            className={`${SECONDARY_BUTTON_CLASSES} shrink-0 px-3 py-1.5 text-sm`}
-            onClick={openUpload}
-          >
-            Upload from txt
-          </button>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              type="button"
+              className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+              onClick={openImport}
+              title="Bulk-load historic results (date, numbers, jackpot, winners) from a pipe-delimited text file"
+            >
+              Import historic results
+            </button>
+            <button
+              type="button"
+              className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+              onClick={openUpload}
+            >
+              Upload from txt
+            </button>
+          </div>
         </div>
       </header>
 
@@ -803,6 +867,19 @@ export default function LottoClient() {
               Result not in yet
             </span>
           );
+          const jackpotDisplay = (detail.draw.jackpot_prize != null || detail.draw.winners > 0) && (
+            <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+              {detail.draw.jackpot_prize != null && (
+                <>Jackpot {fmtAmountOrDash(detail.draw.jackpot_prize)}</>
+              )}
+              {detail.draw.jackpot_prize != null && detail.draw.winners > 0 && " · "}
+              {detail.draw.winners > 0 && (
+                <>
+                  {fmtCount(detail.draw.winners)} winner{detail.draw.winners === 1 ? "" : "s"}
+                </>
+              )}
+            </p>
+          );
           const renderAttemptRow = (attempt: LottoAttemptRow, matchCount: number) => (
             <li
               key={attempt.id}
@@ -929,6 +1006,7 @@ export default function LottoClient() {
                     )}
                   </h2>
                   {drawNumbersDisplay}
+                  {jackpotDisplay}
                   {matchBreakdownDisplay}
                 </div>
                 <div
@@ -1285,6 +1363,78 @@ export default function LottoClient() {
               onClick={closeUploadModal}
             >
               Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={importModal.open} onClose={closeImportModal} ariaLabelledBy="lotto-import-title">
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <h2 id="lotto-import-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Import historic results
+          </h2>
+          <button
+            type="button"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            onClick={closeImportModal}
+          >
+            Close
+          </button>
+        </div>
+        <form onSubmit={submitImport} className="flex flex-col gap-4">
+          {importFormError && (
+            <div className={ERROR_ALERT_CLASSES} role="alert">
+              {importFormError}
+            </div>
+          )}
+          {importSummary && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+              Imported {fmtCount(importSummary.total)} row
+              {importSummary.total === 1 ? "" : "s"}: {fmtCount(importSummary.inserted)} added,{" "}
+              {fmtCount(importSummary.updated)} updated.
+              {importSummary.errors.length > 0 && (
+                <div className="mt-2 text-amber-700 dark:text-amber-300">
+                  {importSummary.errors.length} line
+                  {importSummary.errors.length === 1 ? "" : "s"} couldn&apos;t be parsed:
+                  <ul className="mt-1 list-disc pl-5">
+                    {importSummary.errors.slice(0, 10).map((msg, i) => (
+                      <li key={i}>{msg}</li>
+                    ))}
+                  </ul>
+                  {importSummary.errors.length > 10 && (
+                    <div className="mt-1">…and {importSummary.errors.length - 10} more.</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">Text file</span>
+            <input
+              required
+              type="file"
+              accept=".txt,text/plain"
+              disabled={saving}
+              className="text-sm text-zinc-700 file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-white file:px-2 file:py-1 file:text-xs file:font-medium file:text-zinc-700 dark:text-zinc-300 dark:file:border-zinc-600 dark:file:bg-zinc-900 dark:file:text-zinc-200"
+              onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+            />
+            <span className="text-xs text-zinc-500">
+              One draw per line: <code>| n1-n2-n3-n4-n5-n6 | m/d/yyyy | jackpot | winners |</code>.
+              Each row is upserted by date, so re-uploading (e.g. to backfill jackpot/winners on
+              draws already here) overwrites rather than duplicating.
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
+              {saving ? "Importing…" : "Import"}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              className={SECONDARY_BUTTON_CLASSES}
+              onClick={closeImportModal}
+            >
+              {importSummary ? "Done" : "Cancel"}
             </button>
           </div>
         </form>

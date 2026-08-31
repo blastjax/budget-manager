@@ -1014,6 +1014,8 @@ export type LottoDrawRow = {
   id: number;
   draw_date: string;
   numbers: number[];
+  jackpot_prize: number | null;
+  winners: number;
   created_at: string;
 };
 
@@ -1091,6 +1093,28 @@ export async function deleteLottoAttempt(drawId: number, attemptId: number) {
   return sendJson<LottoDrawDetail>(
     "DELETE",
     `/api/lotto/${drawId}/attempts/${attemptId}`,
+  );
+}
+
+/** Bulk-loads historic results from a pipe-delimited text file — one row per
+ * draw: `| n1-n2-n3-n4-n5-n6 | m/d/yyyy | jackpot | winners |`. Each row is
+ * upserted by date, so re-uploading (e.g. to backfill jackpot/winners on
+ * draws that already exist) overwrites rather than duplicates. */
+export async function importLottoDrawResults(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  // No JSON headers — the browser sets the multipart boundary itself.
+  return j<{
+    filename: string;
+    inserted: number;
+    updated: number;
+    total: number;
+    errors: string[];
+  }>(
+    await apiFetch(`${dataApiBase()}/api/lotto/import`, {
+      method: "POST",
+      body,
+    }),
   );
 }
 
