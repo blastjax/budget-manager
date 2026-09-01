@@ -2,205 +2,134 @@
 
 import { useState } from "react";
 import { LocationLink } from "@/components/LocationLink";
+import { Modal } from "@/components/Modal";
 import {
-  eachDateInRange,
+  addMonths,
   formatDate,
+  formatMonthYear,
   formatTimeRange,
-  monthKey,
-  MONTH_NAMES_FULL,
+  toIsoDateLocal,
 } from "@/lib/dateFormat";
 import { mapsUrlFor } from "@/lib/maps";
+import { SECONDARY_BUTTON_CLASSES } from "@/lib/ui";
 import type { TravelAccommodationRow, TravelFlightRow, TravelItineraryRow } from "@/lib/api";
 
-const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MAX_VISIBLE_PILLS = 2;
+
+const FLIGHT_PILL_CLASSES = "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-200";
+const ITINERARY_PILL_CLASSES = "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200";
+const ACCOMMODATION_BANNER_CLASSES =
+  "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200";
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-type DayEvents = {
-  flights: TravelFlightRow[];
-  itinerary: TravelItineraryRow[];
-  accommodations: TravelAccommodationRow[];
-};
+/** "Flight: MNL to NRT" when both ends are known, degrading gracefully
+ * down to the bare flight number when neither location is set. */
+function flightLabel(f: TravelFlightRow): string {
+  if (f.from_location && f.to_location) return `Flight: ${f.from_location} to ${f.to_location}`;
+  if (f.from_location || f.to_location) return `Flight: ${f.from_location ?? f.to_location}`;
+  return `Flight ${f.flight_number}`;
+}
 
-const LEGEND: { label: string; swatch: string }[] = [
-  { label: "Flights", swatch: "bg-sky-500" },
-  { label: "Itinerary", swatch: "bg-amber-500" },
-  { label: "Accommodation", swatch: "bg-emerald-500" },
-];
+function accommodationLabel(a: TravelAccommodationRow): string {
+  return `Stay at ${a.name}`;
+}
 
-/** Indexes flights/itinerary/accommodations by every "YYYY-MM-DD" they
- * touch — an accommodation counts on every night of its check-in..check-out
- * range, not just its two endpoint dates. */
-function buildDayIndex(
+type WeekDay = { iso: string; day: number; inMonth: boolean };
+
+/** The 7-day weeks covering `year`/`month`, padded with the trailing days
+ * of the previous month and the leading days of the next so every week is
+ * a full row (those padding days are shown dimmed, out of month). */
+function buildWeeks(year: number, month: number): WeekDay[][] {
+  const startOffset = new Date(year, month - 1, 1).getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const prevDaysInMonth = new Date(year, month - 1, 0).getDate();
+  const prev = addMonths(year, month, -1);
+  const next = addMonths(year, month, 1);
+
+  const cells: WeekDay[] = [];
+  for (let i = 0; i < startOffset; i++) {
+    const day = prevDaysInMonth - startOffset + 1 + i;
+    cells.push({ iso: `${prev.y}-${pad(prev.m)}-${pad(day)}`, day, inMonth: false });
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({ iso: `${year}-${pad(month)}-${pad(day)}`, day, inMonth: true });
+  }
+  let nextDay = 1;
+  while (cells.length % 7 !== 0) {
+    cells.push({ iso: `${next.y}-${pad(next.m)}-${pad(nextDay)}`, day: nextDay, inMonth: false });
+    nextDay++;
+  }
+  const weeks: WeekDay[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}
+
+type BannerSegment = { key: string; label: string; startCol: number; endCol: number; lane: number };
+
+/** The accommodation banners touching this week, clamped to its 7 columns
+ * and greedily packed into lanes so overlapping stays stack instead of
+ * colliding (each lane is its own row above the day cells). */
+function bannersForWeek(week: WeekDay[], accommodations: TravelAccommodationRow[]): BannerSegment[] {
+  const weekStart = week[0].iso;
+  const weekEnd = week[6].iso;
+  const raw = accommodations
+    .filter((a) => a.checkout_date >= weekStart && a.checkin_date <= weekEnd)
+    .map((a) => {
+      const clampedStart = a.checkin_date > weekStart ? a.checkin_date : weekStart;
+      const clampedEnd = a.checkout_date < weekEnd ? a.checkout_date : weekEnd;
+      return {
+        key: `a-${a.id}-${weekStart}`,
+        label: accommodationLabel(a),
+        startCol: week.findIndex((d) => d.iso === clampedStart),
+        endCol: week.findIndex((d) => d.iso === clampedEnd),
+      };
+    })
+    .sort((a, b) => a.startCol - b.startCol);
+
+  const laneEndCols: number[] = [];
+  return raw.map((seg) => {
+    let lane = laneEndCols.findIndex((end) => end < seg.startCol);
+    if (lane === -1) {
+      lane = laneEndCols.length;
+      laneEndCols.push(seg.endCol);
+    } else {
+      laneEndCols[lane] = seg.endCol;
+    }
+    return { ...seg, lane };
+  });
+}
+
+type DayPill = { key: string; label: string; classes: string; sortKey: string };
+
+function pillsForDay(
+  iso: string,
   flights: TravelFlightRow[],
   itinerary: TravelItineraryRow[],
-  accommodations: TravelAccommodationRow[],
-): Map<string, DayEvents> {
-  const index = new Map<string, DayEvents>();
-  const ensure = (iso: string): DayEvents => {
-    let e = index.get(iso);
-    if (!e) {
-      e = { flights: [], itinerary: [], accommodations: [] };
-      index.set(iso, e);
-    }
-    return e;
-  };
+): DayPill[] {
+  const pills: DayPill[] = [];
   for (const f of flights) {
-    if (f.flight_date) ensure(f.flight_date).flights.push(f);
+    if (f.flight_date !== iso) continue;
+    pills.push({
+      key: `f-${f.id}`,
+      label: flightLabel(f),
+      classes: FLIGHT_PILL_CLASSES,
+      sortKey: f.departure_time ?? "",
+    });
   }
   for (const item of itinerary) {
-    ensure(item.item_date).itinerary.push(item);
+    if (item.item_date !== iso) continue;
+    pills.push({
+      key: `i-${item.id}`,
+      label: item.activity,
+      classes: ITINERARY_PILL_CLASSES,
+      sortKey: item.start_time ?? "",
+    });
   }
-  for (const a of accommodations) {
-    for (const iso of eachDateInRange(a.checkin_date, a.checkout_date)) {
-      ensure(iso).accommodations.push(a);
-    }
-  }
-  return index;
-}
-
-function DayCell({
-  iso,
-  day,
-  col,
-  events,
-  selected,
-  onClick,
-}: {
-  iso: string;
-  day: number;
-  col: number;
-  events: DayEvents | undefined;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  const flightCount = events?.flights.length ?? 0;
-  const itineraryCount = events?.itinerary.length ?? 0;
-  const accommodations = events?.accommodations ?? [];
-  const accCount = accommodations.length;
-  const hasAny = flightCount > 0 || itineraryCount > 0 || accCount > 0;
-
-  // A solid bar across every night an accommodation covers — rounded into a
-  // capsule at the actual check-in/check-out end, or at a week's edge (so a
-  // stay spanning several weeks still reads as one continuous bar row by
-  // row); a darker shade flags a night with more than one stay overlapping.
-  const accIsStart = accommodations.some((a) => a.checkin_date === iso);
-  const accIsEnd = accommodations.some((a) => a.checkout_date === iso);
-  const accBg = accCount === 0 ? "" : accCount >= 2 ? "bg-emerald-700" : "bg-emerald-500";
-  const accRounding =
-    accCount === 0
-      ? ""
-      : [
-          (accIsStart || col === 0) && "rounded-l-full",
-          (accIsEnd || col === 6) && "rounded-r-full",
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-  const flightDotColor = flightCount >= 2 ? "bg-sky-700" : "bg-sky-500";
-  const itineraryDotColor = itineraryCount >= 2 ? "bg-amber-700" : "bg-amber-500";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={
-        hasAny
-          ? [
-              flightCount > 0 && `${flightCount} flight${flightCount === 1 ? "" : "s"}`,
-              itineraryCount > 0 && `${itineraryCount} itinerary item${itineraryCount === 1 ? "" : "s"}`,
-              accCount > 0 && `${accCount} accommodation${accCount === 1 ? "" : "s"}`,
-            ]
-              .filter(Boolean)
-              .join(", ")
-          : undefined
-      }
-      className={`relative flex h-14 flex-col items-center justify-center gap-1 sm:h-16 ${accBg} ${accRounding} ${
-        selected ? "ring-2 ring-inset ring-indigo-500" : ""
-      }`}
-    >
-      <span
-        className={`text-sm font-semibold sm:text-base ${
-          accCount > 0
-            ? "text-white"
-            : hasAny
-              ? "text-zinc-900 dark:text-zinc-50"
-              : "text-zinc-400 dark:text-zinc-500"
-        }`}
-      >
-        {day}
-      </span>
-      {(flightCount > 0 || itineraryCount > 0) && (
-        <div className="flex gap-1">
-          {flightCount > 0 && (
-            <span className={`h-2 w-2 rounded-full ${flightDotColor}`} aria-hidden />
-          )}
-          {itineraryCount > 0 && (
-            <span className={`h-2 w-2 rounded-full ${itineraryDotColor}`} aria-hidden />
-          )}
-        </div>
-      )}
-    </button>
-  );
-}
-
-function OneMonth({
-  year,
-  month,
-  dayIndex,
-  selectedDate,
-  onSelectDate,
-}: {
-  year: number;
-  month: number;
-  dayIndex: Map<string, DayEvents>;
-  selectedDate: string | null;
-  onSelectDate: (iso: string) => void;
-}) {
-  const firstWeekday = new Date(year, month - 1, 1).getDay();
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const cells: (number | null)[] = [
-    ...Array(firstWeekday).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-3 text-center text-base font-semibold text-zinc-900 dark:text-zinc-50">
-        {MONTH_NAMES_FULL[month - 1]} {year}
-      </div>
-      <div className="grid grid-cols-7">
-        {WEEKDAY_LABELS.map((w, i) => (
-          <div
-            key={i}
-            className="pb-2 text-center text-xs font-medium text-zinc-400 dark:text-zinc-500"
-          >
-            {w}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-y-1">
-        {cells.map((day, i) => {
-          if (day == null) return <div key={i} className="h-14 sm:h-16" />;
-          const iso = `${year}-${pad(month)}-${pad(day)}`;
-          return (
-            <DayCell
-              key={i}
-              iso={iso}
-              day={day}
-              col={i % 7}
-              events={dayIndex.get(iso)}
-              selected={selectedDate === iso}
-              onClick={() => onSelectDate(iso)}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
+  return pills.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 }
 
 function DetailRow({
@@ -238,17 +167,23 @@ function DetailRow({
 
 function DayDetails({
   iso,
-  events,
+  flights,
+  itinerary,
+  accommodations,
   onClose,
 }: {
   iso: string;
-  events: DayEvents | undefined;
+  flights: TravelFlightRow[];
+  itinerary: TravelItineraryRow[];
+  accommodations: TravelAccommodationRow[];
   onClose: () => void;
 }) {
-  const flights = events?.flights ?? [];
-  const itinerary = events?.itinerary ?? [];
-  const accommodations = events?.accommodations ?? [];
-  const hasAny = flights.length > 0 || itinerary.length > 0 || accommodations.length > 0;
+  const dayFlights = flights.filter((f) => f.flight_date === iso);
+  const dayItinerary = itinerary.filter((item) => item.item_date === iso);
+  const dayAccommodations = accommodations.filter(
+    (a) => a.checkin_date <= iso && iso <= a.checkout_date,
+  );
+  const hasAny = dayFlights.length > 0 || dayItinerary.length > 0 || dayAccommodations.length > 0;
 
   return (
     <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -268,24 +203,15 @@ function DayDetails({
         <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing logged for this day.</p>
       )}
       <div className="flex flex-col gap-3 text-sm">
-        {flights.map((f) => (
+        {dayFlights.map((f) => (
           <DetailRow
             key={`f-${f.id}`}
             dotClass="bg-sky-500"
-            title={`Flight ${f.flight_number}`}
+            title={flightLabel(f)}
             subtitle={formatTimeRange(f.departure_time, f.arrival_time)}
-            locationName={
-              f.from_location && f.to_location
-                ? `${f.from_location} → ${f.to_location}`
-                : f.from_location || f.to_location
-            }
-            locationUrl={mapsUrlFor(
-              f.from_location || f.to_location,
-              f.from_location ? f.from_map_url : f.to_map_url,
-            )}
           />
         ))}
-        {itinerary.map((item) => (
+        {dayItinerary.map((item) => (
           <DetailRow
             key={`i-${item.id}`}
             dotClass="bg-amber-500"
@@ -295,11 +221,11 @@ function DayDetails({
             locationUrl={mapsUrlFor(item.location_name, item.location_map_url)}
           />
         ))}
-        {accommodations.map((a) => (
+        {dayAccommodations.map((a) => (
           <DetailRow
             key={`a-${a.id}`}
             dotClass="bg-emerald-500"
-            title={a.name}
+            title={accommodationLabel(a)}
             subtitle={`${formatDate(a.checkin_date)} – ${formatDate(a.checkout_date)} (${a.nights} night${a.nights === 1 ? "" : "s"})`}
             locationName={a.location_name}
             locationUrl={mapsUrlFor(a.location_name, a.location_map_url)}
@@ -310,13 +236,242 @@ function DayDetails({
   );
 }
 
-type TripCalendarTrip = { entry_year: number; entry_month: number; entry_month_end: number };
+function WeekRow({
+  week,
+  todayIso,
+  flights,
+  itinerary,
+  accommodations,
+  selectedDate,
+  onSelectDate,
+}: {
+  week: WeekDay[];
+  todayIso: string;
+  flights: TravelFlightRow[];
+  itinerary: TravelItineraryRow[];
+  accommodations: TravelAccommodationRow[];
+  selectedDate: string | null;
+  onSelectDate: (iso: string) => void;
+}) {
+  const banners = bannersForWeek(week, accommodations);
+  const laneCount = banners.reduce((max, b) => Math.max(max, b.lane + 1), 0);
 
-/** A trip's flights/itinerary/accommodations laid out on a calendar — one
- * grid per month actually touched by the trip (its declared span, widened
- * to cover any event date that falls outside it), color-coded by kind.
- * A date with more than one same-kind event gets a darker shade; clicking
- * any date opens a panel below listing what's on it. */
+  return (
+    <div className="border-b border-zinc-200 last:border-b-0 dark:border-zinc-800">
+      <div className="grid grid-cols-7">
+        {week.map((d) => (
+          <div key={d.iso} className="px-2 pt-2">
+            <button
+              type="button"
+              onClick={() => onSelectDate(d.iso)}
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-sm transition-colors duration-150 ${
+                d.iso === todayIso
+                  ? "bg-indigo-600 font-semibold text-white"
+                  : selectedDate === d.iso
+                    ? "bg-zinc-200 font-semibold text-zinc-900 dark:bg-zinc-700 dark:text-zinc-50"
+                    : d.inMonth
+                      ? "font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+                      : "text-zinc-300 hover:bg-zinc-100 dark:text-zinc-600 dark:hover:bg-zinc-800/60"
+              }`}
+            >
+              {d.day}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {laneCount > 0 && (
+        <div
+          className="grid grid-cols-7 gap-1 px-2 pt-1"
+          style={{ gridTemplateRows: `repeat(${laneCount}, minmax(0, auto))` }}
+        >
+          {banners.map((b) => (
+            <div
+              key={b.key}
+              title={b.label}
+              style={{ gridColumn: `${b.startCol + 1} / ${b.endCol + 2}`, gridRow: b.lane + 1 }}
+              className={`truncate rounded-md px-2 py-1 text-xs font-semibold ${ACCOMMODATION_BANNER_CLASSES}`}
+            >
+              {b.label}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-7 gap-1 px-2 pb-2 pt-1">
+        {week.map((d) => {
+          const pills = pillsForDay(d.iso, flights, itinerary);
+          const visible = pills.slice(0, MAX_VISIBLE_PILLS);
+          const overflow = pills.length - visible.length;
+          return (
+            <div key={d.iso} className="flex min-h-6 flex-col gap-1">
+              {visible.map((p) => (
+                <div
+                  key={p.key}
+                  title={p.label}
+                  className={`truncate rounded-md px-1.5 py-1 text-[11px] font-medium ${p.classes}`}
+                >
+                  {p.label}
+                </div>
+              ))}
+              {overflow > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onSelectDate(d.iso)}
+                  className="text-left text-[11px] font-medium text-zinc-500 transition-colors duration-150 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                >
+                  +{overflow} More
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type TripCalendarTrip = { title: string; entry_year: number; entry_month: number };
+
+function FullScreenCalendar({
+  trip,
+  flights,
+  itinerary,
+  accommodations,
+  onClose,
+}: {
+  trip: TripCalendarTrip;
+  flights: TravelFlightRow[];
+  itinerary: TravelItineraryRow[];
+  accommodations: TravelAccommodationRow[];
+  onClose: () => void;
+}) {
+  const [viewYear, setViewYear] = useState(trip.entry_year);
+  const [viewMonth, setViewMonth] = useState(trip.entry_month);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const today = toIsoDateLocal(new Date());
+  const weeks = buildWeeks(viewYear, viewMonth);
+
+  const goToMonth = (delta: number) => {
+    const n = addMonths(viewYear, viewMonth, delta);
+    setViewYear(n.y);
+    setViewMonth(n.m);
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      ariaLabel={`${trip.title} calendar`}
+      backdropClassName="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm"
+      dialogClassName="flex h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none border-0 bg-white p-0 dark:bg-zinc-950"
+    >
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:px-6">
+        <h2 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          {trip.title}
+        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border border-zinc-200 dark:border-zinc-700">
+            <button
+              type="button"
+              aria-label="Previous month"
+              onClick={() => goToMonth(-1)}
+              className="flex h-8 w-8 items-center justify-center text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+            >
+              ‹
+            </button>
+            <span className="min-w-[9rem] px-1 text-center text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              {formatMonthYear(viewYear, viewMonth)}
+            </span>
+            <button
+              type="button"
+              aria-label="Next month"
+              onClick={() => goToMonth(1)}
+              className="flex h-8 w-8 items-center justify-center text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+            >
+              ›
+            </button>
+          </div>
+          <button
+            type="button"
+            className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+            onClick={() => {
+              const now = new Date();
+              setViewYear(now.getFullYear());
+              setViewMonth(now.getMonth() + 1);
+            }}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4 border-b border-zinc-200 px-4 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400 sm:px-6">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-sky-500" /> Flights
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-amber-500" /> Itinerary
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" /> Accommodation
+        </span>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-auto px-4 py-3 sm:px-6">
+        <div className="min-w-[46rem]">
+          <div className="grid grid-cols-7 border-b border-zinc-200 pb-2 dark:border-zinc-800">
+            {WEEKDAY_LABELS.map((w) => (
+              <div
+                key={w}
+                className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+              >
+                {w}
+              </div>
+            ))}
+          </div>
+          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
+            {weeks.map((week) => (
+              <WeekRow
+                key={week[0].iso}
+                week={week}
+                todayIso={today}
+                flights={flights}
+                itinerary={itinerary}
+                accommodations={accommodations}
+                selectedDate={selectedDate}
+                onSelectDate={(iso) => setSelectedDate((cur) => (cur === iso ? null : iso))}
+              />
+            ))}
+          </div>
+
+          {selectedDate && (
+            <DayDetails
+              iso={selectedDate}
+              flights={flights}
+              itinerary={itinerary}
+              accommodations={accommodations}
+              onClose={() => setSelectedDate(null)}
+            />
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/** Entry point rendered inline on a trip card: a summary + button that
+ * opens the trip's flights/itinerary/accommodations as a full-screen,
+ * banner-style month calendar (multi-day stays span as bars across the
+ * days they cover; flights and itinerary items are pills on their day). */
 export function TripCalendar({
   trip,
   flights,
@@ -328,54 +483,30 @@ export function TripCalendar({
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
 }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  const dayIndex = buildDayIndex(flights, itinerary, accommodations);
-
-  const monthKeys = new Set<string>();
-  for (const iso of dayIndex.keys()) monthKeys.add(iso.slice(0, 7));
-  for (let m = trip.entry_month; m <= trip.entry_month_end; m++) {
-    monthKeys.add(monthKey(trip.entry_year, m));
-  }
-  const months = Array.from(monthKeys)
-    .sort()
-    .map((k) => {
-      const [year, month] = k.split("-").map(Number);
-      return { year, month };
-    });
-
-  if (months.length === 0) return null;
+  const [open, setOpen] = useState(false);
+  const total = flights.length + itinerary.length + accommodations.length;
 
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-zinc-600 dark:text-zinc-400">
-        {LEGEND.map((l) => (
-          <span key={l.label} className="inline-flex items-center gap-1.5">
-            <span className={`h-2 w-2 rounded-full ${l.swatch}`} />
-            {l.label}
-          </span>
-        ))}
-        <span className="text-zinc-400 dark:text-zinc-500">
-          (a darker shade means more than one on that day)
-        </span>
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {months.map(({ year, month }) => (
-          <OneMonth
-            key={`${year}-${month}`}
-            year={year}
-            month={month}
-            dayIndex={dayIndex}
-            selectedDate={selectedDate}
-            onSelectDate={(iso) => setSelectedDate((cur) => (cur === iso ? null : iso))}
-          />
-        ))}
-      </div>
-      {selectedDate && (
-        <DayDetails
-          iso={selectedDate}
-          events={dayIndex.get(selectedDate)}
-          onClose={() => setSelectedDate(null)}
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        {total === 0
+          ? "Nothing logged yet."
+          : `${flights.length} flight${flights.length === 1 ? "" : "s"} · ${itinerary.length} itinerary item${itinerary.length === 1 ? "" : "s"} · ${accommodations.length} stay${accommodations.length === 1 ? "" : "s"}`}
+      </p>
+      <button
+        type="button"
+        className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+        onClick={() => setOpen(true)}
+      >
+        Open full calendar
+      </button>
+      {open && (
+        <FullScreenCalendar
+          trip={trip}
+          flights={flights}
+          itinerary={itinerary}
+          accommodations={accommodations}
+          onClose={() => setOpen(false)}
         />
       )}
     </div>
