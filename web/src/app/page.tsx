@@ -13,6 +13,18 @@ const HOME_TILES = [
     description: "Blood-pressure readings & charts",
     dotClassName: "bg-rose-500",
   },
+  {
+    href: "/travels",
+    title: "Travels",
+    description: "Trips filed by year and month, with flights & itinerary",
+    dotClassName: "bg-amber-500",
+  },
+  {
+    href: "/lotto",
+    title: "Games",
+    description: "Lotto, Mosaic, Mambo, Mastermind & Sets",
+    dotClassName: "bg-emerald-500",
+  },
 ] as const;
 
 export default function Home() {

@@ -150,3 +150,35 @@ export function formatMonthDayShort(iso: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return "";
   return MONTH_DAY_FORMAT.format(d);
 }
+
+/** Every "YYYY-MM-DD" from `startIso` to `endIso`, inclusive. Empty if either
+ * date is invalid or the range runs backwards. */
+export function eachDateInRange(startIso: string, endIso: string): string[] {
+  const start = parseDateOnlyLocal(startIso);
+  const end = parseDateOnlyLocal(endIso);
+  if (!start || !end || end < start) return [];
+  const out: string[] = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    out.push(toIsoDateLocal(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+/** "9:00" -> "09:00" — 24-hour ("military") time, zero-padded. Falls back
+ * to the raw text for anything that doesn't look like an HH:MM value. */
+export function formatTimeLabel(t: string | null | undefined): string | null {
+  if (!t) return null;
+  const m = /^(\d{1,2}):(\d{2})/.exec(t.trim());
+  if (!m) return t;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
+/** "09:00 – 12:00", or just one side, or null if neither is set. */
+export function formatTimeRange(start: string | null, end: string | null): string | null {
+  const s = formatTimeLabel(start);
+  const e = formatTimeLabel(end);
+  if (s && e) return `${s} – ${e}`;
+  return s ?? e ?? null;
+}

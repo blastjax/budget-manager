@@ -11,15 +11,16 @@ export type TimeFieldProps = {
   disabled?: boolean;
 };
 
-/** Plain "HH:MM" (24-hour) text entry. Deliberately not a native
- * `<input type="time">` (its on-screen face can render AM/PM depending on
- * the browser/OS) and not a dropdown — just a text field. */
+/** Plain "HH:MM" (24-hour) text entry — also accepts bare digits like
+ * "1430" (parsed as 14:30). Deliberately not a native `<input type="time">`
+ * (its on-screen face can render AM/PM depending on the browser/OS) and
+ * not a dropdown — just a text field. */
 export function TimeField({ value, onChange, disabled }: TimeFieldProps) {
   return (
     <input
       type="text"
       inputMode="numeric"
-      placeholder="HH:MM"
+      placeholder="HH:MM or 1430"
       className={INPUT_CLASSES}
       value={value}
       disabled={disabled}

@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { DatePickerField } from "@/components/DatePickerField";
 import { DateRangePickerField } from "@/components/DateRangePickerField";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
+import { LocationLink } from "@/components/LocationLink";
 import { Modal } from "@/components/Modal";
 import { TimeField } from "@/components/TimeField";
-import { TripCalendar, type TripCalendarMarks, type TripCalendarMonth } from "@/components/TripCalendar";
+import { TripCalendar } from "@/components/TripCalendar";
 import {
   createTravelAccommodation,
   createTravelFlight,
@@ -26,7 +27,7 @@ import {
   type TravelItineraryRow,
   type TravelTripDetail,
 } from "@/lib/api";
-import { formatDate, monthKey, MONTH_NAMES_FULL, toIsoDateLocal } from "@/lib/dateFormat";
+import { formatDate, formatTimeLabel, formatTimeRange, MONTH_NAMES_FULL } from "@/lib/dateFormat";
 import { mapsUrlFor } from "@/lib/maps";
 import {
   CARD_CLASSES,
@@ -37,39 +38,39 @@ import {
   SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 
-/** "9:00" -> "09:00" — 24-hour ("military") time, zero-padded. Falls back
- * to the raw text for anything that doesn't look like an HH:MM value. */
-function formatTimeLabel(t: string | null | undefined): string | null {
-  if (!t) return null;
-  const m = /^(\d{1,2}):(\d{2})/.exec(t.trim());
-  if (!m) return t;
-  return `${m[1].padStart(2, "0")}:${m[2]}`;
-}
+const TIME_HELP =
+  "Enter time as HH:MM in 24-hour format (e.g. 14:30) — or just digits, e.g. 1430.";
 
-/** "09:00 – 12:00", or just one side, or null if neither is set. */
-function formatTimeRange(start: string | null, end: string | null): string | null {
-  const s = formatTimeLabel(start);
-  const e = formatTimeLabel(end);
-  if (s && e) return `${s} – ${e}`;
-  return s ?? e ?? null;
-}
-
-const TIME_HELP = "Enter time as HH:MM in 24-hour format (e.g. 14:30).";
-
-/** Parses free-text "H:MM"/"HH:MM" as a 24-hour time, zero-padding the
- * hour. Blank means "not set" (returns `undefined` so the field is omitted
- * from the request rather than sent as ""). Throws on anything else — an
- * out-of-range hour/minute, "2:30 PM", garbage — same pattern as the app's
- * other free-text fields (e.g. Lotto's draw date). */
+/** Parses free-text "H:MM"/"HH:MM", or plain digits ("1430", "930", "14")
+ * as a 24-hour time, zero-padding the result. Blank means "not set"
+ * (returns `undefined` so the field is omitted from the request rather
+ * than sent as ""). Throws on anything else — an out-of-range hour/minute,
+ * "2:30 PM", garbage — same pattern as the app's other free-text fields
+ * (e.g. Lotto's draw date). */
 function parseOptionalTime24(text: string): string | undefined {
   const trimmed = text.trim();
   if (!trimmed) return undefined;
-  const m = /^(\d{1,2}):(\d{2})$/.exec(trimmed);
-  if (!m) throw new Error(TIME_HELP);
-  const h = Number(m[1]);
-  const mi = Number(m[2]);
+  let h: number;
+  let mi: number;
+  const withColon = /^(\d{1,2}):(\d{2})$/.exec(trimmed);
+  if (withColon) {
+    h = Number(withColon[1]);
+    mi = Number(withColon[2]);
+  } else {
+    const digitsOnly = /^\d{1,4}$/.exec(trimmed);
+    if (!digitsOnly) throw new Error(TIME_HELP);
+    // 1-2 digits is just the hour ("14" -> 14:00); 3-4 digits splits the
+    // last two off as minutes ("1430" -> 14:30, "930" -> 9:30).
+    if (trimmed.length <= 2) {
+      h = Number(trimmed);
+      mi = 0;
+    } else {
+      h = Number(trimmed.slice(0, -2));
+      mi = Number(trimmed.slice(-2));
+    }
+  }
   if (h < 0 || h > 23 || mi < 0 || mi > 59) throw new Error(TIME_HELP);
-  return `${String(h).padStart(2, "0")}:${m[2]}`;
+  return `${String(h).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
 }
 
 /** Live preview while editing an accommodation's dates — the saved
@@ -82,84 +83,6 @@ function previewNightsDays(checkin: string, checkout: string): { nights: number;
   if (Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime())) return null;
   const nights = Math.max(0, Math.round((co.getTime() - ci.getTime()) / 86_400_000));
   return { nights, days: nights + 1 };
-}
-
-/** Every "YYYY-MM-DD" from `startIso` to `endIso`, inclusive. Empty if
- * either date is invalid or the range runs backwards. */
-function eachDateInRange(startIso: string, endIso: string): string[] {
-  const start = new Date(`${startIso}T00:00:00`);
-  const end = new Date(`${endIso}T00:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return [];
-  const out: string[] = [];
-  const cur = new Date(start);
-  while (cur <= end) {
-    out.push(toIsoDateLocal(cur));
-    cur.setDate(cur.getDate() + 1);
-  }
-  return out;
-}
-
-/** The months + color-coded day marks for a trip's calendar: every month
- * touched by an actual flight/itinerary/accommodation date, widened to
- * always include the trip's declared start..end month span (so a
- * freshly-created trip with no events yet still shows something). */
-function buildTripCalendar(
-  detail: TravelTripDetail,
-): { months: TripCalendarMonth[]; marks: TripCalendarMarks } {
-  const flights = new Set<string>();
-  const itinerary = new Set<string>();
-  const accommodations = new Set<string>();
-  const monthKeys = new Set<string>();
-
-  for (const f of detail.flights) {
-    if (f.flight_date) {
-      flights.add(f.flight_date);
-      monthKeys.add(f.flight_date.slice(0, 7));
-    }
-  }
-  for (const item of detail.itinerary) {
-    itinerary.add(item.item_date);
-    monthKeys.add(item.item_date.slice(0, 7));
-  }
-  for (const a of detail.accommodations) {
-    for (const iso of eachDateInRange(a.checkin_date, a.checkout_date)) {
-      accommodations.add(iso);
-      monthKeys.add(iso.slice(0, 7));
-    }
-  }
-
-  const { entry_year, entry_month, entry_month_end } = detail.trip;
-  for (let m = entry_month; m <= entry_month_end; m++) {
-    monthKeys.add(monthKey(entry_year, m));
-  }
-
-  const months = Array.from(monthKeys)
-    .sort()
-    .map((k) => {
-      const [y, m] = k.split("-").map(Number);
-      return { year: y, month: m };
-    });
-
-  return { months, marks: { flights, itinerary, accommodations } };
-}
-
-function LocationLink({ name, url }: { name: string | null; url: string | null }) {
-  if (!name) return null;
-  if (!url) {
-    return <span className="text-zinc-600 dark:text-zinc-400">{name}</span>;
-  }
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      title="Open in Google Maps"
-      className="inline-flex items-center gap-1 text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
-    >
-      <span aria-hidden>📍</span>
-      {name}
-    </a>
-  );
 }
 
 function ItemRow({
@@ -754,7 +677,6 @@ export default function TravelsClient() {
 
   const renderTripCard = (detail: TravelTripDetail) => {
     const { trip, flights, itinerary, accommodations } = detail;
-    const { months: calendarMonths, marks: calendarMarks } = buildTripCalendar(detail);
     return (
       <div
         key={trip.id}
@@ -790,13 +712,18 @@ export default function TravelsClient() {
         </div>
 
         {/* Calendar */}
-        <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-          <h5 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">Calendar</h5>
-          <TripCalendar months={calendarMonths} marks={calendarMarks} />
+        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h5 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">Calendar</h5>
+          <TripCalendar
+            trip={trip}
+            flights={flights}
+            itinerary={itinerary}
+            accommodations={accommodations}
+          />
         </div>
 
         {/* Flights */}
-        <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between gap-2">
             <h5 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Flights</h5>
             <button
@@ -856,7 +783,7 @@ export default function TravelsClient() {
         </div>
 
         {/* Itinerary */}
-        <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between gap-2">
             <h5 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Itinerary</h5>
             <button
@@ -909,7 +836,7 @@ export default function TravelsClient() {
         </div>
 
         {/* Accommodations */}
-        <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between gap-2">
             <h5 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Accommodations
