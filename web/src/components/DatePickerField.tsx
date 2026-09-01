@@ -70,10 +70,23 @@ export function DatePickerField({
         onClick={openPicker}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`${INPUT_CLASSES} w-full text-left disabled:opacity-50`}
+        className={`${INPUT_CLASSES} w-full text-left disabled:opacity-50 ${value ? "pr-8" : ""}`}
       >
         {value ? formatDate(value) : <span className="text-zinc-400">{placeholder}</span>}
       </button>
+      {value && !disabled && (
+        <button
+          type="button"
+          aria-label="Clear date"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange("");
+          }}
+          className="absolute inset-y-0 right-2 flex items-center text-zinc-400 transition-colors duration-150 hover:text-zinc-700 dark:hover:text-zinc-200"
+        >
+          ×
+        </button>
+      )}
       {open && (
         <div className="absolute z-20 mt-2 w-72 rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10">
           <CalendarMonth

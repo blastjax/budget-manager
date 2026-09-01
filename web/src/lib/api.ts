@@ -1209,6 +1209,9 @@ export type TravelItineraryRow = {
   id: number;
   trip_id: number;
   item_date: string;
+  /** Set only when the item spans past its start date (an overnight train,
+   * a multi-day trek) — `null` means a same-day item. */
+  item_end_date: string | null;
   start_time: string | null;
   end_time: string | null;
   activity: string;
@@ -1268,6 +1271,7 @@ export type TravelFlightBody = {
 
 export type TravelItineraryBody = {
   item_date: string;
+  item_end_date?: string | null;
   start_time?: string | null;
   end_time?: string | null;
   activity: string;

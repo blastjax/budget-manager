@@ -78,22 +78,81 @@ function buildWeeks(year: number, month: number): WeekDay[][] {
   return weeks;
 }
 
-type BannerSegment = { key: string; label: string; startCol: number; endCol: number; lane: number };
+/** True for an itinerary item that actually spans past its start date (an
+ * overnight train, a multi-day trek) — as opposed to a same-day item with
+ * `item_end_date` unset or equal to `item_date`. */
+function itinerarySpans(item: TravelItineraryRow): boolean {
+  return !!item.item_end_date && item.item_end_date !== item.item_date;
+}
 
-/** The accommodation banners touching this week, clamped to its 7 columns
- * and greedily packed into lanes so overlapping stays stack instead of
- * colliding (each lane is its own row above the day cells). */
-function bannersForWeek(week: WeekDay[], accommodations: TravelAccommodationRow[]): BannerSegment[] {
+/** "Aug 10 – Aug 11 · 22:00 – 06:00" for a spanning item, otherwise just
+ * the time range (and the date too, when `alwaysShowDate` — the "whole
+ * trip" list isn't already headed by that date the way a day panel is). */
+function itineraryDetailSubtitle(item: TravelItineraryRow, alwaysShowDate: boolean): string | undefined {
+  const dateText = itinerarySpans(item)
+    ? `${formatDate(item.item_date)} – ${formatDate(item.item_end_date)}`
+    : alwaysShowDate
+      ? formatDate(item.item_date)
+      : null;
+  return [dateText, formatTimeRange(item.start_time, item.end_time)].filter(Boolean).join(" · ") || undefined;
+}
+
+type SpanItem = { key: string; label: string; startDate: string; endDate: string; colorClasses: string };
+
+/** Multi-day accommodations and itinerary items combined into one list of
+ * spans, for the calendar's banner lanes. */
+function spanItemsFor(
+  itinerary: TravelItineraryRow[],
+  accommodations: TravelAccommodationRow[],
+): SpanItem[] {
+  const items: SpanItem[] = [];
+  for (const item of itinerary) {
+    if (!itinerarySpans(item)) continue;
+    items.push({
+      key: `i-${item.id}`,
+      label: item.activity,
+      startDate: item.item_date,
+      endDate: item.item_end_date as string,
+      colorClasses: ITINERARY_PILL_CLASSES,
+    });
+  }
+  for (const a of accommodations) {
+    items.push({
+      key: `a-${a.id}`,
+      label: accommodationLabel(a),
+      startDate: a.checkin_date,
+      endDate: a.checkout_date,
+      colorClasses: ACCOMMODATION_BANNER_CLASSES,
+    });
+  }
+  return items;
+}
+
+type BannerSegment = {
+  key: string;
+  label: string;
+  colorClasses: string;
+  startCol: number;
+  endCol: number;
+  lane: number;
+};
+
+/** The spans touching this week (accommodations and multi-day itinerary
+ * items alike), clamped to its 7 columns and greedily packed into lanes so
+ * overlapping ones stack instead of colliding (each lane is its own row
+ * above the day cells). */
+function bannersForWeek(week: WeekDay[], items: SpanItem[]): BannerSegment[] {
   const weekStart = week[0].iso;
   const weekEnd = week[6].iso;
-  const raw = accommodations
-    .filter((a) => a.checkout_date >= weekStart && a.checkin_date <= weekEnd)
-    .map((a) => {
-      const clampedStart = a.checkin_date > weekStart ? a.checkin_date : weekStart;
-      const clampedEnd = a.checkout_date < weekEnd ? a.checkout_date : weekEnd;
+  const raw = items
+    .filter((it) => it.endDate >= weekStart && it.startDate <= weekEnd)
+    .map((it) => {
+      const clampedStart = it.startDate > weekStart ? it.startDate : weekStart;
+      const clampedEnd = it.endDate < weekEnd ? it.endDate : weekEnd;
       return {
-        key: `a-${a.id}-${weekStart}`,
-        label: accommodationLabel(a),
+        key: `${it.key}-${weekStart}`,
+        label: it.label,
+        colorClasses: it.colorClasses,
         startCol: week.findIndex((d) => d.iso === clampedStart),
         endCol: week.findIndex((d) => d.iso === clampedEnd),
       };
@@ -132,6 +191,7 @@ function pillsForDay(
   }
   for (const item of itinerary) {
     if (item.item_date !== iso) continue;
+    if (itinerarySpans(item)) continue; // rendered as a banner instead
     pills.push({
       key: `i-${item.id}`,
       label: item.activity,
@@ -148,6 +208,9 @@ function DetailRow({
   subtitle,
   locationName,
   locationUrl,
+  bookingConfirmation,
+  instructions,
+  notes,
   onEdit,
   onDelete,
   saving,
@@ -157,6 +220,9 @@ function DetailRow({
   subtitle?: React.ReactNode;
   locationName?: string | null;
   locationUrl?: string | null;
+  bookingConfirmation?: string | null;
+  instructions?: string | null;
+  notes?: string | null;
   onEdit: () => void;
   onDelete: () => void;
   saving: boolean;
@@ -177,6 +243,21 @@ function DetailRow({
           {locationName && (
             <div className="mt-0.5">
               <LocationLink name={locationName} url={locationUrl ?? null} />
+            </div>
+          )}
+          {bookingConfirmation && (
+            <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+              Confirmation: {bookingConfirmation}
+            </div>
+          )}
+          {instructions && (
+            <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+              {instructions}
+            </div>
+          )}
+          {notes && (
+            <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+              {notes}
             </div>
           )}
         </div>
@@ -222,6 +303,9 @@ type EventDescriptor = {
   subtitle?: string;
   locationName?: string | null;
   locationUrl?: string | null;
+  bookingConfirmation?: string | null;
+  instructions?: string | null;
+  notes?: string | null;
   onEdit: () => void;
   onDelete: () => void;
 };
@@ -243,6 +327,7 @@ function buildAllEvents(
         [f.flight_date ? formatDate(f.flight_date) : null, formatTimeRange(f.departure_time, f.arrival_time)]
           .filter(Boolean)
           .join(" · ") || undefined,
+      notes: f.notes,
       onEdit: () => actions.onEditFlight(f),
       onDelete: () => actions.onDeleteFlight(f.id),
     });
@@ -253,12 +338,10 @@ function buildAllEvents(
       sortKey: `${item.item_date} ${item.start_time ?? "00:00"}`,
       dotClass: "bg-amber-500",
       title: item.activity,
-      subtitle:
-        [formatDate(item.item_date), formatTimeRange(item.start_time, item.end_time)]
-          .filter(Boolean)
-          .join(" · ") || undefined,
+      subtitle: itineraryDetailSubtitle(item, true),
       locationName: item.location_name,
       locationUrl: mapsUrlFor(item.location_name, item.location_map_url),
+      notes: item.notes,
       onEdit: () => actions.onEditItinerary(item),
       onDelete: () => actions.onDeleteItinerary(item.id),
     });
@@ -272,6 +355,9 @@ function buildAllEvents(
       subtitle: `${formatDate(a.checkin_date)} – ${formatDate(a.checkout_date)} (${a.nights} night${a.nights === 1 ? "" : "s"})`,
       locationName: a.location_name,
       locationUrl: mapsUrlFor(a.location_name, a.location_map_url),
+      bookingConfirmation: a.booking_confirmation,
+      instructions: a.instructions,
+      notes: a.notes,
       onEdit: () => actions.onEditAccommodation(a),
       onDelete: () => actions.onDeleteAccommodation(a.id),
     });
@@ -295,7 +381,9 @@ function DayDetails({
   onClose: () => void;
 }) {
   const dayFlights = flights.filter((f) => f.flight_date === iso);
-  const dayItinerary = itinerary.filter((item) => item.item_date === iso);
+  const dayItinerary = itinerary.filter(
+    (item) => item.item_date <= iso && iso <= (item.item_end_date ?? item.item_date),
+  );
   const dayAccommodations = accommodations.filter(
     (a) => a.checkin_date <= iso && iso <= a.checkout_date,
   );
@@ -321,6 +409,7 @@ function DayDetails({
             dotClass="bg-sky-500"
             title={flightLabel(f)}
             subtitle={formatTimeRange(f.departure_time, f.arrival_time)}
+            notes={f.notes}
             saving={actions.saving}
             onEdit={() => actions.onEditFlight(f)}
             onDelete={() => actions.onDeleteFlight(f.id)}
@@ -331,9 +420,10 @@ function DayDetails({
             key={`i-${item.id}`}
             dotClass="bg-amber-500"
             title={item.activity}
-            subtitle={formatTimeRange(item.start_time, item.end_time)}
+            subtitle={itineraryDetailSubtitle(item, false)}
             locationName={item.location_name}
             locationUrl={mapsUrlFor(item.location_name, item.location_map_url)}
+            notes={item.notes}
             saving={actions.saving}
             onEdit={() => actions.onEditItinerary(item)}
             onDelete={() => actions.onDeleteItinerary(item.id)}
@@ -347,6 +437,9 @@ function DayDetails({
             subtitle={`${formatDate(a.checkin_date)} – ${formatDate(a.checkout_date)} (${a.nights} night${a.nights === 1 ? "" : "s"})`}
             locationName={a.location_name}
             locationUrl={mapsUrlFor(a.location_name, a.location_map_url)}
+            bookingConfirmation={a.booking_confirmation}
+            instructions={a.instructions}
+            notes={a.notes}
             saving={actions.saving}
             onEdit={() => actions.onEditAccommodation(a)}
             onDelete={() => actions.onDeleteAccommodation(a.id)}
@@ -397,6 +490,9 @@ function TripFullSpanDetails({
               subtitle={e.subtitle}
               locationName={e.locationName}
               locationUrl={e.locationUrl}
+              bookingConfirmation={e.bookingConfirmation}
+              instructions={e.instructions}
+              notes={e.notes}
               saving={actions.saving}
               onEdit={e.onEdit}
               onDelete={e.onDelete}
@@ -425,7 +521,7 @@ function WeekRow({
   selectedDate: string | null;
   onSelectDate: (iso: string) => void;
 }) {
-  const banners = bannersForWeek(week, accommodations);
+  const banners = bannersForWeek(week, spanItemsFor(itinerary, accommodations));
   const laneCount = banners.reduce((max, b) => Math.max(max, b.lane + 1), 0);
 
   return (
@@ -464,7 +560,7 @@ function WeekRow({
               title={b.label}
               onClick={() => onSelectDate(week[b.startCol].iso)}
               style={{ gridColumn: `${b.startCol + 1} / ${b.endCol + 2}`, gridRow: b.lane + 1 }}
-              className={`truncate rounded-md px-2 py-1 text-left text-xs font-semibold transition-opacity duration-150 hover:opacity-80 ${ACCOMMODATION_BANNER_CLASSES}`}
+              className={`truncate rounded-md px-2 py-1 text-left text-xs font-semibold transition-opacity duration-150 hover:opacity-80 ${b.colorClasses}`}
             >
               {b.label}
             </button>

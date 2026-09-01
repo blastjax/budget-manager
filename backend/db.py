@@ -470,6 +470,9 @@ _SCHEMA_STATEMENTS: list[str] = [
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trip_id INTEGER NOT NULL REFERENCES travel_trip(id) ON DELETE CASCADE,
         item_date DATE NOT NULL,
+        -- Optional end date for an item that spans past its start date (an
+        -- overnight train, a multi-day trek); NULL means a same-day item.
+        item_end_date DATE,
         start_time TEXT,
         end_time TEXT,
         activity TEXT NOT NULL,
@@ -477,7 +480,8 @@ _SCHEMA_STATEMENTS: list[str] = [
         location_map_url TEXT,
         notes TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (length(trim(activity)) > 0)
+        CHECK (length(trim(activity)) > 0),
+        CHECK (item_end_date IS NULL OR item_end_date >= item_date)
     )
     """,
     """
@@ -659,6 +663,25 @@ def _migrate_travel_trip_add_month_end() -> None:
         conn.close()
 
 
+def _migrate_travel_itinerary_add_end_date() -> None:
+    """Older DBs don't have ``item_end_date`` on ``travel_itinerary``. Existing
+    items stay same-day (``item_end_date = NULL``) until edited to add a span —
+    e.g. an overnight train logged as a single-day item before this existed."""
+    path = sqlite_path()
+    if not path.exists():
+        return  # fresh DB — the CREATE TABLE statement below defines it correctly
+    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
+    try:
+        cols = conn.execute("PRAGMA table_info(travel_itinerary)").fetchall()
+        if not cols:
+            return  # table doesn't exist yet
+        if any(c[1] == "item_end_date" for c in cols):
+            return  # already migrated
+        conn.execute("ALTER TABLE travel_itinerary ADD COLUMN item_end_date DATE")
+    finally:
+        conn.close()
+
+
 def init_schema() -> None:
     """Create every table/index that doesn't already exist. Idempotent and cheap
     enough to call on every startup — ``CREATE ... IF NOT EXISTS`` short-circuits
@@ -668,6 +691,7 @@ def init_schema() -> None:
     _migrate_lotto_attempt_add_hidden()
     _migrate_lotto_draw_add_jackpot_winners()
     _migrate_travel_trip_add_month_end()
+    _migrate_travel_itinerary_add_end_date()
     with get_connection() as conn:
         for stmt in _SCHEMA_STATEMENTS:
             conn.execute(stmt)
@@ -2667,7 +2691,7 @@ _TRAVEL_FLIGHT_COLS = (
     "from_location, from_map_url, to_location, to_map_url, notes, created_at"
 )
 _TRAVEL_ITINERARY_COLS = (
-    "id, trip_id, item_date, start_time, end_time, activity, "
+    "id, trip_id, item_date, item_end_date, start_time, end_time, activity, "
     "location_name, location_map_url, notes, created_at"
 )
 _TRAVEL_ACCOMMODATION_COLS = (
@@ -2934,6 +2958,7 @@ def delete_travel_flight(trip_id: int, flight_id: int) -> dict[str, Any] | None:
 def insert_travel_itinerary(
     trip_id: int,
     item_date: Any,
+    item_end_date: Any,
     start_time: str | None,
     end_time: str | None,
     activity: str,
@@ -2946,15 +2971,15 @@ def insert_travel_itinerary(
             cur.execute(
                 """
                 INSERT INTO travel_itinerary (
-                    trip_id, item_date, start_time, end_time, activity,
+                    trip_id, item_date, item_end_date, start_time, end_time, activity,
                     location_name, location_map_url, notes
                 )
-                SELECT ?, ?, ?, ?, ?, ?, ?, ?
+                SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
                 WHERE EXISTS (SELECT 1 FROM travel_trip WHERE id = ?)
                 RETURNING id
                 """,
                 (
-                    trip_id, item_date, start_time, end_time, activity,
+                    trip_id, item_date, item_end_date, start_time, end_time, activity,
                     location_name, location_map_url, notes, trip_id,
                 ),
             )
@@ -2967,6 +2992,7 @@ def update_travel_itinerary(
     trip_id: int,
     item_id: int,
     item_date: Any,
+    item_end_date: Any,
     start_time: str | None,
     end_time: str | None,
     activity: str,
@@ -2979,13 +3005,13 @@ def update_travel_itinerary(
             cur.execute(
                 """
                 UPDATE travel_itinerary SET
-                    item_date = ?, start_time = ?, end_time = ?, activity = ?,
+                    item_date = ?, item_end_date = ?, start_time = ?, end_time = ?, activity = ?,
                     location_name = ?, location_map_url = ?, notes = ?
                 WHERE id = ? AND trip_id = ?
                 RETURNING id
                 """,
                 (
-                    item_date, start_time, end_time, activity,
+                    item_date, item_end_date, start_time, end_time, activity,
                     location_name, location_map_url, notes,
                     item_id, trip_id,
                 ),

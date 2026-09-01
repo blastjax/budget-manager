@@ -172,6 +172,9 @@ type ItineraryFormState = {
   tripId: number | null;
   editId: number | null;
   itemDate: string;
+  /** Optional — set only for an item that spans past its start date (an
+   * overnight train, a multi-day trek). Blank means a same-day item. */
+  itemEndDate: string;
   startTime: string;
   endTime: string;
   activity: string;
@@ -184,6 +187,7 @@ const emptyItineraryForm = (tripId: number): ItineraryFormState => ({
   tripId,
   editId: null,
   itemDate: "",
+  itemEndDate: "",
   startTime: "",
   endTime: "",
   activity: "",
@@ -482,6 +486,7 @@ export default function TravelsClient() {
       tripId,
       editId: item.id,
       itemDate: item.item_date,
+      itemEndDate: item.item_end_date ?? "",
       startTime: item.start_time ?? "",
       endTime: item.end_time ?? "",
       activity: item.activity,
@@ -507,6 +512,10 @@ export default function TravelsClient() {
       setItineraryError("Enter an activity.");
       return;
     }
+    if (itineraryModal.itemEndDate && itineraryModal.itemEndDate < itineraryModal.itemDate) {
+      setItineraryError("End date must be on or after the start date.");
+      return;
+    }
     let startTime: string | undefined;
     let endTime: string | undefined;
     try {
@@ -520,6 +529,7 @@ export default function TravelsClient() {
     try {
       const body = {
         item_date: itineraryModal.itemDate,
+        item_end_date: optOrUndefined(itineraryModal.itemEndDate) ?? null,
         start_time: startTime ?? null,
         end_time: endTime ?? null,
         activity,
@@ -688,7 +698,9 @@ export default function TravelsClient() {
               {trip.title}
             </h4>
             {trip.notes && (
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{trip.notes}</p>
+              <p className="mt-1 whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-400">
+                {trip.notes}
+              </p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -783,7 +795,9 @@ export default function TravelsClient() {
                       </div>
                     )}
                     {f.notes && (
-                      <div className="mt-0.5 text-zinc-500 dark:text-zinc-400">{f.notes}</div>
+                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                        {f.notes}
+                      </div>
                     )}
                   </ItemRow>
                 );
@@ -814,6 +828,7 @@ export default function TravelsClient() {
               {itinerary.map((item) => {
                 const url = mapsUrlFor(item.location_name, item.location_map_url);
                 const timeRange = formatTimeRange(item.start_time, item.end_time);
+                const spansDays = item.item_end_date && item.item_end_date !== item.item_date;
                 return (
                   <ItemRow
                     key={item.id}
@@ -822,7 +837,9 @@ export default function TravelsClient() {
                     onDelete={() => void onDeleteItinerary(trip.id, item.id)}
                   >
                     <div className="font-medium text-zinc-900 dark:text-zinc-50">
-                      {formatDate(item.item_date)}
+                      {spansDays
+                        ? `${formatDate(item.item_date)} – ${formatDate(item.item_end_date)}`
+                        : formatDate(item.item_date)}
                       {timeRange && (
                         <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
                           {timeRange}
@@ -836,7 +853,9 @@ export default function TravelsClient() {
                       </div>
                     )}
                     {item.notes && (
-                      <div className="mt-0.5 text-zinc-500 dark:text-zinc-400">{item.notes}</div>
+                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                        {item.notes}
+                      </div>
                     )}
                   </ItemRow>
                 );
@@ -891,17 +910,19 @@ export default function TravelsClient() {
                       </div>
                     )}
                     {a.booking_confirmation && (
-                      <div className="mt-0.5 text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
                         Confirmation: {a.booking_confirmation}
                       </div>
                     )}
                     {a.instructions && (
-                      <div className="mt-0.5 text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
                         {a.instructions}
                       </div>
                     )}
                     {a.notes && (
-                      <div className="mt-0.5 text-zinc-500 dark:text-zinc-400">{a.notes}</div>
+                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                        {a.notes}
+                      </div>
                     )}
                   </ItemRow>
                 );
@@ -1297,14 +1318,39 @@ export default function TravelsClient() {
               {itineraryError}
             </div>
           )}
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Date</span>
-            <DatePickerField
-              value={itineraryModal.itemDate}
-              disabled={saving}
-              onChange={(iso) => setItineraryModal((m) => ({ ...m, itemDate: iso }))}
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">Date</span>
+              <DatePickerField
+                value={itineraryModal.itemDate}
+                disabled={saving}
+                onChange={(iso) =>
+                  setItineraryModal((m) => ({
+                    ...m,
+                    itemDate: iso,
+                    // Keep a set end date from trailing behind a later start
+                    // date, same as the trip's start/end month fields.
+                    itemEndDate: m.itemEndDate && m.itemEndDate < iso ? iso : m.itemEndDate,
+                  }))
+                }
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                End date <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <DatePickerField
+                value={itineraryModal.itemEndDate}
+                disabled={saving}
+                placeholder="Same day"
+                onChange={(iso) => setItineraryModal((m) => ({ ...m, itemEndDate: iso }))}
+              />
+            </label>
+          </div>
+          <p className="-mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            Only needed when the item spans past its start date — an overnight train, a
+            multi-day trek.
+          </p>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-zinc-600 dark:text-zinc-400">

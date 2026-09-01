@@ -86,6 +86,9 @@ class TravelFlightCreate(BaseModel):
 
 class TravelItineraryCreate(BaseModel):
     item_date: dt.date
+    # Optional — set only when the item spans past its start date (an
+    # overnight train, a multi-day trek). None means a same-day item.
+    item_end_date: dt.date | None = None
     start_time: str | None = None
     end_time: str | None = None
     activity: str = Field(min_length=1)
@@ -102,6 +105,12 @@ class TravelItineraryCreate(BaseModel):
     @classmethod
     def _optional(cls, v: str | None) -> str | None:
         return _clean_optional(v)
+
+    @model_validator(mode="after")
+    def _end_date_after_start(self) -> "TravelItineraryCreate":
+        if self.item_end_date is not None and self.item_end_date < self.item_date:
+            raise ValueError("End date must be on or after the start date.")
+        return self
 
 
 class TravelAccommodationCreate(BaseModel):
