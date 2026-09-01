@@ -9,6 +9,14 @@ import { Modal } from "@/components/Modal";
 import { TimeField } from "@/components/TimeField";
 import { TripCalendar } from "@/components/TripCalendar";
 import {
+  TRAVEL_ADD_BUTTON,
+  TRAVEL_CLOSE_BUTTON,
+  TRAVEL_DELETE_BUTTON,
+  TRAVEL_EDIT_BUTTON,
+  TRAVEL_PRIMARY_BUTTON,
+  TRAVEL_SECONDARY_BUTTON,
+} from "@/app/travels/travelButtonStyles";
+import {
   createTravelAccommodation,
   createTravelFlight,
   createTravelItinerary,
@@ -29,14 +37,7 @@ import {
 } from "@/lib/api";
 import { formatDate, formatTimeLabel, formatTimeRange, MONTH_NAMES_FULL } from "@/lib/dateFormat";
 import { mapsUrlFor } from "@/lib/maps";
-import {
-  CARD_CLASSES,
-  DASHED_EMPTY_CLASSES,
-  ERROR_ALERT_CLASSES,
-  INPUT_CLASSES,
-  PRIMARY_BUTTON_CLASSES,
-  SECONDARY_BUTTON_CLASSES,
-} from "@/lib/ui";
+import { CARD_CLASSES, DASHED_EMPTY_CLASSES, ERROR_ALERT_CLASSES, INPUT_CLASSES } from "@/lib/ui";
 
 const TIME_HELP =
   "Enter time as HH:MM in 24-hour format (e.g. 14:30) — or just digits, e.g. 1430.";
@@ -100,18 +101,13 @@ function ItemRow({
     <li className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="min-w-0 flex-1 text-sm">{children}</div>
       <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          disabled={saving}
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-          onClick={onEdit}
-        >
+        <button type="button" disabled={saving} className={TRAVEL_EDIT_BUTTON} onClick={onEdit}>
           Edit
         </button>
         <button
           type="button"
           disabled={saving}
-          className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+          className={TRAVEL_DELETE_BUTTON}
           onClick={onDelete}
         >
           Delete
@@ -699,7 +695,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs`}
+              className={TRAVEL_EDIT_BUTTON}
               onClick={() => openEditTrip(detail)}
             >
               Edit
@@ -707,7 +703,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+              className={TRAVEL_DELETE_BUTTON}
               onClick={() => void onDeleteTrip(trip.id)}
             >
               Delete
@@ -743,7 +739,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+              className={TRAVEL_ADD_BUTTON}
               onClick={() => openAddFlight(trip.id)}
             >
               + Add flight
@@ -803,7 +799,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+              className={TRAVEL_ADD_BUTTON}
               onClick={() => openAddItinerary(trip.id)}
             >
               + Add item
@@ -858,7 +854,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+              className={TRAVEL_ADD_BUTTON}
               onClick={() => openAddAccommodation(trip.id)}
             >
               + Add stay
@@ -1004,7 +1000,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={TRAVEL_CLOSE_BUTTON}
             onClick={closeTripModal}
           >
             Close
@@ -1102,13 +1098,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
+            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
               {saving ? "Saving…" : tripModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={SECONDARY_BUTTON_CLASSES}
+              className={TRAVEL_SECONDARY_BUTTON}
               onClick={closeTripModal}
             >
               Cancel
@@ -1128,7 +1124,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={TRAVEL_CLOSE_BUTTON}
             onClick={closeFlightModal}
           >
             Close
@@ -1259,13 +1255,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
+            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
               {saving ? "Saving…" : flightModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={SECONDARY_BUTTON_CLASSES}
+              className={TRAVEL_SECONDARY_BUTTON}
               onClick={closeFlightModal}
             >
               Cancel
@@ -1289,7 +1285,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={TRAVEL_CLOSE_BUTTON}
             onClick={closeItineraryModal}
           >
             Close
@@ -1387,13 +1383,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
+            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
               {saving ? "Saving…" : itineraryModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={SECONDARY_BUTTON_CLASSES}
+              className={TRAVEL_SECONDARY_BUTTON}
               onClick={closeItineraryModal}
             >
               Cancel
@@ -1417,7 +1413,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={TRAVEL_CLOSE_BUTTON}
             onClick={closeAccommodationModal}
           >
             Close
@@ -1554,13 +1550,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
+            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
               {saving ? "Saving…" : accommodationModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={SECONDARY_BUTTON_CLASSES}
+              className={TRAVEL_SECONDARY_BUTTON}
               onClick={closeAccommodationModal}
             >
               Cancel

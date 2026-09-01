@@ -1,5 +1,6 @@
 "use client";
 
+import { TRAVEL_ICON_BUTTON } from "@/app/travels/travelButtonStyles";
 import { MONTH_NAMES_FULL } from "@/lib/dateFormat";
 
 export type DayState = "none" | "today" | "selected" | "range-start" | "range-end" | "range-middle";
@@ -49,7 +50,7 @@ export function CalendarMonth({
           onClick={onPrev}
           disabled={!onPrev}
           aria-label="Previous month"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 disabled:invisible dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className={TRAVEL_ICON_BUTTON}
         >
           ‹
         </button>
@@ -61,7 +62,7 @@ export function CalendarMonth({
           onClick={onNext}
           disabled={!onNext}
           aria-label="Next month"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 disabled:invisible dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className={TRAVEL_ICON_BUTTON}
         >
           ›
         </button>
@@ -94,12 +95,12 @@ export function CalendarMonth({
                 .join(" ")
             : "";
           return (
-            <div key={i} className={`flex h-9 items-center justify-center ${bgClasses}`}>
+            <div key={i} className={`flex h-10 items-center justify-center ${bgClasses}`}>
               <button
                 type="button"
                 onClick={() => onSelectDay(iso)}
                 className={[
-                  "flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors duration-150",
+                  "flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors duration-150",
                   isCap
                     ? "bg-indigo-600 font-semibold text-white"
                     : state === "today"

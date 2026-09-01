@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CalendarMonth, type DayState } from "@/components/CalendarMonth";
+import { TRAVEL_SECONDARY_BUTTON } from "@/app/travels/travelButtonStyles";
 import { addMonths, formatDate, toIsoDateLocal } from "@/lib/dateFormat";
 import { INPUT_CLASSES } from "@/lib/ui";
 
@@ -140,7 +141,7 @@ export function DateRangePickerField({
           <div className="mt-2 flex justify-end sm:hidden">
             <button
               type="button"
-              className="rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
+              className={`${TRAVEL_SECONDARY_BUTTON} px-3.5 py-1.5 text-xs`}
               onClick={() => {
                 const n = addMonths(anchorYear, anchorMonth, 1);
                 setAnchorYear(n.y);

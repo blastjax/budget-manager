@@ -4,6 +4,17 @@ import { useState } from "react";
 import { LocationLink } from "@/components/LocationLink";
 import { Modal } from "@/components/Modal";
 import {
+  TRAVEL_ADD_BUTTON,
+  TRAVEL_CLOSE_BUTTON,
+  TRAVEL_DELETE_BUTTON,
+  TRAVEL_EDIT_BUTTON,
+  TRAVEL_ICON_BUTTON,
+  TRAVEL_PRIMARY_BUTTON,
+  TRAVEL_SECONDARY_BUTTON,
+  TRAVEL_TOGGLE_ACTIVE_BUTTON,
+  TRAVEL_TOGGLE_INACTIVE_BUTTON,
+} from "@/app/travels/travelButtonStyles";
+import {
   addMonths,
   formatDate,
   formatMonthYear,
@@ -11,7 +22,6 @@ import {
   toIsoDateLocal,
 } from "@/lib/dateFormat";
 import { mapsUrlFor } from "@/lib/maps";
-import { SECONDARY_BUTTON_CLASSES } from "@/lib/ui";
 import type { TravelAccommodationRow, TravelFlightRow, TravelItineraryRow } from "@/lib/api";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -172,19 +182,14 @@ function DetailRow({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          disabled={saving}
-          onClick={onEdit}
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-        >
+        <button type="button" disabled={saving} onClick={onEdit} className={TRAVEL_EDIT_BUTTON}>
           Edit
         </button>
         <button
           type="button"
           disabled={saving}
           onClick={onDelete}
-          className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+          className={TRAVEL_DELETE_BUTTON}
         >
           Delete
         </button>
@@ -205,6 +210,74 @@ type CalendarActions = {
   onDeleteAccommodation: (accommodationId: number) => void;
   saving: boolean;
 };
+
+/** One combined, chronologically-sorted list entry — a flight, itinerary
+ * item, or accommodation — used by the "whole trip" view. Flights with no
+ * date sort to the end rather than the top. */
+type EventDescriptor = {
+  key: string;
+  sortKey: string;
+  dotClass: string;
+  title: string;
+  subtitle?: string;
+  locationName?: string | null;
+  locationUrl?: string | null;
+  onEdit: () => void;
+  onDelete: () => void;
+};
+
+function buildAllEvents(
+  flights: TravelFlightRow[],
+  itinerary: TravelItineraryRow[],
+  accommodations: TravelAccommodationRow[],
+  actions: CalendarActions,
+): EventDescriptor[] {
+  const events: EventDescriptor[] = [];
+  for (const f of flights) {
+    events.push({
+      key: `f-${f.id}`,
+      sortKey: `${f.flight_date ?? "9999-99-99"} ${f.departure_time ?? "00:00"}`,
+      dotClass: "bg-sky-500",
+      title: flightLabel(f),
+      subtitle:
+        [f.flight_date ? formatDate(f.flight_date) : null, formatTimeRange(f.departure_time, f.arrival_time)]
+          .filter(Boolean)
+          .join(" · ") || undefined,
+      onEdit: () => actions.onEditFlight(f),
+      onDelete: () => actions.onDeleteFlight(f.id),
+    });
+  }
+  for (const item of itinerary) {
+    events.push({
+      key: `i-${item.id}`,
+      sortKey: `${item.item_date} ${item.start_time ?? "00:00"}`,
+      dotClass: "bg-amber-500",
+      title: item.activity,
+      subtitle:
+        [formatDate(item.item_date), formatTimeRange(item.start_time, item.end_time)]
+          .filter(Boolean)
+          .join(" · ") || undefined,
+      locationName: item.location_name,
+      locationUrl: mapsUrlFor(item.location_name, item.location_map_url),
+      onEdit: () => actions.onEditItinerary(item),
+      onDelete: () => actions.onDeleteItinerary(item.id),
+    });
+  }
+  for (const a of accommodations) {
+    events.push({
+      key: `a-${a.id}`,
+      sortKey: `${a.checkin_date} 00:00`,
+      dotClass: "bg-emerald-500",
+      title: accommodationLabel(a),
+      subtitle: `${formatDate(a.checkin_date)} – ${formatDate(a.checkout_date)} (${a.nights} night${a.nights === 1 ? "" : "s"})`,
+      locationName: a.location_name,
+      locationUrl: mapsUrlFor(a.location_name, a.location_map_url),
+      onEdit: () => actions.onEditAccommodation(a),
+      onDelete: () => actions.onDeleteAccommodation(a.id),
+    });
+  }
+  return events.sort((x, y) => x.sortKey.localeCompare(y.sortKey));
+}
 
 function DayDetails({
   iso,
@@ -234,18 +307,12 @@ function DayDetails({
         <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
           {formatDate(iso)}
         </h6>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-md px-2 py-1 text-xs text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
-        >
+        <button type="button" onClick={onClose} className={TRAVEL_CLOSE_BUTTON}>
           Close
         </button>
       </div>
       {!hasAny && (
-        <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">
-          Nothing logged for this day.
-        </p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing logged for this day.</p>
       )}
       <div className="flex flex-col gap-3 text-sm">
         {dayFlights.map((f) => (
@@ -286,32 +353,57 @@ function DayDetails({
           />
         ))}
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-        <button
-          type="button"
-          disabled={actions.saving}
-          onClick={() => actions.onAddFlight(iso)}
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-        >
-          + Add flight
-        </button>
-        <button
-          type="button"
-          disabled={actions.saving}
-          onClick={() => actions.onAddItinerary(iso)}
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-        >
-          + Add itinerary item
-        </button>
-        <button
-          type="button"
-          disabled={actions.saving}
-          onClick={() => actions.onAddAccommodation(iso)}
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-        >
-          + Add stay
+    </div>
+  );
+}
+
+/** The "Show whole trip" view: every flight, itinerary item, and stay
+ * across every month of the trip, in one chronological list — not just
+ * the currently viewed month or a single clicked day. */
+function TripFullSpanDetails({
+  flights,
+  itinerary,
+  accommodations,
+  actions,
+  onClose,
+}: {
+  flights: TravelFlightRow[];
+  itinerary: TravelItineraryRow[];
+  accommodations: TravelAccommodationRow[];
+  actions: CalendarActions;
+  onClose: () => void;
+}) {
+  const events = buildAllEvents(flights, itinerary, accommodations, actions);
+
+  return (
+    <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          Whole trip — every flight, itinerary item, and stay
+        </h6>
+        <button type="button" onClick={onClose} className={TRAVEL_CLOSE_BUTTON}>
+          Close
         </button>
       </div>
+      {events.length === 0 ? (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing logged yet.</p>
+      ) : (
+        <div className="flex flex-col gap-3 text-sm">
+          {events.map((e) => (
+            <DetailRow
+              key={e.key}
+              dotClass={e.dotClass}
+              title={e.title}
+              subtitle={e.subtitle}
+              locationName={e.locationName}
+              locationUrl={e.locationUrl}
+              saving={actions.saving}
+              onEdit={e.onEdit}
+              onDelete={e.onDelete}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -435,6 +527,7 @@ function FullScreenCalendar({
   const [viewYear, setViewYear] = useState(trip.entry_year);
   const [viewMonth, setViewMonth] = useState(trip.entry_month);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showAllEvents, setShowAllEvents] = useState(false);
 
   const today = toIsoDateLocal(new Date());
   const weeks = buildWeeks(viewYear, viewMonth);
@@ -445,6 +538,16 @@ function FullScreenCalendar({
     setViewMonth(n.m);
   };
 
+  const selectDate = (iso: string) => {
+    setShowAllEvents(false);
+    setSelectedDate((cur) => (cur === iso ? null : iso));
+  };
+
+  const toggleShowAll = () => {
+    setSelectedDate(null);
+    setShowAllEvents((v) => !v);
+  };
+
   return (
     <Modal
       open
@@ -453,17 +556,26 @@ function FullScreenCalendar({
       backdropClassName="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm"
       dialogClassName="flex h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none border-0 bg-white p-0 dark:bg-zinc-950"
     >
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:px-6">
-        <h2 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+      <div className="grid shrink-0 grid-cols-1 items-center gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:grid-cols-3 sm:px-6">
+        <h2 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-50 sm:justify-self-start">
           {trip.title}
         </h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border border-zinc-200 dark:border-zinc-700">
+        <div className="justify-self-center">
+          <button
+            type="button"
+            onClick={toggleShowAll}
+            className={showAllEvents ? TRAVEL_TOGGLE_ACTIVE_BUTTON : TRAVEL_TOGGLE_INACTIVE_BUTTON}
+          >
+            {showAllEvents ? "Hide whole trip" : "Show whole trip"}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               aria-label="Previous month"
               onClick={() => goToMonth(-1)}
-              className="flex h-8 w-8 items-center justify-center text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+              className={TRAVEL_ICON_BUTTON}
             >
               ‹
             </button>
@@ -474,14 +586,14 @@ function FullScreenCalendar({
               type="button"
               aria-label="Next month"
               onClick={() => goToMonth(1)}
-              className="flex h-8 w-8 items-center justify-center text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+              className={TRAVEL_ICON_BUTTON}
             >
               ›
             </button>
           </div>
           <button
             type="button"
-            className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+            className={`${TRAVEL_SECONDARY_BUTTON} px-3.5 py-1.5 text-sm`}
             onClick={() => {
               const now = new Date();
               setViewYear(now.getFullYear());
@@ -492,7 +604,7 @@ function FullScreenCalendar({
           </button>
           <button
             type="button"
-            className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+            className={`${TRAVEL_SECONDARY_BUTTON} px-3.5 py-1.5 text-sm`}
             onClick={onClose}
           >
             Close
@@ -500,24 +612,22 @@ function FullScreenCalendar({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800 sm:px-6">
-        <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-600 dark:text-zinc-400">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-sky-500" /> Flights
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-amber-500" /> Itinerary
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Accommodation
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-4 border-b border-zinc-200 px-4 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400 sm:px-6">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-sky-500" /> Flights
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-amber-500" /> Itinerary
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" /> Accommodation
+        </span>
+        <div className="ml-auto flex flex-wrap gap-2">
           <button
             type="button"
             disabled={actions.saving}
             onClick={() => actions.onAddFlight(selectedDate ?? undefined)}
-            className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+            className={TRAVEL_ADD_BUTTON}
           >
             + Add flight
           </button>
@@ -525,7 +635,7 @@ function FullScreenCalendar({
             type="button"
             disabled={actions.saving}
             onClick={() => actions.onAddItinerary(selectedDate ?? undefined)}
-            className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+            className={TRAVEL_ADD_BUTTON}
           >
             + Add itinerary item
           </button>
@@ -533,7 +643,7 @@ function FullScreenCalendar({
             type="button"
             disabled={actions.saving}
             onClick={() => actions.onAddAccommodation(selectedDate ?? undefined)}
-            className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+            className={TRAVEL_ADD_BUTTON}
           >
             + Add stay
           </button>
@@ -562,20 +672,30 @@ function FullScreenCalendar({
                 itinerary={itinerary}
                 accommodations={accommodations}
                 selectedDate={selectedDate}
-                onSelectDate={(iso) => setSelectedDate((cur) => (cur === iso ? null : iso))}
+                onSelectDate={selectDate}
               />
             ))}
           </div>
 
-          {selectedDate && (
-            <DayDetails
-              iso={selectedDate}
+          {showAllEvents ? (
+            <TripFullSpanDetails
               flights={flights}
               itinerary={itinerary}
               accommodations={accommodations}
               actions={actions}
-              onClose={() => setSelectedDate(null)}
+              onClose={() => setShowAllEvents(false)}
             />
+          ) : (
+            selectedDate && (
+              <DayDetails
+                iso={selectedDate}
+                flights={flights}
+                itinerary={itinerary}
+                accommodations={accommodations}
+                actions={actions}
+                onClose={() => setSelectedDate(null)}
+              />
+            )
           )}
         </div>
       </div>
@@ -590,9 +710,10 @@ export type { CalendarActions as TripCalendarActions };
  * banner-style month calendar (multi-day stays span as bars across the
  * days they cover; flights and itinerary items are pills on their day).
  * Clicking a pill/banner (or any date) shows that day's agenda below the
- * grid, with edit/delete on each item and add buttons for new ones — the
- * same create/update/delete flow as the trip card's own list sections,
- * just reachable from inside the calendar too. */
+ * grid, with edit/delete on each item — the same create/update/delete flow
+ * as the trip card's own list sections, just reachable from inside the
+ * calendar too. "Show whole trip" swaps that agenda for every event across
+ * every month of the trip in one list. */
 export function TripCalendar({
   trip,
   flights,
@@ -615,11 +736,7 @@ export function TripCalendar({
           ? "Nothing logged yet."
           : `${flights.length} flight${flights.length === 1 ? "" : "s"} · ${itinerary.length} itinerary item${itinerary.length === 1 ? "" : "s"} · ${accommodations.length} stay${accommodations.length === 1 ? "" : "s"}`}
       </p>
-      <button
-        type="button"
-        className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
-        onClick={() => setOpen(true)}
-      >
+      <button type="button" className={TRAVEL_PRIMARY_BUTTON} onClick={() => setOpen(true)}>
         Open full calendar
       </button>
       {open && (
