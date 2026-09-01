@@ -1,10 +1,11 @@
 """Travel trip endpoints.
 
 A trip is one travel entry, filed under an entry year + month (like the
-payslip/monthly-expense period fields elsewhere in this app), holding three
-kinds of nested records: flights, itinerary items, and accommodations —
-each managed via its own sub-route and always returning the trip's full,
-refreshed detail so the frontend never has to re-fetch separately.
+payslip/monthly-expense period fields elsewhere in this app), holding four
+kinds of nested records: flights, ground transport (bus/train), itinerary
+items, and accommodations — each managed via its own sub-route and always
+returning the trip's full, refreshed detail so the frontend never has to
+re-fetch separately.
 
 An accommodation's nights/days are derived from its check-in/check-out
 dates on every read rather than stored, so they can never drift out of sync
@@ -24,21 +25,25 @@ from app.schemas.travel import (
     TravelAccommodationCreate,
     TravelFlightCreate,
     TravelItineraryCreate,
+    TravelTransportCreate,
     TravelTripCreate,
 )
 from db import (
     delete_travel_accommodation,
     delete_travel_flight,
     delete_travel_itinerary,
+    delete_travel_transport,
     delete_travel_trip,
     insert_travel_accommodation,
     insert_travel_flight,
     insert_travel_itinerary,
+    insert_travel_transport,
     insert_travel_trip,
     list_travel_trips,
     update_travel_accommodation,
     update_travel_flight,
     update_travel_itinerary,
+    update_travel_transport,
     update_travel_trip,
 )
 
@@ -60,6 +65,24 @@ def _serialize_flight(row: dict[str, Any]) -> dict[str, Any]:
         "trip_id": row["trip_id"],
         "flight_number": row["flight_number"],
         "flight_date": row["flight_date"],
+        "departure_time": row["departure_time"],
+        "arrival_time": row["arrival_time"],
+        "from_location": row["from_location"],
+        "from_map_url": row["from_map_url"],
+        "to_location": row["to_location"],
+        "to_map_url": row["to_map_url"],
+        "notes": row["notes"],
+        "created_at": row["created_at"],
+    }
+
+
+def _serialize_transport(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "trip_id": row["trip_id"],
+        "mode": row["mode"],
+        "number": row["number"],
+        "travel_date": row["travel_date"],
         "departure_time": row["departure_time"],
         "arrival_time": row["arrival_time"],
         "from_location": row["from_location"],
@@ -124,6 +147,7 @@ def _serialize_detail(detail: dict[str, Any]) -> dict[str, Any]:
     return {
         "trip": _serialize_trip(detail["trip"]),
         "flights": [_serialize_flight(f) for f in detail["flights"]],
+        "transport": [_serialize_transport(t) for t in detail["transport"]],
         "itinerary": [_serialize_itinerary(i) for i in detail["itinerary"]],
         "accommodations": [_serialize_accommodation(a) for a in detail["accommodations"]],
     }
@@ -217,6 +241,57 @@ def travel_remove_flight(trip_id: int, flight_id: int) -> dict[str, Any]:
     detail = delete_travel_flight(trip_id, flight_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="Flight not found.")
+    return _serialize_detail(detail)
+
+
+@router.post("/api/travel/{trip_id}/transport")
+def travel_add_transport(trip_id: int, body: TravelTransportCreate) -> dict[str, Any]:
+    detail = insert_travel_transport(
+        trip_id,
+        body.mode,
+        body.number,
+        body.travel_date,
+        body.departure_time,
+        body.arrival_time,
+        body.from_location,
+        body.from_map_url,
+        body.to_location,
+        body.to_map_url,
+        body.notes,
+    )
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Trip not found.")
+    return _serialize_detail(detail)
+
+
+@router.put("/api/travel/{trip_id}/transport/{transport_id}")
+def travel_update_transport(
+    trip_id: int, transport_id: int, body: TravelTransportCreate
+) -> dict[str, Any]:
+    detail = update_travel_transport(
+        trip_id,
+        transport_id,
+        body.mode,
+        body.number,
+        body.travel_date,
+        body.departure_time,
+        body.arrival_time,
+        body.from_location,
+        body.from_map_url,
+        body.to_location,
+        body.to_map_url,
+        body.notes,
+    )
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Transport leg not found.")
+    return _serialize_detail(detail)
+
+
+@router.delete("/api/travel/{trip_id}/transport/{transport_id}")
+def travel_remove_transport(trip_id: int, transport_id: int) -> dict[str, Any]:
+    detail = delete_travel_transport(trip_id, transport_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Transport leg not found.")
     return _serialize_detail(detail)
 
 

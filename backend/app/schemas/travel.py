@@ -1,15 +1,17 @@
 """Travel trip API models.
 
 A trip is filed under an entry year + month (like a journal entry) and holds
-three kinds of nested records: flights, itinerary items, and accommodations.
-Locations on itinerary/accommodation rows (and a flight's origin/destination)
-carry an optional custom Google Maps link; when one isn't set, the frontend
-builds a maps search link from the location's name instead.
+four kinds of nested records: flights, ground transport (bus/train), itinerary
+items, and accommodations. Locations on itinerary/accommodation rows (and a
+flight's or transport leg's origin/destination) carry an optional custom
+Google Maps link; when one isn't set, the frontend builds a maps search link
+from the location's name instead.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -71,6 +73,37 @@ class TravelFlightCreate(BaseModel):
         return _require_text(v, "Flight number")
 
     @field_validator(
+        "departure_time",
+        "arrival_time",
+        "from_location",
+        "from_map_url",
+        "to_location",
+        "to_map_url",
+        "notes",
+    )
+    @classmethod
+    def _optional(cls, v: str | None) -> str | None:
+        return _clean_optional(v)
+
+
+class TravelTransportCreate(BaseModel):
+    """A bus or train leg — same shape as a flight, plus a mode, with the
+    number optional since a bus route isn't always known/labeled the way a
+    flight number is."""
+
+    mode: Literal["bus", "train"]
+    number: str | None = None
+    travel_date: dt.date | None = None
+    departure_time: str | None = None
+    arrival_time: str | None = None
+    from_location: str | None = None
+    from_map_url: str | None = None
+    to_location: str | None = None
+    to_map_url: str | None = None
+    notes: str | None = None
+
+    @field_validator(
+        "number",
         "departure_time",
         "arrival_time",
         "from_location",

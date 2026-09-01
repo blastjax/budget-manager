@@ -1205,6 +1205,27 @@ export type TravelFlightRow = {
   created_at: string;
 };
 
+/** A bus or train leg — same shape as a flight, plus a `mode`; the number
+ * is optional since a bus route isn't always known/labeled the way a
+ * flight number is. */
+export type TravelTransportRow = {
+  id: number;
+  trip_id: number;
+  mode: "bus" | "train";
+  number: string | null;
+  travel_date: string | null;
+  departure_time: string | null;
+  arrival_time: string | null;
+  from_location: string | null;
+  /** Custom Google Maps link; when unset the UI builds a search link from `from_location`. */
+  from_map_url: string | null;
+  to_location: string | null;
+  /** Custom Google Maps link; when unset the UI builds a search link from `to_location`. */
+  to_map_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export type TravelItineraryRow = {
   id: number;
   trip_id: number;
@@ -1245,6 +1266,7 @@ export type TravelAccommodationRow = {
 export type TravelTripDetail = {
   trip: TravelTripRow;
   flights: TravelFlightRow[];
+  transport: TravelTransportRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
 };
@@ -1260,6 +1282,19 @@ export type TravelTripCreateBody = {
 export type TravelFlightBody = {
   flight_number: string;
   flight_date?: string | null;
+  departure_time?: string | null;
+  arrival_time?: string | null;
+  from_location?: string | null;
+  from_map_url?: string | null;
+  to_location?: string | null;
+  to_map_url?: string | null;
+  notes?: string | null;
+};
+
+export type TravelTransportBody = {
+  mode: "bus" | "train";
+  number?: string | null;
+  travel_date?: string | null;
   departure_time?: string | null;
   arrival_time?: string | null;
   from_location?: string | null;
@@ -1327,6 +1362,29 @@ export async function updateTravelFlight(
 
 export async function deleteTravelFlight(tripId: number, flightId: number) {
   return sendJson<TravelTripDetail>("DELETE", `/api/travel/${tripId}/flights/${flightId}`);
+}
+
+export async function createTravelTransport(tripId: number, body: TravelTransportBody) {
+  return sendJson<TravelTripDetail>("POST", `/api/travel/${tripId}/transport`, body);
+}
+
+export async function updateTravelTransport(
+  tripId: number,
+  transportId: number,
+  body: TravelTransportBody,
+) {
+  return sendJson<TravelTripDetail>(
+    "PUT",
+    `/api/travel/${tripId}/transport/${transportId}`,
+    body,
+  );
+}
+
+export async function deleteTravelTransport(tripId: number, transportId: number) {
+  return sendJson<TravelTripDetail>(
+    "DELETE",
+    `/api/travel/${tripId}/transport/${transportId}`,
+  );
 }
 
 export async function createTravelItinerary(tripId: number, body: TravelItineraryBody) {

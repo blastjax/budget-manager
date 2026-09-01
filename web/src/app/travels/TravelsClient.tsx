@@ -20,19 +20,23 @@ import {
   createTravelAccommodation,
   createTravelFlight,
   createTravelItinerary,
+  createTravelTransport,
   createTravelTrip,
   deleteTravelAccommodation,
   deleteTravelFlight,
   deleteTravelItinerary,
+  deleteTravelTransport,
   deleteTravelTrip,
   getTravelTrips,
   updateTravelAccommodation,
   updateTravelFlight,
   updateTravelItinerary,
+  updateTravelTransport,
   updateTravelTrip,
   type TravelAccommodationRow,
   type TravelFlightRow,
   type TravelItineraryRow,
+  type TravelTransportRow,
   type TravelTripDetail,
 } from "@/lib/api";
 import { formatDate, formatTimeLabel, formatTimeRange, MONTH_NAMES_FULL } from "@/lib/dateFormat";
@@ -84,6 +88,12 @@ function previewNightsDays(checkin: string, checkout: string): { nights: number;
   if (Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime())) return null;
   const nights = Math.max(0, Math.round((co.getTime() - ci.getTime()) / 86_400_000));
   return { nights, days: nights + 1 };
+}
+
+/** "Train Nozomi 23", or just "Bus"/"Train" when no number is set. */
+function transportLabel(t: Pick<TravelTransportRow, "mode" | "number">): string {
+  const mode = t.mode === "bus" ? "Bus" : "Train";
+  return t.number ? `${mode} ${t.number}` : mode;
 }
 
 function ItemRow({
@@ -167,6 +177,39 @@ const emptyFlightForm = (tripId: number): FlightFormState => ({
   notes: "",
 });
 
+type TransportFormState = {
+  open: boolean;
+  tripId: number | null;
+  editId: number | null;
+  mode: "bus" | "train";
+  /** Optional — a bus route isn't always known/labeled the way a flight
+   * number is. */
+  number: string;
+  travelDate: string;
+  departureTime: string;
+  arrivalTime: string;
+  fromLocation: string;
+  fromMapUrl: string;
+  toLocation: string;
+  toMapUrl: string;
+  notes: string;
+};
+const emptyTransportForm = (tripId: number): TransportFormState => ({
+  open: true,
+  tripId,
+  editId: null,
+  mode: "bus",
+  number: "",
+  travelDate: "",
+  departureTime: "",
+  arrivalTime: "",
+  fromLocation: "",
+  fromMapUrl: "",
+  toLocation: "",
+  toMapUrl: "",
+  notes: "",
+});
+
 type ItineraryFormState = {
   open: boolean;
   tripId: number | null;
@@ -229,6 +272,11 @@ const emptyAccommodationForm = (tripId: number): AccommodationFormState => ({
 
 const CLOSED_TRIP_MODAL: TripFormState = { ...emptyTripForm(), open: false };
 const CLOSED_FLIGHT_MODAL: FlightFormState = { ...emptyFlightForm(0), open: false, tripId: null };
+const CLOSED_TRANSPORT_MODAL: TransportFormState = {
+  ...emptyTransportForm(0),
+  open: false,
+  tripId: null,
+};
 const CLOSED_ITINERARY_MODAL: ItineraryFormState = {
   ...emptyItineraryForm(0),
   open: false,
@@ -268,6 +316,9 @@ export default function TravelsClient() {
 
   const [flightModal, setFlightModal] = useState<FlightFormState>(CLOSED_FLIGHT_MODAL);
   const [flightError, setFlightError] = useState<string | null>(null);
+
+  const [transportModal, setTransportModal] = useState<TransportFormState>(CLOSED_TRANSPORT_MODAL);
+  const [transportError, setTransportError] = useState<string | null>(null);
 
   const [itineraryModal, setItineraryModal] =
     useState<ItineraryFormState>(CLOSED_ITINERARY_MODAL);
@@ -465,6 +516,87 @@ export default function TravelsClient() {
     setError(null);
     try {
       const detail = await deleteTravelFlight(tripId, flightId);
+      upsertLocalTrip(detail);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // --- Transport (bus/train) ---
+
+  const openAddTransport = (tripId: number, initialDate?: string) => {
+    setTransportError(null);
+    setTransportModal({ ...emptyTransportForm(tripId), travelDate: initialDate ?? "" });
+  };
+  const openEditTransport = (tripId: number, t: TravelTransportRow) => {
+    setTransportError(null);
+    setTransportModal({
+      open: true,
+      tripId,
+      editId: t.id,
+      mode: t.mode,
+      number: t.number ?? "",
+      travelDate: t.travel_date ?? "",
+      departureTime: t.departure_time ?? "",
+      arrivalTime: t.arrival_time ?? "",
+      fromLocation: t.from_location ?? "",
+      fromMapUrl: t.from_map_url ?? "",
+      toLocation: t.to_location ?? "",
+      toMapUrl: t.to_map_url ?? "",
+      notes: t.notes ?? "",
+    });
+  };
+  const closeTransportModal = () => {
+    setTransportModal(CLOSED_TRANSPORT_MODAL);
+    setTransportError(null);
+  };
+  const submitTransport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTransportError(null);
+    if (transportModal.tripId == null) return;
+    let departureTime: string | undefined;
+    let arrivalTime: string | undefined;
+    try {
+      departureTime = parseOptionalTime24(transportModal.departureTime);
+      arrivalTime = parseOptionalTime24(transportModal.arrivalTime);
+    } catch (err) {
+      setTransportError(err instanceof Error ? err.message : "Invalid time");
+      return;
+    }
+    setSaving(true);
+    try {
+      const body = {
+        mode: transportModal.mode,
+        number: optOrUndefined(transportModal.number) ?? null,
+        travel_date: optOrUndefined(transportModal.travelDate) ?? null,
+        departure_time: departureTime ?? null,
+        arrival_time: arrivalTime ?? null,
+        from_location: optOrUndefined(transportModal.fromLocation) ?? null,
+        from_map_url: optOrUndefined(transportModal.fromMapUrl) ?? null,
+        to_location: optOrUndefined(transportModal.toLocation) ?? null,
+        to_map_url: optOrUndefined(transportModal.toMapUrl) ?? null,
+        notes: optOrUndefined(transportModal.notes) ?? null,
+      };
+      const detail =
+        transportModal.editId != null
+          ? await updateTravelTransport(transportModal.tripId, transportModal.editId, body)
+          : await createTravelTransport(transportModal.tripId, body);
+      upsertLocalTrip(detail);
+      closeTransportModal();
+    } catch (err) {
+      setTransportError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const onDeleteTransport = async (tripId: number, transportId: number) => {
+    if (!confirm("Delete this bus/train leg?")) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const detail = await deleteTravelTransport(tripId, transportId);
       upsertLocalTrip(detail);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed");
@@ -686,7 +818,7 @@ export default function TravelsClient() {
   }
 
   const renderTripCard = (detail: TravelTripDetail) => {
-    const { trip, flights, itinerary, accommodations } = detail;
+    const { trip, flights, transport, itinerary, accommodations } = detail;
     return (
       <div
         key={trip.id}
@@ -729,12 +861,16 @@ export default function TravelsClient() {
           <TripCalendar
             trip={trip}
             flights={flights}
+            transport={transport}
             itinerary={itinerary}
             accommodations={accommodations}
             saving={saving}
             onAddFlight={(date) => openAddFlight(trip.id, date)}
             onEditFlight={(f) => openEditFlight(trip.id, f)}
             onDeleteFlight={(flightId) => void onDeleteFlight(trip.id, flightId)}
+            onAddTransport={(date) => openAddTransport(trip.id, date)}
+            onEditTransport={(t) => openEditTransport(trip.id, t)}
+            onDeleteTransport={(transportId) => void onDeleteTransport(trip.id, transportId)}
             onAddItinerary={(date) => openAddItinerary(trip.id, date)}
             onEditItinerary={(item) => openEditItinerary(trip.id, item)}
             onDeleteItinerary={(itemId) => void onDeleteItinerary(trip.id, itemId)}
@@ -797,6 +933,72 @@ export default function TravelsClient() {
                     {f.notes && (
                       <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
                         {f.notes}
+                      </div>
+                    )}
+                  </ItemRow>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Transport (bus/train) */}
+        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex items-center justify-between gap-2">
+            <h5 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Bus / Train
+            </h5>
+            <button
+              type="button"
+              disabled={saving}
+              className={TRAVEL_ADD_BUTTON}
+              onClick={() => openAddTransport(trip.id)}
+            >
+              + Add bus/train
+            </button>
+          </div>
+          {transport.length === 0 ? (
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              No bus/train legs logged.
+            </p>
+          ) : (
+            <ul className="mt-2 flex flex-col gap-2">
+              {transport.map((t) => {
+                const fromUrl = mapsUrlFor(t.from_location, t.from_map_url);
+                const toUrl = mapsUrlFor(t.to_location, t.to_map_url);
+                const timeRange = formatTimeRange(t.departure_time, t.arrival_time);
+                return (
+                  <ItemRow
+                    key={t.id}
+                    saving={saving}
+                    onEdit={() => openEditTransport(trip.id, t)}
+                    onDelete={() => void onDeleteTransport(trip.id, t.id)}
+                  >
+                    <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                      {transportLabel(t)}
+                      {t.travel_date && (
+                        <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+                          {formatDate(t.travel_date)}
+                        </span>
+                      )}
+                    </div>
+                    {timeRange && (
+                      <div className="mt-0.5 text-zinc-600 dark:text-zinc-400">{timeRange}</div>
+                    )}
+                    {(t.from_location || t.to_location) && (
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <LocationLink name={t.from_location} url={fromUrl} />
+                        {t.from_location && t.to_location && (
+                          <span className="text-zinc-400" aria-hidden>
+                            →
+                          </span>
+                        )}
+                        <LocationLink name={t.to_location} url={toUrl} />
+                      </div>
+                    )}
+                    {t.notes && (
+                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                        {t.notes}
                       </div>
                     )}
                   </ItemRow>
@@ -935,7 +1137,11 @@ export default function TravelsClient() {
   };
 
   const anyModalOpen =
-    tripModal.open || flightModal.open || itineraryModal.open || accommodationModal.open;
+    tripModal.open ||
+    flightModal.open ||
+    transportModal.open ||
+    itineraryModal.open ||
+    accommodationModal.open;
   const accommodationPreview = previewNightsDays(
     accommodationModal.checkinDate,
     accommodationModal.checkoutDate,
@@ -948,8 +1154,8 @@ export default function TravelsClient() {
           Travels
         </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Trips filed by the year and month you took them, each with its flights, day-by-day
-          itinerary, and accommodations. Location links open in Google Maps.
+          Trips filed by the year and month you took them, each with its flights, bus/train
+          legs, day-by-day itinerary, and accommodations. Location links open in Google Maps.
         </p>
       </header>
 
@@ -1284,6 +1490,178 @@ export default function TravelsClient() {
               disabled={saving}
               className={TRAVEL_SECONDARY_BUTTON}
               onClick={closeFlightModal}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Transport (bus/train) modal */}
+      <Modal
+        open={transportModal.open}
+        onClose={closeTransportModal}
+        ariaLabelledBy="travel-transport-title"
+      >
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <h2
+            id="travel-transport-title"
+            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            {transportModal.editId != null ? "Edit bus/train leg" : "Add bus/train leg"}
+          </h2>
+          <button type="button" className={TRAVEL_CLOSE_BUTTON} onClick={closeTransportModal}>
+            Close
+          </button>
+        </div>
+        <form onSubmit={submitTransport} className="flex flex-col gap-4">
+          {transportError && (
+            <div className={ERROR_ALERT_CLASSES} role="alert">
+              {transportError}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">Mode</span>
+              <select
+                className={INPUT_CLASSES}
+                value={transportModal.mode}
+                disabled={saving}
+                onChange={(e) =>
+                  setTransportModal((m) => ({ ...m, mode: e.target.value as "bus" | "train" }))
+                }
+              >
+                <option value="bus">Bus</option>
+                <option value="train">Train</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                Number <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <input
+                type="text"
+                className={INPUT_CLASSES}
+                value={transportModal.number}
+                disabled={saving}
+                placeholder="e.g. Nozomi 23"
+                onChange={(e) => setTransportModal((m) => ({ ...m, number: e.target.value }))}
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">
+              Date <span className="font-normal text-zinc-400">(optional)</span>
+            </span>
+            <DatePickerField
+              value={transportModal.travelDate}
+              disabled={saving}
+              onChange={(iso) => setTransportModal((m) => ({ ...m, travelDate: iso }))}
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                Departure time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <TimeField
+                value={transportModal.departureTime}
+                disabled={saving}
+                onChange={(hhmm) => setTransportModal((m) => ({ ...m, departureTime: hhmm }))}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                Arrival time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <TimeField
+                value={transportModal.arrivalTime}
+                disabled={saving}
+                onChange={(hhmm) => setTransportModal((m) => ({ ...m, arrivalTime: hhmm }))}
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                From <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <input
+                type="text"
+                className={INPUT_CLASSES}
+                value={transportModal.fromLocation}
+                disabled={saving}
+                placeholder="e.g. Tokyo Station"
+                onChange={(e) =>
+                  setTransportModal((m) => ({ ...m, fromLocation: e.target.value }))
+                }
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                From maps link <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <input
+                type="url"
+                className={INPUT_CLASSES}
+                value={transportModal.fromMapUrl}
+                disabled={saving}
+                placeholder="Auto-built from the name if blank"
+                onChange={(e) =>
+                  setTransportModal((m) => ({ ...m, fromMapUrl: e.target.value }))
+                }
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                To <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <input
+                type="text"
+                className={INPUT_CLASSES}
+                value={transportModal.toLocation}
+                disabled={saving}
+                placeholder="e.g. Kyoto Station"
+                onChange={(e) => setTransportModal((m) => ({ ...m, toLocation: e.target.value }))}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                To maps link <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <input
+                type="url"
+                className={INPUT_CLASSES}
+                value={transportModal.toMapUrl}
+                disabled={saving}
+                placeholder="Auto-built from the name if blank"
+                onChange={(e) => setTransportModal((m) => ({ ...m, toMapUrl: e.target.value }))}
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">
+              Notes <span className="font-normal text-zinc-400">(optional)</span>
+            </span>
+            <textarea
+              rows={2}
+              className={INPUT_CLASSES}
+              value={transportModal.notes}
+              disabled={saving}
+              onChange={(e) => setTransportModal((m) => ({ ...m, notes: e.target.value }))}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
+              {saving ? "Saving…" : transportModal.editId != null ? "Update" : "Add"}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              className={TRAVEL_SECONDARY_BUTTON}
+              onClick={closeTransportModal}
             >
               Cancel
             </button>

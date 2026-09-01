@@ -22,12 +22,19 @@ import {
   toIsoDateLocal,
 } from "@/lib/dateFormat";
 import { mapsUrlFor } from "@/lib/maps";
-import type { TravelAccommodationRow, TravelFlightRow, TravelItineraryRow } from "@/lib/api";
+import type {
+  TravelAccommodationRow,
+  TravelFlightRow,
+  TravelItineraryRow,
+  TravelTransportRow,
+} from "@/lib/api";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MAX_VISIBLE_PILLS = 2;
 
 const FLIGHT_PILL_CLASSES = "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-200";
+const TRANSPORT_PILL_CLASSES =
+  "bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-200";
 const ITINERARY_PILL_CLASSES = "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200";
 const ACCOMMODATION_BANNER_CLASSES =
   "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200";
@@ -42,6 +49,15 @@ function flightLabel(f: TravelFlightRow): string {
   if (f.from_location && f.to_location) return `Flight: ${f.from_location} to ${f.to_location}`;
   if (f.from_location || f.to_location) return `Flight: ${f.from_location ?? f.to_location}`;
   return `Flight ${f.flight_number}`;
+}
+
+/** "Train: Tokyo Station to Kyoto Station" when both ends are known,
+ * degrading down to "Bus 45" or the bare mode when there's less to show. */
+function transportLabel(t: TravelTransportRow): string {
+  const mode = t.mode === "bus" ? "Bus" : "Train";
+  if (t.from_location && t.to_location) return `${mode}: ${t.from_location} to ${t.to_location}`;
+  if (t.from_location || t.to_location) return `${mode}: ${t.from_location ?? t.to_location}`;
+  return t.number ? `${mode} ${t.number}` : mode;
 }
 
 function accommodationLabel(a: TravelAccommodationRow): string {
@@ -177,6 +193,7 @@ type DayPill = { key: string; label: string; classes: string; sortKey: string };
 function pillsForDay(
   iso: string,
   flights: TravelFlightRow[],
+  transport: TravelTransportRow[],
   itinerary: TravelItineraryRow[],
 ): DayPill[] {
   const pills: DayPill[] = [];
@@ -187,6 +204,15 @@ function pillsForDay(
       label: flightLabel(f),
       classes: FLIGHT_PILL_CLASSES,
       sortKey: f.departure_time ?? "",
+    });
+  }
+  for (const t of transport) {
+    if (t.travel_date !== iso) continue;
+    pills.push({
+      key: `t-${t.id}`,
+      label: transportLabel(t),
+      classes: TRANSPORT_PILL_CLASSES,
+      sortKey: t.departure_time ?? "",
     });
   }
   for (const item of itinerary) {
@@ -283,6 +309,9 @@ type CalendarActions = {
   onAddFlight: (date?: string) => void;
   onEditFlight: (flight: TravelFlightRow) => void;
   onDeleteFlight: (flightId: number) => void;
+  onAddTransport: (date?: string) => void;
+  onEditTransport: (transport: TravelTransportRow) => void;
+  onDeleteTransport: (transportId: number) => void;
   onAddItinerary: (date?: string) => void;
   onEditItinerary: (item: TravelItineraryRow) => void;
   onDeleteItinerary: (itemId: number) => void;
@@ -312,6 +341,7 @@ type EventDescriptor = {
 
 function buildAllEvents(
   flights: TravelFlightRow[],
+  transport: TravelTransportRow[],
   itinerary: TravelItineraryRow[],
   accommodations: TravelAccommodationRow[],
   actions: CalendarActions,
@@ -330,6 +360,21 @@ function buildAllEvents(
       notes: f.notes,
       onEdit: () => actions.onEditFlight(f),
       onDelete: () => actions.onDeleteFlight(f.id),
+    });
+  }
+  for (const t of transport) {
+    events.push({
+      key: `t-${t.id}`,
+      sortKey: `${t.travel_date ?? "9999-99-99"} ${t.departure_time ?? "00:00"}`,
+      dotClass: "bg-violet-500",
+      title: transportLabel(t),
+      subtitle:
+        [t.travel_date ? formatDate(t.travel_date) : null, formatTimeRange(t.departure_time, t.arrival_time)]
+          .filter(Boolean)
+          .join(" · ") || undefined,
+      notes: t.notes,
+      onEdit: () => actions.onEditTransport(t),
+      onDelete: () => actions.onDeleteTransport(t.id),
     });
   }
   for (const item of itinerary) {
@@ -368,6 +413,7 @@ function buildAllEvents(
 function DayDetails({
   iso,
   flights,
+  transport,
   itinerary,
   accommodations,
   actions,
@@ -375,19 +421,25 @@ function DayDetails({
 }: {
   iso: string;
   flights: TravelFlightRow[];
+  transport: TravelTransportRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
   actions: CalendarActions;
   onClose: () => void;
 }) {
   const dayFlights = flights.filter((f) => f.flight_date === iso);
+  const dayTransport = transport.filter((t) => t.travel_date === iso);
   const dayItinerary = itinerary.filter(
     (item) => item.item_date <= iso && iso <= (item.item_end_date ?? item.item_date),
   );
   const dayAccommodations = accommodations.filter(
     (a) => a.checkin_date <= iso && iso <= a.checkout_date,
   );
-  const hasAny = dayFlights.length > 0 || dayItinerary.length > 0 || dayAccommodations.length > 0;
+  const hasAny =
+    dayFlights.length > 0 ||
+    dayTransport.length > 0 ||
+    dayItinerary.length > 0 ||
+    dayAccommodations.length > 0;
 
   return (
     <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -413,6 +465,18 @@ function DayDetails({
             saving={actions.saving}
             onEdit={() => actions.onEditFlight(f)}
             onDelete={() => actions.onDeleteFlight(f.id)}
+          />
+        ))}
+        {dayTransport.map((t) => (
+          <DetailRow
+            key={`t-${t.id}`}
+            dotClass="bg-violet-500"
+            title={transportLabel(t)}
+            subtitle={formatTimeRange(t.departure_time, t.arrival_time)}
+            notes={t.notes}
+            saving={actions.saving}
+            onEdit={() => actions.onEditTransport(t)}
+            onDelete={() => actions.onDeleteTransport(t.id)}
           />
         ))}
         {dayItinerary.map((item) => (
@@ -450,29 +514,31 @@ function DayDetails({
   );
 }
 
-/** The "Show whole trip" view: every flight, itinerary item, and stay
- * across every month of the trip, in one chronological list — not just
- * the currently viewed month or a single clicked day. */
+/** The "Show whole trip" view: every flight, bus/train leg, itinerary
+ * item, and stay across every month of the trip, in one chronological
+ * list — not just the currently viewed month or a single clicked day. */
 function TripFullSpanDetails({
   flights,
+  transport,
   itinerary,
   accommodations,
   actions,
   onClose,
 }: {
   flights: TravelFlightRow[];
+  transport: TravelTransportRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
   actions: CalendarActions;
   onClose: () => void;
 }) {
-  const events = buildAllEvents(flights, itinerary, accommodations, actions);
+  const events = buildAllEvents(flights, transport, itinerary, accommodations, actions);
 
   return (
     <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Whole trip — every flight, itinerary item, and stay
+          Whole trip — every flight, bus/train leg, itinerary item, and stay
         </h6>
         <button type="button" onClick={onClose} className={TRAVEL_CLOSE_BUTTON}>
           Close
@@ -508,6 +574,7 @@ function WeekRow({
   week,
   todayIso,
   flights,
+  transport,
   itinerary,
   accommodations,
   selectedDate,
@@ -516,6 +583,7 @@ function WeekRow({
   week: WeekDay[];
   todayIso: string;
   flights: TravelFlightRow[];
+  transport: TravelTransportRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
   selectedDate: string | null;
@@ -570,7 +638,7 @@ function WeekRow({
 
       <div className="grid grid-cols-7 gap-1 px-2 pb-2 pt-1">
         {week.map((d) => {
-          const pills = pillsForDay(d.iso, flights, itinerary);
+          const pills = pillsForDay(d.iso, flights, transport, itinerary);
           const visible = pills.slice(0, MAX_VISIBLE_PILLS);
           const overflow = pills.length - visible.length;
           return (
@@ -608,6 +676,7 @@ type TripCalendarTrip = { title: string; entry_year: number; entry_month: number
 function FullScreenCalendar({
   trip,
   flights,
+  transport,
   itinerary,
   accommodations,
   actions,
@@ -615,6 +684,7 @@ function FullScreenCalendar({
 }: {
   trip: TripCalendarTrip;
   flights: TravelFlightRow[];
+  transport: TravelTransportRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
   actions: CalendarActions;
@@ -713,6 +783,9 @@ function FullScreenCalendar({
           <span className="h-2 w-2 rounded-full bg-sky-500" /> Flights
         </span>
         <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-violet-500" /> Bus/Train
+        </span>
+        <span className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-amber-500" /> Itinerary
         </span>
         <span className="inline-flex items-center gap-1.5">
@@ -726,6 +799,14 @@ function FullScreenCalendar({
             className={TRAVEL_ADD_BUTTON}
           >
             + Add flight
+          </button>
+          <button
+            type="button"
+            disabled={actions.saving}
+            onClick={() => actions.onAddTransport(selectedDate ?? undefined)}
+            className={TRAVEL_ADD_BUTTON}
+          >
+            + Add bus/train
           </button>
           <button
             type="button"
@@ -765,6 +846,7 @@ function FullScreenCalendar({
                 week={week}
                 todayIso={today}
                 flights={flights}
+                transport={transport}
                 itinerary={itinerary}
                 accommodations={accommodations}
                 selectedDate={selectedDate}
@@ -776,6 +858,7 @@ function FullScreenCalendar({
           {showAllEvents ? (
             <TripFullSpanDetails
               flights={flights}
+              transport={transport}
               itinerary={itinerary}
               accommodations={accommodations}
               actions={actions}
@@ -786,6 +869,7 @@ function FullScreenCalendar({
               <DayDetails
                 iso={selectedDate}
                 flights={flights}
+                transport={transport}
                 itinerary={itinerary}
                 accommodations={accommodations}
                 actions={actions}
@@ -813,24 +897,26 @@ export type { CalendarActions as TripCalendarActions };
 export function TripCalendar({
   trip,
   flights,
+  transport,
   itinerary,
   accommodations,
   ...actions
 }: {
   trip: TripCalendarTrip;
   flights: TravelFlightRow[];
+  transport: TravelTransportRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
 } & CalendarActions) {
   const [open, setOpen] = useState(false);
-  const total = flights.length + itinerary.length + accommodations.length;
+  const total = flights.length + transport.length + itinerary.length + accommodations.length;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         {total === 0
           ? "Nothing logged yet."
-          : `${flights.length} flight${flights.length === 1 ? "" : "s"} · ${itinerary.length} itinerary item${itinerary.length === 1 ? "" : "s"} · ${accommodations.length} stay${accommodations.length === 1 ? "" : "s"}`}
+          : `${flights.length} flight${flights.length === 1 ? "" : "s"} · ${transport.length} bus/train leg${transport.length === 1 ? "" : "s"} · ${itinerary.length} itinerary item${itinerary.length === 1 ? "" : "s"} · ${accommodations.length} stay${accommodations.length === 1 ? "" : "s"}`}
       </p>
       <button type="button" className={TRAVEL_PRIMARY_BUTTON} onClick={() => setOpen(true)}>
         Open full calendar
@@ -839,6 +925,7 @@ export function TripCalendar({
         <FullScreenCalendar
           trip={trip}
           flights={flights}
+          transport={transport}
           itinerary={itinerary}
           accommodations={accommodations}
           actions={actions}

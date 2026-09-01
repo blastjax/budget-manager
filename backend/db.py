@@ -466,6 +466,31 @@ _SCHEMA_STATEMENTS: list[str] = [
         ON travel_flight (trip_id, flight_date, created_at)
     """,
     """
+    CREATE TABLE IF NOT EXISTS travel_transport (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id INTEGER NOT NULL REFERENCES travel_trip(id) ON DELETE CASCADE,
+        -- Ground transport leg — bus or train. Same shape as travel_flight,
+        -- with a mode and an optional (rather than required) number, since
+        -- a bus route isn't always known/labeled the way a flight number is.
+        mode TEXT NOT NULL,
+        number TEXT,
+        travel_date DATE,
+        departure_time TEXT,
+        arrival_time TEXT,
+        from_location TEXT,
+        from_map_url TEXT,
+        to_location TEXT,
+        to_map_url TEXT,
+        notes TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (mode IN ('bus', 'train'))
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_travel_transport_parent
+        ON travel_transport (trip_id, travel_date, created_at)
+    """,
+    """
     CREATE TABLE IF NOT EXISTS travel_itinerary (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trip_id INTEGER NOT NULL REFERENCES travel_trip(id) ON DELETE CASCADE,
@@ -2690,6 +2715,10 @@ _TRAVEL_FLIGHT_COLS = (
     "id, trip_id, flight_number, flight_date, departure_time, arrival_time, "
     "from_location, from_map_url, to_location, to_map_url, notes, created_at"
 )
+_TRAVEL_TRANSPORT_COLS = (
+    "id, trip_id, mode, number, travel_date, departure_time, arrival_time, "
+    "from_location, from_map_url, to_location, to_map_url, notes, created_at"
+)
 _TRAVEL_ITINERARY_COLS = (
     "id, trip_id, item_date, item_end_date, start_time, end_time, activity, "
     "location_name, location_map_url, notes, created_at"
@@ -2706,6 +2735,18 @@ def _travel_flights_rows(cur: Any, trip_id: int) -> list[dict[str, Any]]:
         SELECT {_TRAVEL_FLIGHT_COLS} FROM travel_flight
         WHERE trip_id = ?
         ORDER BY flight_date ASC NULLS LAST, created_at ASC, id ASC
+        """,
+        (trip_id,),
+    )
+    return [_row_to_dict(cur, r) for r in cur.fetchall()]
+
+
+def _travel_transport_rows(cur: Any, trip_id: int) -> list[dict[str, Any]]:
+    cur.execute(
+        f"""
+        SELECT {_TRAVEL_TRANSPORT_COLS} FROM travel_transport
+        WHERE trip_id = ?
+        ORDER BY travel_date ASC NULLS LAST, created_at ASC, id ASC
         """,
         (trip_id,),
     )
@@ -2745,6 +2786,7 @@ def _travel_trip_detail(cur: Any, trip_id: int) -> dict[str, Any] | None:
     return {
         "trip": trip,
         "flights": _travel_flights_rows(cur, trip_id),
+        "transport": _travel_transport_rows(cur, trip_id),
         "itinerary": _travel_itinerary_rows(cur, trip_id),
         "accommodations": _travel_accommodations_rows(cur, trip_id),
     }
@@ -2786,6 +2828,19 @@ def list_travel_trips(limit: int = 500) -> list[dict[str, Any]]:
 
             cur.execute(
                 f"""
+                SELECT {_TRAVEL_TRANSPORT_COLS} FROM travel_transport
+                WHERE trip_id IN ({placeholders})
+                ORDER BY travel_date ASC NULLS LAST, created_at ASC, id ASC
+                """,
+                ids,
+            )
+            transport_by_trip: dict[int, list[dict[str, Any]]] = {}
+            for r in cur.fetchall():
+                tr = _row_to_dict(cur, r)
+                transport_by_trip.setdefault(tr["trip_id"], []).append(tr)
+
+            cur.execute(
+                f"""
                 SELECT {_TRAVEL_ITINERARY_COLS} FROM travel_itinerary
                 WHERE trip_id IN ({placeholders})
                 ORDER BY item_date ASC, start_time ASC NULLS LAST, created_at ASC, id ASC
@@ -2814,6 +2869,7 @@ def list_travel_trips(limit: int = 500) -> list[dict[str, Any]]:
                 {
                     "trip": t,
                     "flights": flights_by_trip.get(t["id"], []),
+                    "transport": transport_by_trip.get(t["id"], []),
                     "itinerary": itinerary_by_trip.get(t["id"], []),
                     "accommodations": accommodations_by_trip.get(t["id"], []),
                 }
@@ -2949,6 +3005,88 @@ def delete_travel_flight(trip_id: int, flight_id: int) -> dict[str, Any] | None:
             cur.execute(
                 "DELETE FROM travel_flight WHERE id = ? AND trip_id = ? RETURNING id",
                 (flight_id, trip_id),
+            )
+            if not cur.fetchone():
+                return None
+            return _travel_trip_detail(cur, trip_id)
+
+
+def insert_travel_transport(
+    trip_id: int,
+    mode: str,
+    number: str | None,
+    travel_date: Any,
+    departure_time: str | None,
+    arrival_time: str | None,
+    from_location: str | None,
+    from_map_url: str | None,
+    to_location: str | None,
+    to_map_url: str | None,
+    notes: str | None,
+) -> dict[str, Any] | None:
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                """
+                INSERT INTO travel_transport (
+                    trip_id, mode, number, travel_date, departure_time, arrival_time,
+                    from_location, from_map_url, to_location, to_map_url, notes
+                )
+                SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                WHERE EXISTS (SELECT 1 FROM travel_trip WHERE id = ?)
+                RETURNING id
+                """,
+                (
+                    trip_id, mode, number, travel_date, departure_time, arrival_time,
+                    from_location, from_map_url, to_location, to_map_url, notes, trip_id,
+                ),
+            )
+            if not cur.fetchone():
+                return None
+            return _travel_trip_detail(cur, trip_id)
+
+
+def update_travel_transport(
+    trip_id: int,
+    transport_id: int,
+    mode: str,
+    number: str | None,
+    travel_date: Any,
+    departure_time: str | None,
+    arrival_time: str | None,
+    from_location: str | None,
+    from_map_url: str | None,
+    to_location: str | None,
+    to_map_url: str | None,
+    notes: str | None,
+) -> dict[str, Any] | None:
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                """
+                UPDATE travel_transport SET
+                    mode = ?, number = ?, travel_date = ?, departure_time = ?, arrival_time = ?,
+                    from_location = ?, from_map_url = ?, to_location = ?, to_map_url = ?, notes = ?
+                WHERE id = ? AND trip_id = ?
+                RETURNING id
+                """,
+                (
+                    mode, number, travel_date, departure_time, arrival_time,
+                    from_location, from_map_url, to_location, to_map_url, notes,
+                    transport_id, trip_id,
+                ),
+            )
+            if not cur.fetchone():
+                return None
+            return _travel_trip_detail(cur, trip_id)
+
+
+def delete_travel_transport(trip_id: int, transport_id: int) -> dict[str, Any] | None:
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                "DELETE FROM travel_transport WHERE id = ? AND trip_id = ? RETURNING id",
+                (transport_id, trip_id),
             )
             if not cur.fetchone():
                 return None
