@@ -346,7 +346,10 @@ export default function LottoClient() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const r = await getLottoDraws(500);
+      // 2000 is the API's own hard cap (see `lotto_list`/`list_lotto_draws` in
+      // the backend) — comfortably above the 1500+ historic draws currently
+      // loaded, so nothing gets silently cut off further back than that.
+      const r = await getLottoDraws(2000);
       setDraws(r.draws);
       setCollapsedIds(
         new Set(r.draws.filter((d) => d.attempts.length > 0).map((d) => d.draw.id)),

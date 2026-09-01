@@ -366,14 +366,16 @@ function WeekRow({
           style={{ gridTemplateRows: `repeat(${laneCount}, minmax(0, auto))` }}
         >
           {banners.map((b) => (
-            <div
+            <button
               key={b.key}
+              type="button"
               title={b.label}
+              onClick={() => onSelectDate(week[b.startCol].iso)}
               style={{ gridColumn: `${b.startCol + 1} / ${b.endCol + 2}`, gridRow: b.lane + 1 }}
-              className={`truncate rounded-md px-2 py-1 text-xs font-semibold ${ACCOMMODATION_BANNER_CLASSES}`}
+              className={`truncate rounded-md px-2 py-1 text-left text-xs font-semibold transition-opacity duration-150 hover:opacity-80 ${ACCOMMODATION_BANNER_CLASSES}`}
             >
               {b.label}
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -386,13 +388,15 @@ function WeekRow({
           return (
             <div key={d.iso} className="flex min-h-6 flex-col gap-1">
               {visible.map((p) => (
-                <div
+                <button
                   key={p.key}
+                  type="button"
                   title={p.label}
-                  className={`truncate rounded-md px-1.5 py-1 text-[11px] font-medium ${p.classes}`}
+                  onClick={() => onSelectDate(d.iso)}
+                  className={`truncate rounded-md px-1.5 py-1 text-left text-[11px] font-medium transition-opacity duration-150 hover:opacity-80 ${p.classes}`}
                 >
                   {p.label}
-                </div>
+                </button>
               ))}
               {overflow > 0 && (
                 <button
