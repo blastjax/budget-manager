@@ -1,13 +1,16 @@
 """Parsing for the historic lotto draw-results text format.
 
-Expects pipe-delimited rows shaped like::
+Accepts rows shaped like either::
 
     | 26-10-05-24-49-12 | 1/3/2016 | 50,000,000.00 | 1 |
+    26-10-05-24-49-12 1/3/2016 50,000,000.00 1
 
 i.e. winning numbers - draw date - jackpot prize - winner count, one draw per
-line. Blank lines and lines that don't match are skipped and reported back in
-``errors`` rather than aborting the whole import, so one bad row in a large
-paste doesn't block the rest.
+line, with the four fields separated by pipes, plain whitespace, or a mix of
+both (the pipes are cosmetic — only the field order matters). Blank lines and
+lines that don't match are skipped and reported back in ``errors`` rather
+than aborting the whole import, so one bad row in a large paste doesn't block
+the rest.
 """
 
 from __future__ import annotations
@@ -21,11 +24,13 @@ from pydantic import ValidationError
 
 from app.schemas.lotto import LottoNumbers
 
+_SEP = r"(?:\s*\|\s*|\s+)"  # a pipe (spaces optional around it) or plain whitespace
+
 _ROW_RE = re.compile(
-    r"""^\s*\|?\s*
-        (?P<numbers>[\d\-]+)\s*\|\s*
-        (?P<date>\d{1,2}/\d{1,2}/\d{4})\s*\|\s*
-        (?P<jackpot>[\d,]+(?:\.\d+)?)\s*\|\s*
+    rf"""^\s*\|?\s*
+        (?P<numbers>[\d\-]+){_SEP}
+        (?P<date>\d{{1,2}}/\d{{1,2}}/\d{{4}}){_SEP}
+        (?P<jackpot>[\d,]+(?:\.\d+)?){_SEP}
         (?P<winners>\d+)\s*\|?\s*$
     """,
     re.VERBOSE,

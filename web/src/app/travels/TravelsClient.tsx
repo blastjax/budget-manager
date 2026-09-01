@@ -391,9 +391,9 @@ export default function TravelsClient() {
 
   // --- Flight ---
 
-  const openAddFlight = (tripId: number) => {
+  const openAddFlight = (tripId: number, initialDate?: string) => {
     setFlightError(null);
-    setFlightModal(emptyFlightForm(tripId));
+    setFlightModal({ ...emptyFlightForm(tripId), flightDate: initialDate ?? "" });
   };
   const openEditFlight = (tripId: number, f: TravelFlightRow) => {
     setFlightError(null);
@@ -475,9 +475,9 @@ export default function TravelsClient() {
 
   // --- Itinerary ---
 
-  const openAddItinerary = (tripId: number) => {
+  const openAddItinerary = (tripId: number, initialDate?: string) => {
     setItineraryError(null);
-    setItineraryModal(emptyItineraryForm(tripId));
+    setItineraryModal({ ...emptyItineraryForm(tripId), itemDate: initialDate ?? "" });
   };
   const openEditItinerary = (tripId: number, item: TravelItineraryRow) => {
     setItineraryError(null);
@@ -559,9 +559,13 @@ export default function TravelsClient() {
 
   // --- Accommodation ---
 
-  const openAddAccommodation = (tripId: number) => {
+  const openAddAccommodation = (tripId: number, initialDate?: string) => {
     setAccommodationError(null);
-    setAccommodationModal(emptyAccommodationForm(tripId));
+    setAccommodationModal({
+      ...emptyAccommodationForm(tripId),
+      checkinDate: initialDate ?? "",
+      checkoutDate: initialDate ?? "",
+    });
   };
   const openEditAccommodation = (tripId: number, a: TravelAccommodationRow) => {
     setAccommodationError(null);
@@ -719,6 +723,16 @@ export default function TravelsClient() {
             flights={flights}
             itinerary={itinerary}
             accommodations={accommodations}
+            saving={saving}
+            onAddFlight={(date) => openAddFlight(trip.id, date)}
+            onEditFlight={(f) => openEditFlight(trip.id, f)}
+            onDeleteFlight={(flightId) => void onDeleteFlight(trip.id, flightId)}
+            onAddItinerary={(date) => openAddItinerary(trip.id, date)}
+            onEditItinerary={(item) => openEditItinerary(trip.id, item)}
+            onDeleteItinerary={(itemId) => void onDeleteItinerary(trip.id, itemId)}
+            onAddAccommodation={(date) => openAddAccommodation(trip.id, date)}
+            onEditAccommodation={(a) => openEditAccommodation(trip.id, a)}
+            onDeleteAccommodation={(id) => void onDeleteAccommodation(trip.id, id)}
           />
         </div>
 

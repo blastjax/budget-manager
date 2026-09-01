@@ -138,44 +138,87 @@ function DetailRow({
   subtitle,
   locationName,
   locationUrl,
+  onEdit,
+  onDelete,
+  saving,
 }: {
   dotClass: string;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   locationName?: string | null;
   locationUrl?: string | null;
+  onEdit: () => void;
+  onDelete: () => void;
+  saving: boolean;
 }) {
   return (
-    <div className="flex gap-2.5">
-      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`} aria-hidden />
-      <div className="min-w-0">
-        <div className="font-medium text-zinc-900 dark:text-zinc-50">
-          {title}
-          {subtitle && (
-            <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">{subtitle}</span>
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 gap-2.5">
+        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`} aria-hidden />
+        <div className="min-w-0">
+          <div className="font-medium text-zinc-900 dark:text-zinc-50">
+            {title}
+            {subtitle && (
+              <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+                {subtitle}
+              </span>
+            )}
+          </div>
+          {locationName && (
+            <div className="mt-0.5">
+              <LocationLink name={locationName} url={locationUrl ?? null} />
+            </div>
           )}
         </div>
-        {locationName && (
-          <div className="mt-0.5">
-            <LocationLink name={locationName} url={locationUrl ?? null} />
-          </div>
-        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={onEdit}
+          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={onDelete}
+          className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+        >
+          Delete
+        </button>
       </div>
     </div>
   );
 }
+
+type CalendarActions = {
+  onAddFlight: (date?: string) => void;
+  onEditFlight: (flight: TravelFlightRow) => void;
+  onDeleteFlight: (flightId: number) => void;
+  onAddItinerary: (date?: string) => void;
+  onEditItinerary: (item: TravelItineraryRow) => void;
+  onDeleteItinerary: (itemId: number) => void;
+  onAddAccommodation: (date?: string) => void;
+  onEditAccommodation: (accommodation: TravelAccommodationRow) => void;
+  onDeleteAccommodation: (accommodationId: number) => void;
+  saving: boolean;
+};
 
 function DayDetails({
   iso,
   flights,
   itinerary,
   accommodations,
+  actions,
   onClose,
 }: {
   iso: string;
   flights: TravelFlightRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
+  actions: CalendarActions;
   onClose: () => void;
 }) {
   const dayFlights = flights.filter((f) => f.flight_date === iso);
@@ -200,7 +243,9 @@ function DayDetails({
         </button>
       </div>
       {!hasAny && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing logged for this day.</p>
+        <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">
+          Nothing logged for this day.
+        </p>
       )}
       <div className="flex flex-col gap-3 text-sm">
         {dayFlights.map((f) => (
@@ -209,6 +254,9 @@ function DayDetails({
             dotClass="bg-sky-500"
             title={flightLabel(f)}
             subtitle={formatTimeRange(f.departure_time, f.arrival_time)}
+            saving={actions.saving}
+            onEdit={() => actions.onEditFlight(f)}
+            onDelete={() => actions.onDeleteFlight(f.id)}
           />
         ))}
         {dayItinerary.map((item) => (
@@ -219,6 +267,9 @@ function DayDetails({
             subtitle={formatTimeRange(item.start_time, item.end_time)}
             locationName={item.location_name}
             locationUrl={mapsUrlFor(item.location_name, item.location_map_url)}
+            saving={actions.saving}
+            onEdit={() => actions.onEditItinerary(item)}
+            onDelete={() => actions.onDeleteItinerary(item.id)}
           />
         ))}
         {dayAccommodations.map((a) => (
@@ -229,8 +280,37 @@ function DayDetails({
             subtitle={`${formatDate(a.checkin_date)} – ${formatDate(a.checkout_date)} (${a.nights} night${a.nights === 1 ? "" : "s"})`}
             locationName={a.location_name}
             locationUrl={mapsUrlFor(a.location_name, a.location_map_url)}
+            saving={actions.saving}
+            onEdit={() => actions.onEditAccommodation(a)}
+            onDelete={() => actions.onDeleteAccommodation(a.id)}
           />
         ))}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <button
+          type="button"
+          disabled={actions.saving}
+          onClick={() => actions.onAddFlight(iso)}
+          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+        >
+          + Add flight
+        </button>
+        <button
+          type="button"
+          disabled={actions.saving}
+          onClick={() => actions.onAddItinerary(iso)}
+          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+        >
+          + Add itinerary item
+        </button>
+        <button
+          type="button"
+          disabled={actions.saving}
+          onClick={() => actions.onAddAccommodation(iso)}
+          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+        >
+          + Add stay
+        </button>
       </div>
     </div>
   );
@@ -338,12 +418,14 @@ function FullScreenCalendar({
   flights,
   itinerary,
   accommodations,
+  actions,
   onClose,
 }: {
   trip: TripCalendarTrip;
   flights: TravelFlightRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
+  actions: CalendarActions;
   onClose: () => void;
 }) {
   const [viewYear, setViewYear] = useState(trip.entry_year);
@@ -414,16 +496,44 @@ function FullScreenCalendar({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 border-b border-zinc-200 px-4 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400 sm:px-6">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-sky-500" /> Flights
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-amber-500" /> Itinerary
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" /> Accommodation
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800 sm:px-6">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-600 dark:text-zinc-400">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-sky-500" /> Flights
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-amber-500" /> Itinerary
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Accommodation
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={actions.saving}
+            onClick={() => actions.onAddFlight(selectedDate ?? undefined)}
+            className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+          >
+            + Add flight
+          </button>
+          <button
+            type="button"
+            disabled={actions.saving}
+            onClick={() => actions.onAddItinerary(selectedDate ?? undefined)}
+            className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+          >
+            + Add itinerary item
+          </button>
+          <button
+            type="button"
+            disabled={actions.saving}
+            onClick={() => actions.onAddAccommodation(selectedDate ?? undefined)}
+            className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1 text-xs`}
+          >
+            + Add stay
+          </button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto px-4 py-3 sm:px-6">
@@ -459,6 +569,7 @@ function FullScreenCalendar({
               flights={flights}
               itinerary={itinerary}
               accommodations={accommodations}
+              actions={actions}
               onClose={() => setSelectedDate(null)}
             />
           )}
@@ -468,21 +579,28 @@ function FullScreenCalendar({
   );
 }
 
+export type { CalendarActions as TripCalendarActions };
+
 /** Entry point rendered inline on a trip card: a summary + button that
  * opens the trip's flights/itinerary/accommodations as a full-screen,
  * banner-style month calendar (multi-day stays span as bars across the
- * days they cover; flights and itinerary items are pills on their day). */
+ * days they cover; flights and itinerary items are pills on their day).
+ * Clicking a pill/banner (or any date) shows that day's agenda below the
+ * grid, with edit/delete on each item and add buttons for new ones — the
+ * same create/update/delete flow as the trip card's own list sections,
+ * just reachable from inside the calendar too. */
 export function TripCalendar({
   trip,
   flights,
   itinerary,
   accommodations,
+  ...actions
 }: {
   trip: TripCalendarTrip;
   flights: TravelFlightRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
-}) {
+} & CalendarActions) {
   const [open, setOpen] = useState(false);
   const total = flights.length + itinerary.length + accommodations.length;
 
@@ -506,6 +624,7 @@ export function TripCalendar({
           flights={flights}
           itinerary={itinerary}
           accommodations={accommodations}
+          actions={actions}
           onClose={() => setOpen(false)}
         />
       )}
