@@ -10,16 +10,16 @@ import type { BudgetTheme } from "./theme";
 export function getChartTooltipStyle(theme: BudgetTheme): CSSProperties {
   return theme === "dark"
     ? {
-        backgroundColor: "rgba(24, 24, 27, 0.92)",
-        border: "1px solid rgb(63 63 70)",
-        borderRadius: "8px",
+        backgroundColor: "rgba(5, 5, 5, 0.92)",
+        border: "1px solid rgb(18 18 18)",
+        borderRadius: "6px",
         fontSize: "12px",
         color: "#fafafa",
       }
     : {
         backgroundColor: "rgba(255, 255, 255, 0.96)",
         border: "1px solid rgb(228 228 231)",
-        borderRadius: "8px",
+        borderRadius: "6px",
         fontSize: "12px",
         color: "#18181b",
       };

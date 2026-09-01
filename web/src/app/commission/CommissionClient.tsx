@@ -28,6 +28,9 @@ import {
   formatMonthYearShortFromKey,
 } from "@/lib/dateFormat";
 import {
+  AMOUNT_NEGATIVE_CLASSES,
+  AMOUNT_POSITIVE_CLASSES,
+  CARD_CLASSES,
   DASHED_EMPTY_CLASSES,
   ERROR_ALERT_CLASSES,
   LOADING_TEXT_CLASSES,
@@ -35,6 +38,11 @@ import {
   SEGMENTED_BUTTON_CLASSES,
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
   SEGMENTED_WRAPPER_CLASSES,
+  TABLE_CELL_CLASSES,
+  TABLE_HEAD_CELL_CLASSES,
+  TABLE_HEAD_ROW_CLASSES,
+  TABLE_ROW_CLASSES,
+  TABLE_WRAPPER_CLASSES,
 } from "@/lib/ui";
 import { useChartZoom } from "@/lib/useChartZoom";
 import { buildCommissionForecast, type CalculationSegment } from "./commissionForecast";
@@ -64,8 +72,8 @@ const CALCULATION_SEGMENT_COLOR_CLASSES: Record<
 > = {
   date: "text-orange-600 dark:text-orange-400",
   years: "text-purple-600 dark:text-purple-400",
-  positive: "text-emerald-600 dark:text-emerald-400",
-  negative: "text-red-600 dark:text-red-400",
+  positive: AMOUNT_POSITIVE_CLASSES,
+  negative: AMOUNT_NEGATIVE_CLASSES,
 };
 
 /** Compact per-row trend: same-month actuals across previous years (green, solid)
@@ -290,7 +298,7 @@ export default function CommissionClient() {
         </p>
       ) : (
         <>
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
@@ -396,7 +404,7 @@ export default function CommissionClient() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
@@ -532,7 +540,7 @@ export default function CommissionClient() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               Forecast summary
             </h2>
@@ -580,25 +588,25 @@ export default function CommissionClient() {
             </div>
 
             {forecast.forecastPoints.length > 0 && (
-              <div className="mt-6 overflow-x-auto">
+              <div className={`${TABLE_WRAPPER_CLASSES} mt-6 overflow-x-auto`}>
                 <table className="w-full min-w-[42rem] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
-                      <th className="pb-2 pr-2">Month</th>
-                      <th className="pb-2 pr-2">Predicted commission</th>
-                      <th className="pb-2 pr-2">Trend</th>
-                      <th className="pb-2 pr-2">How it&apos;s calculated</th>
-                      <th className="pb-2">Years used</th>
+                    <tr className={TABLE_HEAD_ROW_CLASSES}>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Month</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Predicted commission</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Trend</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>How it&apos;s calculated</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Years used</th>
                     </tr>
                   </thead>
                   <tbody>
                     {forecast.forecastPoints.map((fp) => (
-                      <tr key={fp.monthKey} className="border-b border-zinc-100 dark:border-zinc-800/60">
-                        <td className="py-2 pr-2 text-zinc-700 dark:text-zinc-300">{fp.label}</td>
-                        <td className="py-2 pr-2 tabular-nums font-medium text-emerald-700 dark:text-emerald-300">
+                      <tr key={fp.monthKey} className={TABLE_ROW_CLASSES}>
+                        <td className={TABLE_CELL_CLASSES}>{fp.label}</td>
+                        <td className={`${TABLE_CELL_CLASSES} ${AMOUNT_POSITIVE_CLASSES}`}>
                           {fmtMoney(fp.commissionForecast)}
                         </td>
-                        <td className="py-2 pr-2">
+                        <td className={TABLE_CELL_CLASSES}>
                           <ForecastTrendSparkline
                             samples={fp.sameMonthSamples}
                             forecastValue={fp.commissionForecast}
@@ -606,7 +614,7 @@ export default function CommissionClient() {
                             forecastColor={forecastColor}
                           />
                         </td>
-                        <td className="py-2 pr-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <td className={`${TABLE_CELL_CLASSES} text-xs`}>
                           {fp.calculationDetail.map((seg, i) => {
                             if (seg.break) return <br key={i} />;
                             const colorClass = seg.color
@@ -628,7 +636,7 @@ export default function CommissionClient() {
                             );
                           })}
                         </td>
-                        <td className="py-2 tabular-nums text-zinc-500 dark:text-zinc-400">
+                        <td className={TABLE_CELL_CLASSES}>
                           {fp.yearsOfHistory}
                         </td>
                       </tr>
@@ -639,7 +647,7 @@ export default function CommissionClient() {
             )}
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               Historic commission entries
             </h2>
@@ -656,7 +664,7 @@ export default function CommissionClient() {
                   return (
                     <div
                       key={year}
-                      className="flex w-full min-w-0 flex-col rounded-xl border border-zinc-200 bg-zinc-50/40 p-4 shadow-sm sm:p-5 dark:border-zinc-700 dark:bg-zinc-900/30"
+                      className="flex w-full min-w-0 flex-col rounded-lg border border-zinc-200 bg-zinc-50/40 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-900/30"
                     >
                       <h3 className="mb-4 flex items-center justify-between gap-2 border-b border-zinc-200 pb-3 text-base font-semibold text-zinc-800 dark:border-zinc-700 dark:text-zinc-100">
                         <span>{year}</span>

@@ -846,7 +846,7 @@ export default function CreditCardClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeCardModal}
           >
             Close
@@ -983,7 +983,7 @@ export default function CreditCardClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closePaymentModal}
           >
             Close
@@ -1064,7 +1064,7 @@ export default function CreditCardClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeBalanceModal}
           >
             Close

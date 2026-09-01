@@ -174,13 +174,13 @@ function ItemRow({
   saving: boolean;
 }) {
   return (
-    <li className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <li className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="min-w-0 flex-1 text-sm">{children}</div>
       <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
           disabled={saving}
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+          className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
           onClick={onEdit}
         >
           Edit
@@ -188,7 +188,7 @@ function ItemRow({
         <button
           type="button"
           disabled={saving}
-          className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+          className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
           onClick={onDelete}
         >
           Delete
@@ -781,7 +781,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+              className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
               onClick={() => void onDeleteTrip(trip.id)}
             >
               Delete
@@ -1063,7 +1063,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeTripModal}
           >
             Close
@@ -1187,7 +1187,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeFlightModal}
           >
             Close
@@ -1348,7 +1348,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeItineraryModal}
           >
             Close
@@ -1476,7 +1476,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeAccommodationModal}
           >
             Close

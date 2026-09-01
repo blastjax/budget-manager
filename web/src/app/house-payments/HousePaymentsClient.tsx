@@ -23,7 +23,21 @@ import {
 } from "@/lib/parseFormNumber";
 import { formatDate as fmtDate } from "@/lib/dateFormat";
 import { fmtAmountOrDash, fmtCount } from "@/lib/formatNumber";
-import { DASHED_EMPTY_CLASSES, ERROR_ALERT_CLASSES, LOADING_TEXT_CLASSES } from "@/lib/ui";
+import {
+  alertClasses,
+  AMOUNT_POSITIVE_CLASSES,
+  DASHED_EMPTY_CLASSES,
+  ERROR_ALERT_CLASSES,
+  INPUT_CLASSES,
+  LOADING_TEXT_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
+  TABLE_CELL_CLASSES,
+  TABLE_HEAD_CELL_CLASSES,
+  TABLE_HEAD_ROW_CLASSES,
+  TABLE_ROW_CLASSES,
+  TABLE_WRAPPER_CLASSES,
+} from "@/lib/ui";
 
 const fmtMoney = fmtAmountOrDash;
 
@@ -276,7 +290,7 @@ export default function HousePaymentsClient() {
 
       {!loading && (
         <section>
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/30">
+          <div className={`${alertClasses("success")} !p-4`}>
             <p className="text-xs font-medium uppercase text-emerald-800 dark:text-emerald-200">
               Total amount paid
             </p>
@@ -297,7 +311,7 @@ export default function HousePaymentsClient() {
         open={planModalOpen}
         onClose={closePlanModal}
         ariaLabelledBy="house-plan-title"
-        dialogClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
@@ -308,7 +322,7 @@ export default function HousePaymentsClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
             onClick={closePlanModal}
           >
             Close
@@ -319,7 +333,7 @@ export default function HousePaymentsClient() {
             <span className="text-zinc-600 dark:text-zinc-400">Name</span>
             <input
               required
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={planForm.name}
               onChange={(e) =>
                 setPlanForm((f) => ({ ...f, name: e.target.value }))
@@ -333,7 +347,7 @@ export default function HousePaymentsClient() {
             </span>
             <textarea
               rows={3}
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={planForm.notes}
               onChange={(e) =>
                 setPlanForm((f) => ({ ...f, notes: e.target.value }))
@@ -345,14 +359,14 @@ export default function HousePaymentsClient() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              className={PRIMARY_BUTTON_CLASSES}
             >
               {saving ? "Saving…" : editingPlanId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
+              className={SECONDARY_BUTTON_CLASSES}
               onClick={closePlanModal}
             >
               Cancel
@@ -377,7 +391,7 @@ export default function HousePaymentsClient() {
                     void openEntries(r.id);
                   }
                 }}
-                className="min-w-0 cursor-pointer rounded-xl border border-zinc-200 bg-white p-3 shadow-sm transition hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:ring-indigo-700/50"
+                className="min-w-0 cursor-pointer rounded-lg border border-zinc-200 bg-white p-3 transition-colors duration-150 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:ring-indigo-700/50"
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                   <div className="min-w-0">
@@ -400,7 +414,7 @@ export default function HousePaymentsClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs dark:border-zinc-600 sm:px-3 sm:text-sm"
+                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800/60 sm:px-3 sm:text-sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         startEditPlan(r);
@@ -411,7 +425,7 @@ export default function HousePaymentsClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 dark:border-red-900 dark:text-red-300 sm:px-3 sm:text-sm"
+                      className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         void onDeletePlan(r.id);
@@ -424,7 +438,7 @@ export default function HousePaymentsClient() {
                 <dl className="mt-3 grid gap-2 text-xs sm:mt-4 sm:gap-3 sm:text-sm sm:grid-cols-2">
                   <div>
                     <dt className="text-xs text-zinc-500">Total paid</dt>
-                    <dd className="tabular-nums font-semibold text-emerald-800 dark:text-emerald-200">
+                    <dd className={AMOUNT_POSITIVE_CLASSES}>
                       {fmtMoney(r.total_paid)}
                     </dd>
                   </div>
@@ -456,7 +470,7 @@ export default function HousePaymentsClient() {
         onClose={closeEntriesModal}
         ariaLabelledBy="house-entries-title"
         backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-        dialogClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
             <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
               <div className="min-w-0">
@@ -478,7 +492,7 @@ export default function HousePaymentsClient() {
               </div>
               <button
                 type="button"
-                className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
                 onClick={closeEntriesModal}
               >
                 Close
@@ -502,7 +516,7 @@ export default function HousePaymentsClient() {
                       <input
                         required
                         type="date"
-                        className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+                        className={INPUT_CLASSES}
                         value={entryForm.paid_on}
                         onChange={(e) =>
                           setEntryForm((f) => ({ ...f, paid_on: e.target.value }))
@@ -516,7 +530,7 @@ export default function HousePaymentsClient() {
                         required
                         type="text"
                         inputMode="decimal"
-                        className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+                        className={INPUT_CLASSES}
                         value={entryForm.amount}
                         onChange={(e) =>
                           setEntryForm((f) => ({ ...f, amount: e.target.value }))
@@ -532,7 +546,7 @@ export default function HousePaymentsClient() {
                       <button
                         type="submit"
                         disabled={savingEntry}
-                        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                        className={PRIMARY_BUTTON_CLASSES}
                       >
                         {savingEntry
                           ? "Saving…"
@@ -544,7 +558,7 @@ export default function HousePaymentsClient() {
                         <button
                           type="button"
                           disabled={savingEntry}
-                          className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600"
+                          className={SECONDARY_BUTTON_CLASSES}
                           onClick={cancelEntryEdit}
                         >
                           Cancel
@@ -558,13 +572,13 @@ export default function HousePaymentsClient() {
                       No payments yet. Add the first one above.
                     </p>
                   ) : (
-                    <div className="overflow-x-auto">
+                    <div className={`${TABLE_WRAPPER_CLASSES} overflow-x-auto`}>
                       <table className="w-full min-w-[28rem] text-left text-sm">
                         <thead>
-                          <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
-                            <th className="pb-2 pr-2">Date paid</th>
-                            <th className="pb-2 pr-2 text-right">Amount</th>
-                            <th className="pb-2 text-right">Actions</th>
+                          <tr className={TABLE_HEAD_ROW_CLASSES}>
+                            <th className={TABLE_HEAD_CELL_CLASSES}>Date paid</th>
+                            <th className={`${TABLE_HEAD_CELL_CLASSES} text-right`}>Amount</th>
+                            <th className={`${TABLE_HEAD_CELL_CLASSES} text-right`}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -573,24 +587,24 @@ export default function HousePaymentsClient() {
                             return (
                               <tr
                                 key={entry.id}
-                                className={`border-b border-zinc-100 dark:border-zinc-800 ${
+                                className={`${TABLE_ROW_CLASSES} ${
                                   isEditing
-                                    ? "bg-indigo-50/80 dark:bg-indigo-950/30"
+                                    ? "bg-indigo-50/80 hover:bg-indigo-50/80 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/30"
                                     : ""
                                 }`}
                               >
-                                <td className="py-2 pr-2 tabular-nums text-zinc-800 dark:text-zinc-200">
+                                <td className={TABLE_CELL_CLASSES}>
                                   {fmtDate(entry.paid_on)}
                                 </td>
-                                <td className="py-2 pr-2 text-right tabular-nums font-medium">
+                                <td className={`${TABLE_CELL_CLASSES} text-right font-medium`}>
                                   {fmtMoney(entry.amount)}
                                 </td>
-                                <td className="py-2 text-right">
+                                <td className={`${TABLE_CELL_CLASSES} text-right`}>
                                   <div className="flex justify-end gap-1.5">
                                     <button
                                       type="button"
                                       disabled={savingEntry}
-                                      className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                                      className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800/60"
                                       onClick={() => startEditEntry(entry)}
                                     >
                                       Edit
@@ -598,7 +612,7 @@ export default function HousePaymentsClient() {
                                     <button
                                       type="button"
                                       disabled={savingEntry}
-                                      className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                                      className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
                                       onClick={() => void onDeleteEntry(entry.id)}
                                     >
                                       Delete

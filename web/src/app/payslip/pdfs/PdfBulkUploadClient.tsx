@@ -211,7 +211,7 @@ export function PdfBulkUploadClient() {
         onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
         className={[
-          "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors",
+          "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed px-6 py-12 text-center transition-colors duration-150",
           dragging
             ? "border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/30"
             : "border-zinc-300 hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500",
@@ -241,7 +241,7 @@ export function PdfBulkUploadClient() {
 
       {/* File list */}
       {items.length > 0 && (
-        <section className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           {/* Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
             <p className="text-sm text-zinc-600 dark:text-zinc-400">

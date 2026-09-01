@@ -151,12 +151,12 @@ export const STAT_THEMES: Record<DraggableStatId, StatTheme> = {
 
 /** Shared shell: stretch with grid row height (match tallest card in the row). */
 export const PAYSLIP_STAT_CARD_SHELL =
-  "flex h-full min-h-0 min-w-0 flex-col rounded-lg border px-3 py-2.5 shadow-sm";
+  "flex h-full min-h-0 min-w-0 flex-col rounded-lg border px-3 py-2.5";
 
 /** Pinned stat card (e.g. medical): same layout, no drag cursor. */
 export const PAYSLIP_STAT_CARD_SHELL_PINNED =
-  "flex h-full min-h-0 min-w-0 cursor-default flex-col rounded-lg border px-3 py-2.5 shadow-sm";
+  "flex h-full min-h-0 min-w-0 cursor-default flex-col rounded-lg border px-3 py-2.5";
 
 /** Deduction year totals: same grid density as stats, no progress bars. */
 export const PAYSLIP_DEDUCTION_CARD_SHELL =
-  "flex h-full min-h-0 min-w-0 flex-col rounded-lg border border-red-200/80 bg-red-50/50 px-3 py-2.5 shadow-sm dark:border-red-900/45 dark:bg-red-950/25";
+  "flex h-full min-h-0 min-w-0 flex-col rounded-lg border border-red-200/80 bg-red-50/50 px-3 py-2.5 dark:border-red-900/45 dark:bg-red-950/25";

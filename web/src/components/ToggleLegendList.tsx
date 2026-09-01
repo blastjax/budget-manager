@@ -25,7 +25,7 @@ export function ToggleLegendList({
             type="button"
             onClick={() => onToggle(item.key)}
             aria-pressed={!item.hidden}
-            className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm transition-opacity hover:opacity-80 ${
+            className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm transition-opacity duration-150 hover:opacity-80 ${
               item.hidden ? "opacity-40" : "opacity-100"
             }`}
           >

@@ -40,7 +40,7 @@ function OneMonth({
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="mb-2 text-center text-sm font-semibold text-zinc-900 dark:text-zinc-50">
         {MONTH_NAMES_FULL[month - 1]} {year}
       </div>

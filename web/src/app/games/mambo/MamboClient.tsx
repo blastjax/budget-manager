@@ -869,87 +869,94 @@ export default function MamboClient() {
             </div>
           )}
 
-          <div className="flex max-w-full flex-col items-start overflow-x-auto rounded-xl bg-white p-3 shadow-sm">
-            {colLabels}
-            <div className="flex">
-              {rowLabels}
-              <div
-                className="select-none"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: colTemplate,
-                  gridTemplateRows: rowTemplate,
-                }}
-              >
-                {grid.map((row, r) =>
-                  row.map((v, c) => {
-                    const isClue = puzzle[r][c] !== EMPTY;
-                    const bad = conflicts.cells.has(cellKey(r, c));
-                    const isNext = nextStep != null && nextStep.r === r && nextStep.c === c;
-                    const isLast = lastStep != null && lastStep.r === r && lastStep.c === c;
-                    return (
-                      <button
-                        key={cellKey(r, c)}
-                        type="button"
-                        onClick={() => cycleCell(r, c, false)}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          cycleCell(r, c, true);
-                        }}
-                        aria-label={`Row ${r + 1} column ${c + 1}: ${
-                          v === EMPTY ? "empty" : SYMBOL_LABELS[v]
-                        }${isClue ? " (clue)" : ""}`}
-                        style={{ gridRow: 2 * r + 1, gridColumn: 2 * c + 1 }}
-                        className={`flex items-center justify-center rounded-md border transition ${
-                          isClue
-                            ? "border-zinc-400 bg-zinc-100"
-                            : "border-zinc-300 bg-white hover:bg-zinc-50"
-                        } ${
-                          bad ? "!border-red-500 bg-red-50 ring-2 ring-inset ring-red-500" : ""
-                        } ${
-                          isNext
-                            ? "!border-emerald-500 ring-2 ring-inset ring-emerald-500"
-                            : isLast
-                              ? "!border-indigo-400 ring-2 ring-inset ring-indigo-400"
-                              : ""
-                        }`}
-                      >
-                        <SymbolMark value={v} faded={!isClue} />
-                      </button>
-                    );
-                  }),
-                )}
+          {/* The board itself stays a white "paper" panel in both themes (see
+              SymbolMark / labelClass) so its labels and pieces keep their
+              light-mode colours — but it sits inside a dark-aware bezel so it
+              reads as an intentional inset on AMOLED instead of an unstyled
+              white rectangle floating on black. */}
+          <div className="max-w-full rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex max-w-full flex-col items-start overflow-x-auto rounded-md bg-white p-3 ring-1 ring-black/10">
+              {colLabels}
+              <div className="flex">
+                {rowLabels}
+                <div
+                  className="select-none"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: colTemplate,
+                    gridTemplateRows: rowTemplate,
+                  }}
+                >
+                  {grid.map((row, r) =>
+                    row.map((v, c) => {
+                      const isClue = puzzle[r][c] !== EMPTY;
+                      const bad = conflicts.cells.has(cellKey(r, c));
+                      const isNext = nextStep != null && nextStep.r === r && nextStep.c === c;
+                      const isLast = lastStep != null && lastStep.r === r && lastStep.c === c;
+                      return (
+                        <button
+                          key={cellKey(r, c)}
+                          type="button"
+                          onClick={() => cycleCell(r, c, false)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            cycleCell(r, c, true);
+                          }}
+                          aria-label={`Row ${r + 1} column ${c + 1}: ${
+                            v === EMPTY ? "empty" : SYMBOL_LABELS[v]
+                          }${isClue ? " (clue)" : ""}`}
+                          style={{ gridRow: 2 * r + 1, gridColumn: 2 * c + 1 }}
+                          className={`flex items-center justify-center rounded-md border transition-colors duration-150 ${
+                            isClue
+                              ? "border-zinc-400 bg-zinc-100"
+                              : "border-zinc-300 bg-white hover:bg-zinc-50"
+                          } ${
+                            bad ? "!border-red-500 bg-red-50 ring-2 ring-inset ring-red-500" : ""
+                          } ${
+                            isNext
+                              ? "!border-emerald-500 ring-2 ring-inset ring-emerald-500"
+                              : isLast
+                                ? "!border-indigo-400 ring-2 ring-inset ring-indigo-400"
+                                : ""
+                          }`}
+                        >
+                          <SymbolMark value={v} faded={!isClue} />
+                        </button>
+                      );
+                    }),
+                  )}
 
-                {hSigns.map((row, r) =>
-                  row.map((sign, c) => (
-                    <SignSlot
-                      key={`h-${r}-${c}`}
-                      sign={sign}
-                      bad={conflicts.hSigns.has(cellKey(r, c))}
-                      gapPx={gapPx}
-                      onClick={() => cycleSign("h", r, c)}
-                      style={{ gridRow: 2 * r + 1, gridColumn: 2 * c + 2 }}
-                      label={`Sign between row ${r + 1} column ${c + 1} and column ${c + 2}`}
-                    />
-                  )),
-                )}
-                {vSigns.map((row, r) =>
-                  row.map((sign, c) => (
-                    <SignSlot
-                      key={`v-${r}-${c}`}
-                      sign={sign}
-                      bad={conflicts.vSigns.has(cellKey(r, c))}
-                      gapPx={gapPx}
-                      onClick={() => cycleSign("v", r, c)}
-                      style={{ gridRow: 2 * r + 2, gridColumn: 2 * c + 1 }}
-                      label={`Sign between column ${c + 1} row ${r + 1} and row ${r + 2}`}
-                    />
-                  )),
-                )}
+                  {hSigns.map((row, r) =>
+                    row.map((sign, c) => (
+                      <SignSlot
+                        key={`h-${r}-${c}`}
+                        sign={sign}
+                        bad={conflicts.hSigns.has(cellKey(r, c))}
+                        gapPx={gapPx}
+                        onClick={() => cycleSign("h", r, c)}
+                        style={{ gridRow: 2 * r + 1, gridColumn: 2 * c + 2 }}
+                        label={`Sign between row ${r + 1} column ${c + 1} and column ${c + 2}`}
+                      />
+                    )),
+                  )}
+                  {vSigns.map((row, r) =>
+                    row.map((sign, c) => (
+                      <SignSlot
+                        key={`v-${r}-${c}`}
+                        sign={sign}
+                        bad={conflicts.vSigns.has(cellKey(r, c))}
+                        gapPx={gapPx}
+                        onClick={() => cycleSign("v", r, c)}
+                        style={{ gridRow: 2 * r + 2, gridColumn: 2 * c + 1 }}
+                        label={`Sign between column ${c + 1} row ${r + 1} and row ${r + 2}`}
+                      />
+                    )),
+                  )}
+                </div>
+                {rowLabels}
               </div>
-              {rowLabels}
+              {colLabels}
             </div>
-            {colLabels}
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-600 dark:text-zinc-400">

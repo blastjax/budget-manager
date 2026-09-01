@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CARD_CLASSES, PRIMARY_BUTTON_CLASSES, SECONDARY_BUTTON_CLASSES } from "@/lib/ui";
+import { CARD_CLASSES, INPUT_CLASSES, PRIMARY_BUTTON_CLASSES, SECONDARY_BUTTON_CLASSES } from "@/lib/ui";
 import {
   allCodes,
   cycleFeedbackPeg,
@@ -26,6 +26,15 @@ const COLOR_COUNTS = Array.from(
   { length: MAX_COLORS - MIN_COLORS + 1 },
   (_, i) => MIN_COLORS + i,
 );
+
+/** Tone-classed banner box, matching ui.ts's `ERROR_ALERT_CLASSES` pattern
+ * (border + tinted background + tinted text, no shadow) for the two tones
+ * it doesn't cover. */
+const BANNER_TONE_CLASSES: Record<"good" | "bad" | "warn", string> = {
+  good: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200",
+  bad: "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200",
+  warn: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+};
 
 /** `colorMap[slot]` is the palette index displayed for legend slot `slot` —
  * identity by default, but a slot's colour can be reassigned so the legend
@@ -229,7 +238,7 @@ export default function MastermindClient() {
               <select
                 value={numColors}
                 onChange={(e) => setNumColors(Number(e.target.value))}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className={INPUT_CLASSES}
               >
                 {COLOR_COUNTS.map((n) => (
                   <option key={n} value={n}>
@@ -309,13 +318,7 @@ export default function MastermindClient() {
           {banner && (
             <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
               <div
-                className={`pointer-events-auto w-full max-w-md rounded-lg border px-4 py-3 text-sm font-medium shadow-lg ${
-                  banner.tone === "good"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
-                    : banner.tone === "bad"
-                      ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-                      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-                }`}
+                className={`pointer-events-auto w-full max-w-md rounded-lg border px-4 py-3 text-sm font-medium shadow-lg dark:shadow-none dark:ring-1 dark:ring-white/10 ${BANNER_TONE_CLASSES[banner.tone]}`}
               >
                 {banner.text}
               </div>
@@ -323,56 +326,60 @@ export default function MastermindClient() {
           )}
 
           {/* Always a white panel, in both themes, so the grade circles (a
-              white fill vs. a black fill) stay legible against it. */}
-          <div className="flex w-full max-w-md flex-col-reverse gap-2 overflow-x-auto rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
-            {Array.from({ length: MAX_ATTEMPTS }, (_, idx) => {
-              const isActive = idx === activeIdx && !gameOver;
-              const isSubmitted = idx < submittedCount;
-              const needsGrading = idx === submittedCount - 1;
-              const stored = attempts[idx];
-              const guess = isActive ? activeGuessDisplay : stored.guess;
-              const isGhost = isActive && activeIsBlank && suggestion != null;
+              white fill vs. a black fill) stay legible against it — framed in
+              a dark bezel so it reads as an intentional inset on AMOLED
+              instead of an unstyled white rectangle floating on black. */}
+          <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex flex-col-reverse gap-2 overflow-x-auto rounded-md bg-white p-3 ring-1 ring-black/10">
+              {Array.from({ length: MAX_ATTEMPTS }, (_, idx) => {
+                const isActive = idx === activeIdx && !gameOver;
+                const isSubmitted = idx < submittedCount;
+                const needsGrading = idx === submittedCount - 1;
+                const stored = attempts[idx];
+                const guess = isActive ? activeGuessDisplay : stored.guess;
+                const isGhost = isActive && activeIsBlank && suggestion != null;
 
-              return (
-                <div
-                  key={idx}
-                  className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
-                    isActive
-                      ? "border-indigo-300 bg-indigo-50/60"
-                      : needsGrading
-                        ? "border-amber-300 bg-amber-50/60"
-                        : "border-transparent"
-                  }`}
-                >
-                  <span className="w-5 shrink-0 text-right text-xs text-zinc-400">{idx + 1}</span>
+                return (
+                  <div
+                    key={idx}
+                    className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
+                      isActive
+                        ? "border-indigo-300 bg-indigo-50/60"
+                        : needsGrading
+                          ? "border-amber-300 bg-amber-50/60"
+                          : "border-transparent"
+                    }`}
+                  >
+                    <span className="w-5 shrink-0 text-right text-xs text-zinc-400">{idx + 1}</span>
 
-                  <div className="flex items-center gap-1.5">
-                    {guess.map((v, pos) => (
-                      <GuessPeg
-                        key={pos}
-                        value={v}
-                        colorMap={colorMap}
-                        ghost={isGhost}
-                        interactive={isActive}
-                        selected={isActive && pointer === pos}
-                        onSelect={() => selectPeg(pos)}
-                      />
-                    ))}
+                    <div className="flex items-center gap-1.5">
+                      {guess.map((v, pos) => (
+                        <GuessPeg
+                          key={pos}
+                          value={v}
+                          colorMap={colorMap}
+                          ghost={isGhost}
+                          interactive={isActive}
+                          selected={isActive && pointer === pos}
+                          onSelect={() => selectPeg(pos)}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="ml-auto grid grid-cols-2 gap-1.5">
+                      {stored.feedbackPegs.map((p, pos) => (
+                        <FeedbackPeg
+                          key={pos}
+                          value={p}
+                          interactive={isSubmitted}
+                          onClick={() => cycleFeedbackAt(idx, pos)}
+                        />
+                      ))}
+                    </div>
                   </div>
-
-                  <div className="ml-auto grid grid-cols-2 gap-1.5">
-                    {stored.feedbackPegs.map((p, pos) => (
-                      <FeedbackPeg
-                        key={pos}
-                        value={p}
-                        interactive={isSubmitted}
-                        onClick={() => cycleFeedbackAt(idx, pos)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {!gameOver && (
@@ -410,7 +417,7 @@ export default function MastermindClient() {
                   onClick={(e) => handleLegendClick(idx, e)}
                   title={`Click: place ${name} at peg ${pointer + 1} · double-click: change this pin's colour`}
                   aria-label={`Place ${name} at the targeted peg. Double-click to change this pin's colour.`}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-transparent p-1 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-transparent p-1 transition-colors duration-150 hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
                 >
                   <span
                     className="block h-full w-full rounded-full ring-1 ring-inset ring-black/10"
@@ -442,7 +449,7 @@ function GuessPeg({
   onSelect: () => void;
 }) {
   const empty = value === EMPTY_PEG;
-  const base = "h-9 w-9 shrink-0 rounded-full border-2 transition";
+  const base = "h-9 w-9 shrink-0 rounded-full border-2 transition-all duration-150";
   if (!interactive) {
     return (
       <span
@@ -479,7 +486,7 @@ function FeedbackPeg({
 }) {
   const isExact = value === FB_EXACT;
   const isColorOnly = value === FB_COLOR_ONLY;
-  const classes = `h-6 w-6 rounded-full border-2 transition ${
+  const classes = `h-6 w-6 rounded-full border-2 transition-colors duration-150 ${
     isExact
       ? "border-zinc-600 bg-white shadow-sm"
       : isColorOnly

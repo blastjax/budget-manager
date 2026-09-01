@@ -484,7 +484,7 @@ export default function PayslipClient() {
             <button
               type="button"
               onClick={() => setPdfModalOpen(true)}
-              className="flex h-9 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
               <PdfUploadIcon className="h-4 w-4" />
               Upload PDFs
@@ -503,7 +503,7 @@ export default function PayslipClient() {
                   ? "Hide gross amounts in calendar"
                   : "Show gross amounts in calendar"
               }
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
               {showGross ? <EyeIcon /> : <EyeOffIcon />}
             </button>
@@ -600,8 +600,8 @@ export default function PayslipClient() {
         <Modal
           open
           onClose={() => setPdfModalOpen(false)}
-          backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-5 sm:items-center sm:p-6"
-          dialogClassName="max-h-[95vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-zinc-200 bg-white p-6 shadow-xl sm:p-8 dark:border-zinc-800 dark:bg-zinc-950"
+          backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-5 backdrop-blur-sm sm:items-center sm:p-6"
+          dialogClassName="max-h-[95vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-6 shadow-xl sm:p-8 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
         >
           <div className="mb-5 flex items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">

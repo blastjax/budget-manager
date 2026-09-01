@@ -36,8 +36,14 @@ import {
   parseMonthKey as sharedParseMonthKey,
 } from "@/lib/dateFormat";
 import {
+  AMOUNT_NEGATIVE_CLASSES,
+  AMOUNT_POSITIVE_CLASSES,
+  CARD_CLASSES,
+  CHART_ZOOM_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
+  INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
   SEGMENTED_BUTTON_ACTIVE_CLASSES,
   SEGMENTED_BUTTON_CLASSES,
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
@@ -221,9 +227,8 @@ function formatMonthKeyButtonLabel(key: string): string {
 }
 
 const pickerBtnClass =
-  "w-full min-w-[10rem] rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-left text-sm font-medium text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50";
-const pickerYearNavBtnClass =
-  "flex h-8 min-w-8 select-none items-center justify-center rounded-md border border-zinc-300 text-zinc-700 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-500 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900";
+  "w-full min-w-[10rem] rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-left text-sm font-medium text-zinc-900 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800/60";
+const pickerYearNavBtnClass = `${CHART_ZOOM_BUTTON_CLASSES} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-500`;
 
 type LineRangePickerAlign = "left" | "right";
 
@@ -298,7 +303,7 @@ function LineRangeMonthPicker({
       </div>
       {open && (
         <div
-          className={`absolute z-30 mt-1 min-w-[16.5rem] max-w-[calc(100vw-2rem)] rounded-lg border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-800 dark:bg-zinc-950 ${
+          className={`absolute z-30 mt-1 min-w-[16.5rem] max-w-[calc(100vw-2rem)] rounded-lg border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10 ${
             align === "right" ? "right-0" : "left-0"
           }`}
           role="dialog"
@@ -345,7 +350,7 @@ function LineRangeMonthPicker({
                 <button
                   key={mk}
                   type="button"
-                  className={`rounded-md border px-1.5 py-2 text-center text-xs font-medium sm:px-2 sm:text-sm ${
+                  className={`rounded-md border px-1.5 py-2 text-center text-xs font-medium transition-colors duration-150 sm:px-2 sm:text-sm ${
                     selected
                       ? "border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-600"
                       : "border-zinc-200 bg-zinc-50 text-zinc-800 hover:border-zinc-300 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:border-zinc-500 dark:hover:bg-zinc-700"
@@ -579,7 +584,7 @@ export default function SalaryStatsClient() {
           <p className={LOADING_TEXT_CLASSES}>Loading payslips…</p>
         ) : (
           <>
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               Composition
             </h2>
@@ -617,7 +622,7 @@ export default function SalaryStatsClient() {
                 >
                   <button
                     type="button"
-                    className="flex h-8 min-w-8 select-none items-center justify-center rounded-md border border-zinc-300 text-zinc-700 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-500 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                    className={pickerYearNavBtnClass}
                     onClick={() =>
                       setPieYear((y) => (y > 1900 ? y - 1 : y))
                     }
@@ -630,7 +635,7 @@ export default function SalaryStatsClient() {
                   </span>
                   <button
                     type="button"
-                    className="flex h-8 min-w-8 select-none items-center justify-center rounded-md border border-zinc-300 text-zinc-700 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-500 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                    className={pickerYearNavBtnClass}
                     onClick={() =>
                       setPieYear((y) => (y < 2200 ? y + 1 : y))
                     }
@@ -644,7 +649,7 @@ export default function SalaryStatsClient() {
                   <span className="text-zinc-600 dark:text-zinc-400">Month</span>
                   <input
                     type="month"
-                    className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-700 dark:bg-zinc-950"
+                    className={INPUT_CLASSES}
                     value={pieMonthStr}
                     onChange={(e) => setPieMonthStr(e.target.value)}
                   />
@@ -720,7 +725,7 @@ export default function SalaryStatsClient() {
                     <span className="text-zinc-600 dark:text-zinc-400">
                       {CHART_SERIES_LABEL[k]}
                     </span>
-                    <span className="text-sm font-medium tabular-nums text-red-600 dark:text-red-400">
+                    <span className={`text-sm ${AMOUNT_NEGATIVE_CLASSES}`}>
                       {fmtMoney(piePeriodDeductions.sums[k])}
                     </span>
                   </div>
@@ -729,7 +734,7 @@ export default function SalaryStatsClient() {
                   <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
                     Deductions total
                   </span>
-                  <span className="text-sm font-semibold tabular-nums text-red-700 dark:text-red-300">
+                  <span className={`text-sm font-semibold ${AMOUNT_NEGATIVE_CLASSES}`}>
                     {fmtMoney(piePeriodDeductions.total)}
                   </span>
                 </div>
@@ -737,7 +742,7 @@ export default function SalaryStatsClient() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
@@ -782,21 +787,21 @@ export default function SalaryStatsClient() {
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button
                   type="button"
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                  className={SECONDARY_BUTTON_CLASSES}
                   onClick={toggleAllSeries}
                 >
                   Toggle all series
                 </button>
                 <button
                   type="button"
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                  className={SECONDARY_BUTTON_CLASSES}
                   onClick={toggleAdditionsSeries}
                 >
                   Toggle additions
                 </button>
                 <button
                   type="button"
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                  className={SECONDARY_BUTTON_CLASSES}
                   onClick={toggleDeductionsSeries}
                 >
                   Toggle deductions
@@ -889,14 +894,14 @@ export default function SalaryStatsClient() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                   Deductions total (sum over chart range)
                 </span>
-                <span className="text-sm font-semibold tabular-nums text-red-700 dark:text-red-300">
+                <span className={`text-sm font-semibold ${AMOUNT_NEGATIVE_CLASSES}`}>
                   {fmtMoney(lineRangeDeductionsTotal)}
                 </span>
               </div>
             )}
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               All-time Summary
             </h2>
@@ -923,7 +928,7 @@ export default function SalaryStatsClient() {
                   {allTimeTotals.sortedIncomeKeys.map((k) => (
                     <div key={k} className="flex items-center justify-between gap-4 text-sm">
                       <span className="text-zinc-600 dark:text-zinc-400">{CHART_SERIES_LABEL[k]}</span>
-                      <span className="tabular-nums font-medium text-emerald-700 dark:text-emerald-300">
+                      <span className={AMOUNT_POSITIVE_CLASSES}>
                         {fmtMoney(allTimeTotals.incomeByKey[k])}
                       </span>
                     </div>
@@ -941,7 +946,7 @@ export default function SalaryStatsClient() {
                   {allTimeTotals.sortedDeductionKeys.map((k) => (
                     <div key={k} className="flex items-center justify-between gap-4 text-sm">
                       <span className="text-zinc-600 dark:text-zinc-400">{CHART_SERIES_LABEL[k]}</span>
-                      <span className="tabular-nums font-medium text-red-600 dark:text-red-400">
+                      <span className={AMOUNT_NEGATIVE_CLASSES}>
                         {fmtMoney(allTimeTotals.deductionsByKey[k])}
                       </span>
                     </div>

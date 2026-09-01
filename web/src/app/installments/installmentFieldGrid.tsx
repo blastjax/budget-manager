@@ -2,6 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { formatAmountOnBlur } from "@/lib/parseFormNumber";
+import { INPUT_CLASSES } from "@/lib/ui";
 
 export type InstallmentFormState = {
   name: string;
@@ -34,7 +35,7 @@ export function InstallmentFieldGrid({
         <span className="text-zinc-600 dark:text-zinc-400">Name</span>
         <input
           required
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           disabled={saving}
@@ -48,7 +49,7 @@ export function InstallmentFieldGrid({
           required
           type="number"
           min={1}
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.installment_current}
           onChange={(e) =>
             setForm((f) => ({ ...f, installment_current: e.target.value }))
@@ -64,7 +65,7 @@ export function InstallmentFieldGrid({
           required
           type="number"
           min={1}
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.installment_total}
           onChange={(e) =>
             setForm((f) => ({ ...f, installment_total: e.target.value }))
@@ -80,7 +81,7 @@ export function InstallmentFieldGrid({
               required
               type="text"
               inputMode="decimal"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.principal}
               onChange={(e) =>
                 setForm((f) => ({ ...f, principal: e.target.value }))
@@ -99,7 +100,7 @@ export function InstallmentFieldGrid({
             <input
               type="text"
               inputMode="decimal"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.interest}
               onChange={(e) =>
                 setForm((f) => ({ ...f, interest: e.target.value }))
@@ -118,7 +119,7 @@ export function InstallmentFieldGrid({
             <input
               type="text"
               inputMode="decimal"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.payment_total}
               onChange={(e) =>
                 setForm((f) => ({ ...f, payment_total: e.target.value }))
@@ -137,7 +138,7 @@ export function InstallmentFieldGrid({
         <input
           required
           type="month"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.start_date}
           onChange={(e) =>
             setForm((f) => ({ ...f, start_date: e.target.value }))
@@ -151,7 +152,7 @@ export function InstallmentFieldGrid({
         </span>
         <input
           type="month"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.finish_date}
           onChange={(e) =>
             setForm((f) => ({ ...f, finish_date: e.target.value }))
@@ -167,7 +168,7 @@ export function InstallmentFieldGrid({
           <input
             type="text"
             inputMode="decimal"
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className={INPUT_CLASSES}
             value={form.remaining}
             onChange={(e) =>
               setForm((f) => ({ ...f, remaining: e.target.value }))
@@ -188,7 +189,7 @@ export function InstallmentFieldGrid({
           <input
             type="text"
             inputMode="decimal"
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className={INPUT_CLASSES}
             value={form.original_total}
             onChange={(e) =>
               setForm((f) => ({ ...f, original_total: e.target.value }))

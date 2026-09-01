@@ -4,11 +4,11 @@ import { useEffect, type ReactNode } from "react";
 
 /** Default outer container: fixed full-screen overlay with backdrop. */
 const DEFAULT_BACKDROP =
-  "fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center sm:p-6";
+  "fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm sm:items-center sm:p-6";
 
 /** Default dialog shell: bordered card, scrollable, theme-aware. */
 const DEFAULT_DIALOG =
-  "max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-950";
+  "max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10";
 
 export type ModalProps = {
   /** Render only when ``open`` is true. */

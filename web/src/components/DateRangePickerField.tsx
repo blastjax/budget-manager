@@ -110,7 +110,7 @@ export function DateRangePickerField({
         {label || <span className="text-zinc-400">{placeholder}</span>}
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 w-[min(90vw,34rem)] rounded-xl border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="absolute z-20 mt-2 w-[min(90vw,34rem)] rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <CalendarMonth
               year={anchorYear}

@@ -913,7 +913,7 @@ export default function MosaicClient() {
             <div className="flex">
               {rowLabels}
               <div
-                className="select-none overflow-hidden rounded-xl border-[3px] border-zinc-900 shadow-lg dark:border-zinc-100"
+                className="select-none overflow-hidden rounded-lg border-[3px] border-zinc-900 shadow-lg dark:border-zinc-100 dark:shadow-none dark:ring-1 dark:ring-white/10"
                 style={{
                   display: "grid",
                   gridTemplateColumns: `repeat(${cols}, ${cellPx}px)`,
@@ -946,7 +946,7 @@ export default function MosaicClient() {
                         key={`${r}-${c}`}
                         onMouseDown={() => onCellInteract(r, c, true)}
                         onMouseEnter={() => onCellInteract(r, c, false)}
-                        className={`relative cursor-pointer border border-black/10 ${
+                        className={`relative cursor-pointer border border-zinc-300 ${
                           v === BLANK ? "bg-white" : ""
                         }`}
                         style={{
@@ -982,7 +982,7 @@ export default function MosaicClient() {
                 type="button"
                 title="Erase"
                 onClick={() => onPaletteClick(BLANK)}
-                className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-lg text-zinc-500 shadow transition hover:-translate-y-0.5 dark:border-zinc-600 dark:bg-zinc-900 ${
+                className={`flex h-12 w-12 items-center justify-center rounded-md border-2 border-dashed border-zinc-300 bg-white text-lg text-zinc-500 shadow transition-transform duration-150 hover:-translate-y-0.5 dark:border-zinc-600 dark:bg-zinc-900 dark:shadow-none ${
                   paintColor === BLANK ? "ring-2 ring-zinc-900 dark:ring-zinc-100" : ""
                 }`}
               >
@@ -1003,12 +1003,12 @@ export default function MosaicClient() {
                   onDoubleClick={
                     mode === "paint" ? () => cyclePaletteColor(idx) : undefined
                   }
-                  className={`h-12 w-12 rounded-xl shadow transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 ${
+                  className={`h-12 w-12 rounded-md shadow transition-transform duration-150 hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 dark:shadow-none ${
                     active
                       ? "ring-2 ring-zinc-900 dark:ring-zinc-100"
                       : suggested
                         ? "ring-2 ring-emerald-600 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950"
-                        : ""
+                        : "dark:ring-1 dark:ring-white/10"
                   }`}
                   style={{ background: color }}
                 />

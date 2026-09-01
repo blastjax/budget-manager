@@ -36,7 +36,7 @@ export function ChartZoomControls({
         type="button"
         onClick={onReset}
         title="Reset zoom"
-        className="min-w-[3.5rem] rounded-md px-1 py-1 text-center text-xs font-medium tabular-nums text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        className="min-w-[3.5rem] rounded-md px-1 py-1 text-center text-xs font-medium tabular-nums text-zinc-600 transition-colors duration-150 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
         {Math.round(zoom * 100)}%
       </button>

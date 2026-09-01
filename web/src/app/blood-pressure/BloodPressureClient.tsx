@@ -27,7 +27,14 @@ import { chartScrollMinWidth, xAxisTickInterval } from "@/lib/chartAxis";
 import { getChartTooltipStyle } from "@/lib/chartTooltipStyle";
 import { formatDateTime, formatMonthDayShort } from "@/lib/dateFormat";
 import { fmtIntegerOrDash } from "@/lib/formatNumber";
-import { DASHED_EMPTY_CLASSES, ERROR_ALERT_CLASSES, PRIMARY_BUTTON_CLASSES } from "@/lib/ui";
+import {
+  CARD_CLASSES,
+  DASHED_EMPTY_CLASSES,
+  ERROR_ALERT_CLASSES,
+  INPUT_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
+} from "@/lib/ui";
 import { useChartZoom } from "@/lib/useChartZoom";
 
 /**
@@ -316,31 +323,31 @@ export default function BloodPressureClient() {
 
       {!loading && (
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className={CARD_CLASSES}>
             <p className="text-xs font-medium uppercase text-zinc-500">Readings</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
               {fmtNum(summary.count)}
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className={CARD_CLASSES}>
             <p className="text-xs font-medium uppercase text-zinc-500">Avg sys / dia</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
               {fmtNum(summary.avgSys)}/{fmtNum(summary.avgDia)}
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className={CARD_CLASSES}>
             <p className="text-xs font-medium uppercase text-zinc-500">Avg pulse</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
               {fmtNum(summary.avgPulse)}
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className={CARD_CLASSES}>
             <p className="text-xs font-medium uppercase text-zinc-500">Avg SpO2</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
               {Number.isFinite(summary.avgSpo2) ? `${fmtNum(summary.avgSpo2)}%` : "—"}
             </p>
           </div>
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/30">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
             <p className="text-xs font-medium uppercase text-emerald-800 dark:text-emerald-200">
               Healthy
             </p>
@@ -354,7 +361,7 @@ export default function BloodPressureClient() {
         </section>
       )}
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+      <section className={CARD_CLASSES}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
@@ -447,7 +454,7 @@ export default function BloodPressureClient() {
               return (
                 <li
                   key={r.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 dark:border-zinc-800 dark:bg-zinc-950"
+                  className={`flex flex-wrap items-center justify-between gap-3 ${CARD_CLASSES}`}
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
@@ -517,7 +524,7 @@ export default function BloodPressureClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs dark:border-zinc-600 sm:px-3 sm:text-sm"
+                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800 sm:px-3 sm:text-sm"
                       onClick={() => openEdit(r)}
                     >
                       Edit
@@ -525,7 +532,7 @@ export default function BloodPressureClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 dark:border-red-900 dark:text-red-300 sm:px-3 sm:text-sm"
+                      className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
                       onClick={() => void onDelete(r.id)}
                     >
                       Delete
@@ -535,9 +542,7 @@ export default function BloodPressureClient() {
               );
             })}
           {!loading && rows.length === 0 && (
-            <li className="rounded-lg border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-800 dark:text-zinc-200 dark:border-zinc-700">
-              No readings yet.
-            </li>
+            <li className={DASHED_EMPTY_CLASSES}>No readings yet.</li>
           )}
         </ul>
       </section>
@@ -556,7 +561,7 @@ export default function BloodPressureClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeModal}
           >
             Close
@@ -569,7 +574,7 @@ export default function BloodPressureClient() {
               type="number"
               min={1}
               max={400}
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.systolic}
               onChange={(e) => setForm((f) => ({ ...f, systolic: e.target.value }))}
               disabled={saving}
@@ -581,7 +586,7 @@ export default function BloodPressureClient() {
               type="number"
               min={1}
               max={400}
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.diastolic}
               onChange={(e) => setForm((f) => ({ ...f, diastolic: e.target.value }))}
               disabled={saving}
@@ -593,7 +598,7 @@ export default function BloodPressureClient() {
               type="number"
               min={1}
               max={400}
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.pulse}
               onChange={(e) => setForm((f) => ({ ...f, pulse: e.target.value }))}
               disabled={saving}
@@ -608,7 +613,7 @@ export default function BloodPressureClient() {
               type="number"
               min={1}
               max={100}
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.spo2}
               onChange={(e) => setForm((f) => ({ ...f, spo2: e.target.value }))}
               disabled={saving}
@@ -621,7 +626,7 @@ export default function BloodPressureClient() {
               min={26}
               max={45}
               step={0.1}
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.temperature}
               onChange={(e) => setForm((f) => ({ ...f, temperature: e.target.value }))}
               disabled={saving}
@@ -633,7 +638,7 @@ export default function BloodPressureClient() {
               type="number"
               min={0.1}
               step={0.1}
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.weight}
               onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
               disabled={saving}
@@ -643,7 +648,7 @@ export default function BloodPressureClient() {
             <span className="text-zinc-600 dark:text-zinc-400">Notes</span>
             <input
               type="text"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               disabled={saving}
@@ -660,7 +665,7 @@ export default function BloodPressureClient() {
             <button
               type="button"
               disabled={saving}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
+              className={SECONDARY_BUTTON_CLASSES}
               onClick={closeModal}
             >
               Cancel

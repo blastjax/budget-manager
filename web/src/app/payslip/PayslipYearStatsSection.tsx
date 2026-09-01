@@ -242,12 +242,12 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
 
   return (
     <div
-      className="mb-8 rounded-2xl border border-zinc-200/90 bg-zinc-50/90 p-4 shadow-sm sm:p-5 dark:border-zinc-700/80 dark:bg-zinc-900/30"
+      className="mb-8 rounded-lg border border-zinc-200/90 bg-zinc-50/90 p-4 sm:p-5 dark:border-zinc-800/80 dark:bg-zinc-900/30"
     >
       <div className="mb-3 flex items-center justify-center gap-2 tabular-nums sm:mb-4 sm:gap-3">
         <button
           type="button"
-          className="flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          className="flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-white text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
           aria-label="Previous year"
           disabled={statsYear <= 1900}
           onClick={() => setStatsYear((y) => Math.max(1900, y - 1))}
@@ -259,7 +259,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
         </span>
         <button
           type="button"
-          className="flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          className="flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-white text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
           aria-label="Next year"
           disabled={statsYear >= 2200}
           onClick={() => setStatsYear((y) => Math.min(2200, y + 1))}
@@ -324,7 +324,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
               >
                 <div
                   className={`h-full rounded-full transition-[width] ${
-                    medicalOver ? "bg-red-500 dark:bg-red-600" : MEDICAL_REIMBURSEMENT_STAT_THEME.barFill
+                    medicalOver ? "bg-red-600 dark:bg-red-500" : MEDICAL_REIMBURSEMENT_STAT_THEME.barFill
                   }`}
                   style={{ width: `${Math.min(100, medicalPctCap)}%` }}
                 />

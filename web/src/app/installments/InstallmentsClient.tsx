@@ -27,10 +27,20 @@ import {
 import { MONTH_NAMES_SHORT, formatMonthYear } from "@/lib/dateFormat";
 import { fmtAmount, fmtAmountOrDash } from "@/lib/formatNumber";
 import {
+  alertClasses,
+  AMOUNT_POSITIVE_CLASSES,
+  CARD_CLASSES,
   DASHED_EMPTY_CLASSES,
   ERROR_ALERT_CLASSES,
+  INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
   PRIMARY_BUTTON_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
+  TABLE_CELL_CLASSES,
+  TABLE_HEAD_CELL_CLASSES,
+  TABLE_HEAD_ROW_CLASSES,
+  TABLE_ROW_CLASSES,
+  TABLE_WRAPPER_CLASSES,
 } from "@/lib/ui";
 import { InstallmentFieldGrid } from "./installmentFieldGrid";
 
@@ -764,7 +774,7 @@ export default function InstallmentsClient() {
           {doneRows.length > 0 && (
             <button
               type="button"
-              className={`rounded-md border px-3 py-2 text-sm font-medium transition ${
+              className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-150 ${
                 showArchived
                   ? "border-zinc-400 bg-zinc-200 text-zinc-800 dark:border-zinc-500 dark:bg-zinc-700 dark:text-zinc-100"
                   : "border-zinc-300 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-300 dark:hover:bg-zinc-700/40"
@@ -777,7 +787,7 @@ export default function InstallmentsClient() {
           <button
             type="button"
             disabled={loading || rows.length === 0}
-            className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-900/40"
+            className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition-colors duration-150 hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-900/40"
             onClick={() => void openPayments()}
           >
             Payments by month
@@ -793,7 +803,7 @@ export default function InstallmentsClient() {
 
       {!loading && (
         <section className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className={`${CARD_CLASSES} !p-4`}>
             <p className="text-xs font-medium uppercase text-zinc-500">
               Total (active plans)
             </p>
@@ -801,7 +811,7 @@ export default function InstallmentsClient() {
               {fmtMoney(summary.sum_original_total)}
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className={`${CARD_CLASSES} !p-4`}>
             <p className="text-xs font-medium uppercase text-zinc-500">
               Remaining
             </p>
@@ -809,7 +819,7 @@ export default function InstallmentsClient() {
               {fmtMoney(summary.sum_remaining)}
             </p>
           </div>
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/30">
+          <div className={`${alertClasses("success")} !p-4`}>
             <p className="text-xs font-medium uppercase text-emerald-800 dark:text-emerald-200">
               Due this month
             </p>
@@ -824,7 +834,7 @@ export default function InstallmentsClient() {
         open={addModalOpen}
         onClose={closeAddModal}
         ariaLabelledBy="installment-add-title"
-        dialogClassName="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
@@ -835,7 +845,7 @@ export default function InstallmentsClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
             onClick={closeAddModal}
           >
             Close
@@ -853,15 +863,15 @@ export default function InstallmentsClient() {
               <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Per-payment amounts ({draftTotal} row{draftTotal === 1 ? "" : "s"})
               </p>
-              <div className="max-h-64 overflow-x-auto overflow-y-auto rounded-md border border-zinc-200 dark:border-zinc-800">
+              <div className={`${TABLE_WRAPPER_CLASSES} max-h-64 overflow-x-auto overflow-y-auto`}>
                 <table className="w-full min-w-[420px] text-left text-sm">
-                  <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-900">
-                    <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
-                      <th className="py-2 pl-2 pr-2">#</th>
-                      <th className="py-2 pr-2">Due</th>
-                      <th className="py-2 pr-2">Principal</th>
-                      <th className="py-2 pr-2">Interest</th>
-                      <th className="py-2 pr-2">Total</th>
+                  <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-900/60">
+                    <tr className={TABLE_HEAD_ROW_CLASSES}>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>#</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Due</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Principal</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Interest</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -884,20 +894,20 @@ export default function InstallmentsClient() {
                         return (
                           <tr
                             key={seq}
-                            className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
+                            className={TABLE_ROW_CLASSES}
                           >
-                            <td className="py-1.5 pl-2 pr-2 font-mono tabular-nums">
+                            <td className={`${TABLE_CELL_CLASSES} font-mono`}>
                               {seq}
                             </td>
-                            <td className="py-1.5 pr-2 tabular-nums text-zinc-600 dark:text-zinc-400">
+                            <td className={TABLE_CELL_CLASSES}>
                               {fmtMonthYearFromDate(due)}
                             </td>
-                            <td className="py-1.5 pr-2">
+                            <td className={TABLE_CELL_CLASSES}>
                               <input
                                 required
                                 type="text"
                                 inputMode="decimal"
-                                className="w-24 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                                className={`w-24 ${INPUT_CLASSES}`}
                                 value={ld.principal}
                                 onChange={(e) =>
                                   setLineDrafts((prev) => ({
@@ -924,11 +934,11 @@ export default function InstallmentsClient() {
                                 disabled={saving}
                               />
                             </td>
-                            <td className="py-1.5 pr-2">
+                            <td className={TABLE_CELL_CLASSES}>
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                className="w-24 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                                className={`w-24 ${INPUT_CLASSES}`}
                                 value={ld.interest}
                                 onChange={(e) =>
                                   setLineDrafts((prev) => ({
@@ -955,7 +965,7 @@ export default function InstallmentsClient() {
                                 disabled={saving}
                               />
                             </td>
-                            <td className="py-1.5 pr-2 tabular-nums text-zinc-800 dark:text-zinc-100">
+                            <td className={TABLE_CELL_CLASSES}>
                               {fmtMoney(rowTotal)}
                             </td>
                           </tr>
@@ -986,14 +996,14 @@ export default function InstallmentsClient() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              className={PRIMARY_BUTTON_CLASSES}
             >
               {saving ? "Saving…" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
+              className={SECONDARY_BUTTON_CLASSES}
               onClick={closeAddModal}
             >
               Cancel
@@ -1028,11 +1038,11 @@ export default function InstallmentsClient() {
                       void openDetail(r.id);
                     }
                   }}
-                  className={`min-w-0 rounded-xl border p-3 shadow-sm transition hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:hover:ring-indigo-700/50 ${
+                  className={`min-w-0 cursor-pointer rounded-lg border p-3 transition-colors duration-150 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:hover:ring-indigo-700/50 ${
                     due
                       ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20"
-                      : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-                  } cursor-pointer`}
+                      : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                  }`}
                 >
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
                     <div className="min-w-0">
@@ -1045,7 +1055,7 @@ export default function InstallmentsClient() {
                           {nn}
                         </span>
                         {due && (
-                          <span className="ml-2 rounded bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white">
+                          <span className="ml-2 rounded-md bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white">
                             Due this month
                           </span>
                         )}
@@ -1056,7 +1066,7 @@ export default function InstallmentsClient() {
                         <button
                           type="button"
                           disabled={saving}
-                          className="rounded-md bg-indigo-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50 sm:px-3 sm:text-sm"
+                          className="rounded-md bg-indigo-600 px-2 py-1.5 text-xs font-medium text-white transition-colors duration-150 hover:bg-indigo-500 disabled:opacity-50 sm:px-3 sm:text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             void onPay(r.id);
@@ -1068,7 +1078,7 @@ export default function InstallmentsClient() {
                       <button
                         type="button"
                         disabled={saving}
-                        className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 dark:border-red-900 dark:text-red-300 sm:px-3 sm:text-sm"
+                        className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           void onDelete(r.id);
@@ -1164,7 +1174,7 @@ export default function InstallmentsClient() {
                       void openDetail(r.id);
                     }
                   }}
-                  className="min-w-0 cursor-pointer rounded-xl border border-zinc-200 bg-zinc-50 p-3 opacity-70 shadow-sm transition hover:opacity-100 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:ring-indigo-700/50"
+                  className="min-w-0 cursor-pointer rounded-lg border border-zinc-200 bg-zinc-50 p-3 opacity-70 transition-colors duration-150 hover:opacity-100 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:ring-indigo-700/50"
                 >
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
                     <div className="min-w-0">
@@ -1173,7 +1183,7 @@ export default function InstallmentsClient() {
                       </h3>
                       <p className="mt-1 text-xs text-zinc-500 sm:text-sm dark:text-zinc-400">
                         {r.installment_total}/{r.installment_total} payments ·{" "}
-                        <span className="rounded bg-zinc-300 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                        <span className="rounded-md bg-zinc-300 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
                           Paid off
                         </span>
                       </p>
@@ -1182,7 +1192,7 @@ export default function InstallmentsClient() {
                       <button
                         type="button"
                         disabled={saving}
-                        className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 dark:border-red-900 dark:text-red-300 sm:px-3 sm:text-sm"
+                        className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           void onDelete(r.id);
@@ -1243,7 +1253,7 @@ export default function InstallmentsClient() {
         onClose={closeScheduleModal}
         ariaLabelledBy="schedule-title"
         backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-        dialogClassName="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
             <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
               <h2
@@ -1254,7 +1264,7 @@ export default function InstallmentsClient() {
               </h2>
               <button
                 type="button"
-                className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
                 onClick={closeScheduleModal}
               >
                 Close
@@ -1287,7 +1297,7 @@ export default function InstallmentsClient() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                    className={PRIMARY_BUTTON_CLASSES}
                   >
                     {saving ? "Saving…" : "Update"}
                   </button>
@@ -1303,18 +1313,19 @@ export default function InstallmentsClient() {
                 </p>
               )}
               {!detailLoading && detail && detail.lines.length > 0 && (
-                <div className="overflow-x-auto">
+                <div>
                 <p className="mb-3 text-xs text-zinc-600 dark:text-zinc-400">
                   Drag a row to reorder payments. Due dates follow the new row order after you save.
                 </p>
+                <div className={`${TABLE_WRAPPER_CLASSES} overflow-x-auto`}>
                 <table className="w-full min-w-[36rem] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
-                      <th className="pb-2 pr-2">#</th>
-                      <th className="pb-2 pr-2">Due</th>
-                      <th className="pb-2 pr-2">Principal</th>
-                      <th className="pb-2 pr-2">Interest</th>
-                      <th className="pb-2">Total</th>
+                    <tr className={TABLE_HEAD_ROW_CLASSES}>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>#</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Due</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Principal</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Interest</th>
+                      <th className={TABLE_HEAD_CELL_CLASSES}>Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1339,8 +1350,10 @@ export default function InstallmentsClient() {
                         <tr
                           key={ln.id}
                           draggable
-                          className={`cursor-grab border-b border-zinc-100 active:cursor-grabbing dark:border-zinc-800 ${
-                            isNext ? "bg-indigo-50/80 dark:bg-indigo-950/30" : ""
+                          className={`cursor-grab active:cursor-grabbing ${TABLE_ROW_CLASSES} ${
+                            isNext
+                              ? "bg-indigo-50/80 hover:bg-indigo-50/80 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/30"
+                              : ""
                           }`}
                           title="Drag row to reorder"
                           onDragStart={(e) => {
@@ -1386,7 +1399,7 @@ export default function InstallmentsClient() {
                             });
                           }}
                         >
-                          <td className="py-2 pr-2 font-mono tabular-nums">
+                          <td className={`${TABLE_CELL_CLASSES} font-mono`}>
                             {visPos}
                             {isNext && (
                               <span className="ml-1 text-[10px] font-sans text-indigo-600 dark:text-indigo-300">
@@ -1394,7 +1407,7 @@ export default function InstallmentsClient() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2 pr-2 tabular-nums text-zinc-800 dark:text-zinc-200">
+                          <td className={TABLE_CELL_CLASSES}>
                             {fmtMonthYearFromDate(
                               dueMonthForSeq(
                                 detail.installment.start_date,
@@ -1402,12 +1415,12 @@ export default function InstallmentsClient() {
                               ),
                             )}
                           </td>
-                          <td className="cursor-auto py-2 pr-2">
+                          <td className={`${TABLE_CELL_CLASSES} cursor-auto`}>
                             <input
                               type="text"
                               inputMode="decimal"
                               draggable={false}
-                              className="w-28 cursor-text rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                              className={`w-28 cursor-text ${INPUT_CLASSES}`}
                               value={
                                 ed?.principal ?? String(ln.principal)
                               }
@@ -1441,12 +1454,12 @@ export default function InstallmentsClient() {
                               }}
                             />
                           </td>
-                          <td className="cursor-auto py-2 pr-2">
+                          <td className={`${TABLE_CELL_CLASSES} cursor-auto`}>
                             <input
                               type="text"
                               inputMode="decimal"
                               draggable={false}
-                              className="w-24 cursor-text rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                              className={`w-24 cursor-text ${INPUT_CLASSES}`}
                               value={
                                 ed?.interest ??
                                 (ln.interest != null ? String(ln.interest) : "")
@@ -1477,7 +1490,7 @@ export default function InstallmentsClient() {
                               }}
                             />
                           </td>
-                          <td className="py-2 tabular-nums text-zinc-800 dark:text-zinc-100">
+                          <td className={TABLE_CELL_CLASSES}>
                             {fmtMoney(rowTotal)}
                           </td>
                         </tr>
@@ -1486,15 +1499,16 @@ export default function InstallmentsClient() {
                   </tbody>
                 </table>
                 </div>
+                </div>
               )}
               </div>
             </div>
             {!detailLoading && detail && detail.lines.length > 0 && (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
                 <button
                   type="button"
                   disabled={savingSchedule || !scheduleHasChanges}
-                  className={`${PRIMARY_BUTTON_CLASSES} shadow-sm`}
+                  className={PRIMARY_BUTTON_CLASSES}
                   onClick={() => void saveScheduleEdits()}
                 >
                   {savingSchedule ? "Saving…" : "Save changes"}
@@ -1508,7 +1522,7 @@ export default function InstallmentsClient() {
         onClose={closePayments}
         ariaLabelledBy="payments-title"
         backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-        dialogClassName="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
         <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
           <h2
@@ -1519,7 +1533,7 @@ export default function InstallmentsClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
             onClick={closePayments}
           >
             Close
@@ -1530,7 +1544,7 @@ export default function InstallmentsClient() {
           <div className="grid shrink-0 grid-cols-3 gap-2 border-b border-zinc-200 px-4 py-3 text-center dark:border-zinc-800">
             <div>
               <p className="text-[11px] font-medium uppercase text-zinc-500">Done</p>
-              <p className="mt-0.5 text-base font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+              <p className={`mt-0.5 text-base ${AMOUNT_POSITIVE_CLASSES}`}>
                 {fmtMoney(paymentsByMonth.grandDone)}
               </p>
             </div>

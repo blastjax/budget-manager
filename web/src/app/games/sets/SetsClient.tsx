@@ -20,6 +20,15 @@ import { CardTile, SetSymbol } from "./shapes";
 const EMPTY_BUILDER: Card = { symbol: 0, color: 0, texture: 0, count: 0 };
 const sectionHeading = "text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500";
 
+/** Tone-classed banner box, matching ui.ts's `ERROR_ALERT_CLASSES` pattern
+ * (border + tinted background + tinted text, no shadow) for the tones it
+ * doesn't cover. */
+const ALERT_TONE_CLASSES: Record<"good" | "warn" | "bad", string> = {
+  good: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200",
+  warn: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+  bad: "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200",
+};
+
 type Relation = "same" | "different" | "broken";
 
 export default function SetsClient() {
@@ -172,11 +181,7 @@ export default function SetsClient() {
         <section className="flex w-full min-w-0 flex-col gap-4 lg:flex-1">
           {boardBanner && (
             <div
-              className={`w-full max-w-md rounded-lg border px-4 py-3 text-sm font-medium ${
-                boardBanner.tone === "good"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
-                  : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-              }`}
+              className={`w-full max-w-md rounded-lg border px-4 py-3 text-sm font-medium ${ALERT_TONE_CLASSES[boardBanner.tone]}`}
             >
               {boardBanner.text}
             </div>
@@ -198,7 +203,7 @@ export default function SetsClient() {
                   onClick={() => removeCard(idx)}
                   aria-label={`Remove card ${idx + 1}`}
                   title="Remove"
-                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 bg-white text-[10px] leading-none text-zinc-600 shadow hover:bg-red-50 hover:text-red-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 bg-white text-[10px] leading-none text-zinc-600 shadow transition-colors duration-150 hover:bg-red-50 hover:text-red-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:shadow-none dark:ring-1 dark:ring-white/10"
                 >
                   ×
                 </button>
@@ -247,9 +252,7 @@ export default function SetsClient() {
                 <div className="flex flex-col gap-2">
                   <div
                     className={`w-fit rounded-lg border px-3 py-1.5 text-sm font-medium ${
-                      tripleBreakdown.isSet
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
-                        : "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+                      ALERT_TONE_CLASSES[tripleBreakdown.isSet ? "good" : "bad"]
                     }`}
                   >
                     {tripleBreakdown.isSet ? "✓ Valid Set" : "✗ Not a Set"}
@@ -272,7 +275,7 @@ export default function SetsClient() {
                     key={`${i}-${j}-${k}`}
                     type="button"
                     onClick={() => setSelectedIndices([i, j, k])}
-                    className="flex w-fit items-center gap-3 rounded-lg border border-transparent p-1 transition hover:border-indigo-200 hover:bg-indigo-50/60 dark:hover:border-indigo-900 dark:hover:bg-indigo-950/30"
+                    className="flex w-fit items-center gap-3 rounded-lg border border-transparent p-1 transition-colors duration-150 hover:border-indigo-200 hover:bg-indigo-50/60 dark:hover:border-indigo-900 dark:hover:bg-indigo-950/30"
                   >
                     <span className="w-10 shrink-0 text-xs text-zinc-400">Set {setIdx + 1}</span>
                     <CardTile card={board[i]} size="sm" />
@@ -316,10 +319,10 @@ function OptionTile({
       aria-label={label}
       aria-pressed={selected}
       title={label}
-      className={`flex flex-1 items-center justify-center rounded-lg border-2 bg-white px-3 py-3 shadow-sm transition dark:bg-zinc-900 ${
+      className={`flex flex-1 items-center justify-center rounded-lg border-2 bg-white px-3 py-3 shadow-sm transition-colors duration-150 dark:bg-zinc-900 dark:shadow-none ${
         selected
           ? "border-indigo-500 ring-2 ring-indigo-400"
-          : "border-zinc-200 hover:border-indigo-300 dark:border-zinc-700"
+          : "border-zinc-200 hover:border-indigo-300 dark:border-zinc-700 dark:ring-1 dark:ring-white/10"
       }`}
     >
       {children}

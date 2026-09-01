@@ -3,6 +3,7 @@
 import type { Dispatch, FocusEvent, SetStateAction } from "react";
 import { MONTH_NAMES_FULL } from "@/lib/dateFormat";
 import { formatAmountOnBlur } from "@/lib/parseFormNumber";
+import { INPUT_CLASSES } from "@/lib/ui";
 import type { FormState } from "./payslipModalForm";
 import { MONTHS } from "./payslipModalForm";
 
@@ -33,7 +34,7 @@ export function PayslipFormFields({
         <input
           type="text"
           inputMode="decimal"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.withholding_tax}
           onChange={(e) =>
             setForm((f) => ({ ...f, withholding_tax: e.target.value }))
@@ -47,7 +48,7 @@ export function PayslipFormFields({
         <input
           type="text"
           inputMode="decimal"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.sss_contribution}
           onChange={(e) =>
             setForm((f) => ({ ...f, sss_contribution: e.target.value }))
@@ -61,7 +62,7 @@ export function PayslipFormFields({
         <input
           type="text"
           inputMode="decimal"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.philhealth}
           onChange={(e) =>
             setForm((f) => ({ ...f, philhealth: e.target.value }))
@@ -77,7 +78,7 @@ export function PayslipFormFields({
         <input
           type="text"
           inputMode="decimal"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.pag_ibig}
           onChange={(e) =>
             setForm((f) => ({ ...f, pag_ibig: e.target.value }))
@@ -91,7 +92,7 @@ export function PayslipFormFields({
         <input
           type="text"
           inputMode="decimal"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          className={INPUT_CLASSES}
           value={form.mp2}
           onChange={(e) =>
             setForm((f) => ({ ...f, mp2: e.target.value }))
@@ -111,7 +112,7 @@ export function PayslipFormFields({
           <input
             type="text"
             inputMode="numeric"
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className={INPUT_CLASSES}
             value={form.period_year}
             onChange={(e) =>
               setForm((f) => ({ ...f, period_year: e.target.value }))
@@ -122,7 +123,7 @@ export function PayslipFormFields({
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-zinc-600 dark:text-zinc-400">Month</span>
           <select
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className={INPUT_CLASSES}
             value={form.period_month}
             onChange={(e) =>
               setForm((f) => ({ ...f, period_month: e.target.value }))
@@ -140,7 +141,7 @@ export function PayslipFormFields({
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-zinc-600 dark:text-zinc-400">Half of month</span>
           <select
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className={INPUT_CLASSES}
             value={
               requirePeriodHalf
                 ? form.period_half === "2"
@@ -177,7 +178,7 @@ export function PayslipFormFields({
             <input
               type="text"
               inputMode="decimal"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form[key]}
               onChange={(e) =>
                 setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -193,7 +194,7 @@ export function PayslipFormFields({
             <input
               type="text"
               inputMode="decimal"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={INPUT_CLASSES}
               value={form.thirteenth_month}
               onBlur={onAmountBlur("thirteenth_month")}
               onChange={(e) =>
@@ -206,7 +207,7 @@ export function PayslipFormFields({
         <label className="flex flex-col gap-1 text-sm sm:col-span-2 lg:col-span-3">
           <span className="text-zinc-600 dark:text-zinc-400">Notes</span>
           <textarea
-            className="min-h-[4rem] rounded-md border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className={`min-h-[4rem] ${INPUT_CLASSES}`}
             value={form.notes}
             onChange={(e) =>
               setForm((f) => ({ ...f, notes: e.target.value }))
@@ -215,7 +216,7 @@ export function PayslipFormFields({
           />
         </label>
       </div>
-      <aside className="flex min-w-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/50">
+      <aside className="flex min-w-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           Deductions
         </p>

@@ -63,10 +63,10 @@ export function CardTile({
   const padding = size === "lg" ? "gap-2 px-5 py-5" : "gap-1 px-3 py-3";
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-lg border-2 bg-white shadow-sm dark:bg-zinc-900 ${padding} ${
+      className={`inline-flex items-center justify-center rounded-lg border-2 bg-white shadow-sm transition-colors duration-150 dark:bg-zinc-900 dark:shadow-none ${padding} ${
         selected
           ? "border-indigo-500 ring-2 ring-indigo-400"
-          : "border-zinc-200 dark:border-zinc-700"
+          : "border-zinc-200 dark:border-zinc-700 dark:ring-1 dark:ring-white/10"
       }`}
     >
       {Array.from({ length: card.count + 1 }, (_, i) => (

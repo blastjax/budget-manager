@@ -49,7 +49,7 @@ export function CalendarMonth({
           onClick={onPrev}
           disabled={!onPrev}
           aria-label="Previous month"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 disabled:invisible dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 disabled:invisible dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           ‹
         </button>
@@ -61,7 +61,7 @@ export function CalendarMonth({
           onClick={onNext}
           disabled={!onNext}
           aria-label="Next month"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 disabled:invisible dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 disabled:invisible dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           ›
         </button>
@@ -99,12 +99,12 @@ export function CalendarMonth({
                 type="button"
                 onClick={() => onSelectDay(iso)}
                 className={[
-                  "flex h-8 w-8 items-center justify-center rounded-full text-sm transition",
+                  "flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors duration-150",
                   isCap
                     ? "bg-indigo-600 font-semibold text-white"
                     : state === "today"
                       ? "font-semibold text-indigo-600 ring-1 ring-inset ring-indigo-400 dark:text-indigo-400"
-                      : "text-zinc-700 hover:bg-zinc-200/70 dark:text-zinc-300 dark:hover:bg-zinc-700/60",
+                      : "text-zinc-700 hover:bg-zinc-200/60 dark:text-zinc-300 dark:hover:bg-zinc-700/60",
                 ].join(" ")}
               >
                 {day}

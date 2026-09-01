@@ -17,10 +17,10 @@ export function MobileTopBar() {
   const { mobileNavOpen, setMobileNavOpen, closeMobileNav } = useShellLayout();
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-[55] flex h-14 items-center gap-2 border-b border-zinc-200 bg-zinc-50/95 px-3 pt-[max(0.25rem,env(safe-area-inset-top))] backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 lg:hidden">
+    <header className="fixed left-0 right-0 top-0 z-[55] flex h-14 items-center gap-2 border-b border-zinc-200 bg-zinc-50/95 px-3 pt-[max(0.25rem,env(safe-area-inset-top))] backdrop-blur-md dark:border-zinc-900 dark:bg-zinc-900/70 lg:hidden">
       <button
         type="button"
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-zinc-700 transition-colors duration-150 hover:bg-zinc-200/60 dark:text-zinc-200 dark:hover:bg-zinc-800/60"
         aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
         aria-expanded={mobileNavOpen}
         aria-controls="mobile-sidebar-nav"

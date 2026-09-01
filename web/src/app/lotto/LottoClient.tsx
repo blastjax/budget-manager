@@ -27,6 +27,12 @@ import {
   SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 
+/** Success-tone banner box, matching ui.ts's `ERROR_ALERT_CLASSES` pattern
+ * (border + tinted background + tinted text, no shadow) for the tone it
+ * doesn't cover. */
+const SUCCESS_ALERT_CLASSES =
+  "rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200";
+
 const NUMBERS_HELP =
   "6 unique numbers, 1-58 — separate with commas, spaces, or dashes (e.g. 3, 17, 29, 42, 58, 1 or 03-17-29-42-58-01)";
 
@@ -843,7 +849,7 @@ export default function LottoClient() {
         key={attempt.id}
         draggable
         title="Drag onto another attempt or ticket to group them"
-        className={`flex cursor-grab flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-950 ${
+        className={`flex cursor-grab flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-900 ${
           attempt.hidden ? "opacity-50" : ""
         }`}
         onDragStart={(e) => {
@@ -885,7 +891,7 @@ export default function LottoClient() {
           <button
             type="button"
             disabled={saving}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
             onClick={() => openEditAttempt(detail.draw.id, attempt)}
           >
             Edit
@@ -893,7 +899,7 @@ export default function LottoClient() {
           <button
             type="button"
             disabled={saving}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
             onClick={() => void onToggleAttemptHidden(detail.draw.id, attempt)}
           >
             {attempt.hidden ? "Unhide" : "Hide"}
@@ -901,7 +907,7 @@ export default function LottoClient() {
           <button
             type="button"
             disabled={saving}
-            className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+            className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
             onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
           >
             Delete
@@ -926,7 +932,7 @@ export default function LottoClient() {
     return (
       <section key={detail.draw.id} className={CARD_CLASSES}>
         <div
-          className={`group -m-1 flex flex-wrap items-start justify-between gap-3 rounded-lg p-1 transition-colors ${
+          className={`group -m-1 flex flex-wrap items-start justify-between gap-3 rounded-lg p-1 transition-colors duration-150 ${
             hasAttempts ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60" : ""
           }`}
           role={hasAttempts ? "button" : undefined}
@@ -947,7 +953,7 @@ export default function LottoClient() {
             <h2
               className={`text-lg font-medium text-zinc-900 dark:text-zinc-50 ${
                 hasAttempts
-                  ? "transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                  ? "transition-colors duration-150 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
                   : ""
               }`}
             >
@@ -990,7 +996,7 @@ export default function LottoClient() {
             <button
               type="button"
               disabled={saving}
-              className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
+              className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
               onClick={() => void onDeleteDraw(detail.draw.id)}
             >
               Delete
@@ -1013,7 +1019,7 @@ export default function LottoClient() {
               <button
                 type="button"
                 disabled={saving}
-                className="rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-medium text-zinc-500 transition hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-medium text-zinc-500 transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 onClick={() => toggleShowHiddenForDraw(detail.draw.id)}
               >
                 {showHiddenForDraw
@@ -1064,7 +1070,7 @@ export default function LottoClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
                       onClick={() =>
                         void onToggleTicketHidden(
                           detail.draw.id,
@@ -1078,7 +1084,7 @@ export default function LottoClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
                       onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
                     >
                       + Add to this ticket
@@ -1217,7 +1223,7 @@ export default function LottoClient() {
             <section key={group.year} className={CARD_CLASSES}>
               <button
                 type="button"
-                className="-m-1 flex w-full flex-wrap items-center justify-between gap-3 rounded-lg p-1 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                className="-m-1 flex w-full flex-wrap items-center justify-between gap-3 rounded-lg p-1 text-left transition-colors duration-150 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
                 aria-expanded={expanded}
                 onClick={() => toggleYearExpanded(group.year)}
               >
@@ -1257,7 +1263,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeDrawModal}
           >
             Close
@@ -1320,7 +1326,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeAttemptModal}
           >
             Close
@@ -1384,7 +1390,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeUploadModal}
           >
             Close
@@ -1449,7 +1455,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
             onClick={closeImportModal}
           >
             Close
@@ -1462,7 +1468,7 @@ export default function LottoClient() {
             </div>
           )}
           {importSummary && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+            <div className={SUCCESS_ALERT_CLASSES}>
               Imported {fmtCount(importSummary.total)} row
               {importSummary.total === 1 ? "" : "s"}: {fmtCount(importSummary.inserted)} added,{" "}
               {fmtCount(importSummary.updated)} updated.

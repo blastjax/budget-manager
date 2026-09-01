@@ -8,14 +8,18 @@ import {
   getSessionToken,
   setSessionToken,
 } from "@/lib/auth";
+import {
+  CARD_CLASSES,
+  INPUT_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
+} from "@/lib/ui";
 
 type Status = "checking" | "unreachable" | "unauthenticated" | "authenticated";
 
-const CARD_CLASS =
-  "w-full max-w-xs rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900";
+const CARD_CLASS = `w-full max-w-xs ${CARD_CLASSES}`;
 
-const FIELD_CLASS =
-  "mb-3 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100";
+const FIELD_CLASS = `mb-3 w-full ${INPUT_CLASSES}`;
 
 function Screen({ children }: { children: React.ReactNode }) {
   return (
@@ -112,7 +116,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={checkStatus}
-            className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className={`w-full ${SECONDARY_BUTTON_CLASSES} text-center`}
           >
             Retry
           </button>
@@ -153,7 +157,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           <button
             type="submit"
             disabled={submitting || !username || !password}
-            className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            className={`w-full ${PRIMARY_BUTTON_CLASSES} text-center`}
           >
             {submitting ? "Checking…" : "Log in"}
           </button>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 const sidebarNavInactiveHover =
-  "hover:bg-zinc-100 dark:hover:bg-zinc-800/80";
+  "transition-colors duration-150 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60";
 import { dataApiBase } from "@/lib/api";
 import { clearSessionToken, getSessionToken } from "@/lib/auth";
 import { useShellLayout } from "@/lib/shellLayoutContext";
@@ -102,8 +102,8 @@ export function SidebarNav() {
       style={lgUp ? { width: leftWidth, flexShrink: 0 } : undefined}
       className={[
         "w-[min(18rem,88vw)] max-lg:max-w-[88vw]",
-        "flex flex-col overflow-hidden border-r border-zinc-200 bg-zinc-50/90 dark:border-zinc-800 dark:bg-zinc-950",
-        "max-lg:fixed max-lg:left-0 max-lg:top-14 max-lg:z-[52] max-lg:h-[calc(100dvh-3.5rem)] max-lg:max-h-[calc(100dvh-3.5rem)] max-lg:shadow-xl max-lg:transition-transform max-lg:duration-200 max-lg:ease-out",
+        "flex flex-col overflow-hidden border-r border-zinc-200 bg-zinc-50/90 dark:border-zinc-900 dark:bg-zinc-900/60",
+        "max-lg:fixed max-lg:left-0 max-lg:top-14 max-lg:z-[52] max-lg:h-[calc(100dvh-3.5rem)] max-lg:max-h-[calc(100dvh-3.5rem)] max-lg:shadow-xl dark:max-lg:shadow-none dark:max-lg:ring-1 dark:max-lg:ring-white/10 max-lg:transition-transform max-lg:duration-200 max-lg:ease-out",
         mobileNavOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full",
         "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:max-h-[100dvh] lg:translate-x-0 lg:shadow-none",
       ].join(" ")}
@@ -112,7 +112,7 @@ export function SidebarNav() {
         <div className="flex shrink-0 items-center justify-end gap-1 lg:hidden">
           <button
             type="button"
-            className="rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-700 shadow-sm hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="rounded-md px-2 py-1.5 text-sm text-zinc-600 transition-colors duration-150 hover:bg-zinc-200/60 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
             aria-label="Close menu"
             onClick={closeMobileNav}
           >
@@ -132,7 +132,7 @@ export function SidebarNav() {
               className="flex flex-col gap-0.5"
             >
               {segment.title ? (
-                <h2 className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                <h2 className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
                   {segment.title}
                 </h2>
               ) : null}
@@ -143,12 +143,12 @@ export function SidebarNav() {
                     key={href}
                     href={href}
                     onClick={closeMobileNav}
-                    className={`rounded-lg py-2.5 text-sm font-medium transition ${
+                    className={`rounded-md py-2 text-sm ${
                       indent ? "pl-6 pr-3" : "px-3"
                     } ${
                       active
-                        ? "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/80 dark:text-indigo-100"
-                        : `text-zinc-700 dark:text-zinc-300 ${sidebarNavInactiveHover}`
+                        ? "bg-zinc-200/70 font-medium text-zinc-900 dark:bg-zinc-800/70 dark:text-zinc-50"
+                        : `font-normal text-zinc-700 dark:text-zinc-300 ${sidebarNavInactiveHover}`
                     }`}
                   >
                     {label}
@@ -160,11 +160,11 @@ export function SidebarNav() {
         </nav>
 
         {hasSession && (
-          <div className="mt-2 shrink-0 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <div className="mt-2 shrink-0 border-t border-zinc-200 pt-3 dark:border-zinc-900">
             <button
               type="button"
               onClick={handleLogout}
-              className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-700 transition dark:text-zinc-300 ${sidebarNavInactiveHover}`}
+              className={`w-full rounded-md px-3 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 ${sidebarNavInactiveHover}`}
             >
               Log out
             </button>

@@ -18,6 +18,8 @@ import {
   parseFormNumber,
 } from "@/lib/parseFormNumber";
 import {
+  AMOUNT_NEGATIVE_CLASSES,
+  CARD_CLASSES,
   DASHED_EMPTY_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
@@ -213,13 +215,13 @@ export default function MonthlyExpensesClient() {
           {([1, 2] as const).map((half) => (
             <section
               key={half}
-              className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+              className={CARD_CLASSES}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
                   {HALF_LABEL[half]}
                 </h2>
-                <p className="text-sm font-semibold tabular-nums text-red-600 dark:text-red-400">
+                <p className={`text-sm ${AMOUNT_NEGATIVE_CLASSES}`}>
                   −{fmtMoney(totalFor(half))}
                 </p>
               </div>
@@ -240,7 +242,7 @@ export default function MonthlyExpensesClient() {
                           openEditModal(exp);
                         }
                       }}
-                      className="flex cursor-pointer items-start justify-between gap-2 rounded-lg border border-zinc-200 p-3 transition hover:ring-2 hover:ring-indigo-300/60 dark:border-zinc-800 dark:hover:ring-indigo-700/50"
+                      className="flex cursor-pointer items-start justify-between gap-2 rounded-lg border border-zinc-200 p-3 transition-colors duration-150 hover:ring-2 hover:ring-indigo-300/60 dark:border-zinc-800 dark:hover:ring-indigo-700/50"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
@@ -263,7 +265,7 @@ export default function MonthlyExpensesClient() {
                         </span>
                         <button
                           type="button"
-                          className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                          className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
                           onClick={(e) => {
                             e.stopPropagation();
                             void onDelete(exp.id);
@@ -285,7 +287,7 @@ export default function MonthlyExpensesClient() {
         open={modalOpen}
         onClose={closeModal}
         ariaLabelledBy="monthly-expense-title"
-        dialogClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
         <div className="mb-4 flex items-start justify-between gap-2">
           <div>
@@ -298,7 +300,7 @@ export default function MonthlyExpensesClient() {
           </div>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
             onClick={closeModal}
           >
             Close
@@ -373,7 +375,7 @@ export default function MonthlyExpensesClient() {
                 <button
                   key={half}
                   type="button"
-                  className={`flex-1 rounded-md px-4 py-3 text-base font-medium transition ${
+                  className={`flex-1 rounded-md px-4 py-3 text-base font-medium transition-colors duration-150 ${
                     form.period_half === half
                       ? SEGMENTED_BUTTON_ACTIVE_CLASSES
                       : SEGMENTED_BUTTON_INACTIVE_CLASSES

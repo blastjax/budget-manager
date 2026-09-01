@@ -37,6 +37,7 @@ import {
   parseFormNumber,
 } from "@/lib/parseFormNumber";
 import {
+  CARD_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
@@ -333,13 +334,13 @@ const DayGridCell = memo(function DayGridCell({
       onDragLeave={draggable ? () => onDragLeave(iso) : undefined}
       onDrop={draggable ? (e) => onDrop(e, iso) : undefined}
       onDragEnd={onDragEnd}
-      className={`flex min-h-[5rem] min-w-0 flex-col items-center justify-center gap-1 rounded-lg border-2 px-1.5 py-2 text-center transition sm:min-h-[7rem] ${
+      className={`flex min-h-[5rem] min-w-0 flex-col items-center justify-center gap-1 rounded-lg border-2 px-1.5 py-2 text-center transition-colors duration-150 sm:min-h-[7rem] ${
         draggable ? "cursor-grab active:cursor-grabbing" : ""
       } ${
         isDragOverTarget
           ? "border-indigo-500 bg-indigo-100 ring-2 ring-indigo-500/60 dark:border-indigo-400 dark:bg-indigo-950/70"
           : isToday
-            ? `${halfBorderClasses} bg-indigo-50 ring-2 ring-indigo-500/50 dark:bg-indigo-950/50`
+            ? `${halfBorderClasses} bg-indigo-50 ring-2 ring-indigo-500/50 dark:bg-indigo-950/30`
             : isPast
               ? `border-dashed ${halfBorderClasses} bg-zinc-50/60 opacity-60 dark:bg-zinc-900/30`
               : `${halfBorderClasses} ${halfBgClasses}`
@@ -1386,7 +1387,7 @@ export default function CalendarClient() {
         <p className={LOADING_TEXT_CLASSES}>Loading last salary…</p>
       ) : (
         <>
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               Net pay — {formatMonthYear(year, month)}
             </h2>
@@ -1412,7 +1413,7 @@ export default function CalendarClient() {
                     <button
                       type="button"
                       onClick={() => openExpenseModal(half)}
-                      className="block w-full rounded-md text-left transition hover:opacity-90"
+                      className="block w-full rounded-md text-left transition-opacity duration-150 hover:opacity-90"
                     >
                       <p className="pr-16 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
                         {rangeLabel}
@@ -1456,7 +1457,7 @@ export default function CalendarClient() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               Remaining budget
             </h2>
@@ -1485,7 +1486,7 @@ export default function CalendarClient() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className={CARD_CLASSES}>
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               Semi-monthly daily budget
             </h2>
@@ -1517,14 +1518,14 @@ export default function CalendarClient() {
             </div>
           </section>
 
-          <section className="flex min-w-0 flex-1 flex-col rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
+          <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
             <div className="flex flex-col items-center gap-3 sm:relative sm:flex-row sm:justify-center">
               <div className="flex items-center justify-center gap-3">
                 <button
                   type="button"
                   aria-label="Previous month"
                   onClick={goToPrevMonth}
-                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition-colors duration-150 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
                 >
                   ‹
                 </button>
@@ -1535,7 +1536,7 @@ export default function CalendarClient() {
                   type="button"
                   aria-label="Next month"
                   onClick={goToNextMonth}
-                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition-colors duration-150 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
                 >
                   ›
                 </button>
@@ -1545,7 +1546,7 @@ export default function CalendarClient() {
                   <button
                     type="button"
                     onClick={goToToday}
-                    className="rounded-md border-2 border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-purple-400 hover:text-purple-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-purple-500 dark:hover:text-purple-300"
+                    className="rounded-md border-2 border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors duration-150 hover:border-purple-400 hover:text-purple-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-purple-500 dark:hover:text-purple-300"
                   >
                     Today
                   </button>
@@ -1555,7 +1556,7 @@ export default function CalendarClient() {
                   onClick={() => void autoDivideActiveDays()}
                   disabled={autoDividing}
                   title="Reset today and future days this month to an even split of their pay period's budget"
-                  className="rounded-md border-2 border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-purple-400 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-purple-500 dark:hover:text-purple-300"
+                  className="rounded-md border-2 border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors duration-150 hover:border-purple-400 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-purple-500 dark:hover:text-purple-300"
                 >
                   {autoDividing ? "Dividing…" : "Auto-divide"}
                 </button>
@@ -1608,7 +1609,7 @@ export default function CalendarClient() {
         open={expenseModalHalf != null}
         onClose={closeExpenseModal}
         ariaLabelledBy="fixed-expense-title"
-        dialogClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
         <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
           <div className="min-w-0">
@@ -1628,7 +1629,7 @@ export default function CalendarClient() {
           </div>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
             onClick={closeExpenseModal}
           >
             Close
@@ -1804,7 +1805,7 @@ export default function CalendarClient() {
         open={transfer != null}
         onClose={closeTransferModal}
         ariaLabelledBy="transfer-title"
-        dialogClassName="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
         {transfer && (
           <>
@@ -1899,7 +1900,7 @@ export default function CalendarClient() {
         open={spendDay != null}
         onClose={closeSpendModal}
         ariaLabelledBy="spend-title"
-        dialogClassName="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
         {spendDay && spendDay.dailyBudget != null && (
           <>
@@ -1958,7 +1959,7 @@ export default function CalendarClient() {
         open={payDateModalHalf != null}
         onClose={closePayDateModal}
         ariaLabelledBy="pay-date-title"
-        dialogClassName="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        dialogClassName="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
       >
         {payDateModalHalf != null && (
           <>

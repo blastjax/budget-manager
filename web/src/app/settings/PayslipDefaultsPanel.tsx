@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState, type SetStateAction } from "react";
-import { CARD_CLASSES, PRIMARY_BUTTON_CLASSES } from "@/lib/ui";
+import {
+  CARD_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
+  SEGMENTED_BUTTON_ACTIVE_CLASSES,
+  SEGMENTED_BUTTON_CLASSES,
+  SEGMENTED_BUTTON_INACTIVE_CLASSES,
+  SEGMENTED_WRAPPER_CLASSES,
+} from "@/lib/ui";
 import { PayslipFormFields } from "../payslip/PayslipFormFields";
 import {
   getPayslipDefaultsBundleFallback,
@@ -88,7 +96,7 @@ export function PayslipDefaultsPanel() {
           Edit defaults for
         </legend>
         <div
-          className="mt-4 inline-flex w-full max-w-md flex-col gap-2 sm:flex-row sm:items-stretch"
+          className={`w-full max-w-md flex-col sm:flex-row sm:items-stretch ${SEGMENTED_WRAPPER_CLASSES}`}
           role="radiogroup"
           aria-label="Which half template to edit"
         >
@@ -98,10 +106,10 @@ export function PayslipDefaultsPanel() {
               type="button"
               role="radio"
               aria-checked={activeHalf === value}
-              className={`flex-1 rounded-lg border px-3 py-2.5 text-center text-sm font-medium transition sm:min-h-[2.75rem] ${
+              className={`flex-1 text-center sm:min-h-[2.75rem] ${SEGMENTED_BUTTON_CLASSES} ${
                 activeHalf === value
-                  ? "border-indigo-600 bg-indigo-600 text-white shadow-sm dark:border-indigo-500 dark:bg-indigo-600"
-                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-500 dark:hover:bg-zinc-800"
+                  ? SEGMENTED_BUTTON_ACTIVE_CLASSES
+                  : SEGMENTED_BUTTON_INACTIVE_CLASSES
               }`}
               onClick={() => {
                 setActiveHalf(value);
@@ -154,7 +162,7 @@ export function PayslipDefaultsPanel() {
         </button>
         <button
           type="button"
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
+          className={SECONDARY_BUTTON_CLASSES}
           disabled={busy}
           onClick={async () => {
             setBusy(true);

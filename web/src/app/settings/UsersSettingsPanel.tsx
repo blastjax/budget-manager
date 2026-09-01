@@ -191,7 +191,7 @@ export function UsersSettingsPanel() {
         ) : users.length === 0 ? (
           <div className={DASHED_EMPTY_CLASSES}>No users yet.</div>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-900 dark:border-zinc-800">
             {users.map((user) => (
               <li key={user.id} className="p-4">
                 {editingId === user.id ? (
@@ -278,7 +278,7 @@ export function UsersSettingsPanel() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+                        className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
                         onClick={() => handleDelete(user)}
                       >
                         Delete

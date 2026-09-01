@@ -31,6 +31,11 @@ import {
 import { fmtNum, fmtPayPeriod, slotTitle } from "./payslipDisplay";
 import type { FormState } from "./payslipModalForm";
 import type { Nav } from "./payslipNav";
+import {
+  ERROR_ALERT_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
+} from "@/lib/ui";
 
 export function PayslipClientModal({
   nav,
@@ -77,8 +82,8 @@ export function PayslipClientModal({
     <Modal
       open
       onClose={onCloseDialog}
-      backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-5 sm:items-center sm:p-6"
-      dialogClassName="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-zinc-200 bg-white p-6 shadow-xl sm:p-8 lg:max-w-6xl dark:border-zinc-800 dark:bg-zinc-950"
+      backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-5 backdrop-blur-sm sm:items-center sm:p-6"
+      dialogClassName="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-6 shadow-xl sm:p-8 lg:max-w-6xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
     >
             {nav.screen === "slot" && (
               <>
@@ -161,7 +166,7 @@ export function PayslipClientModal({
                       {items.length === 0 && (
                         <button
                           type="button"
-                          className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+                          className={`w-full ${PRIMARY_BUTTON_CLASSES}`}
                           onClick={() =>
                             setNav({
                               screen: "add",
@@ -192,7 +197,7 @@ export function PayslipClientModal({
                         row.id,
                       );
                       const btnCls =
-                        "flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
+                        "flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-white text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
                       return (
                         <>
                           <button
@@ -319,7 +324,7 @@ export function PayslipClientModal({
                       </div>
                     )}
                   </div>
-                  <aside className="flex min-w-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/50">
+                  <aside className="flex min-w-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
                     <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                       Deductions
                     </p>
@@ -379,7 +384,7 @@ export function PayslipClientModal({
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
-                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-500"
+                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm text-white transition-colors duration-150 hover:bg-indigo-500"
                     onClick={() => {
                       setModalForm(formFromRow(row));
                       setNav({ screen: "edit", row });
@@ -467,21 +472,21 @@ export function PayslipClientModal({
                     disabled={saving}
                   />
                   {error && (
-                    <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                    <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">
                       {error}
                     </p>
                   )}
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="submit"
-                      className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                      className={PRIMARY_BUTTON_CLASSES}
                       disabled={saving}
                     >
                       {saving ? "Saving…" : "Save changes"}
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
+                      className={SECONDARY_BUTTON_CLASSES}
                       onClick={() => {
                         clearPayslipModalDraft(nav);
                         setNav({ screen: "detail", row: nav.row });
@@ -522,14 +527,14 @@ export function PayslipClientModal({
                     lockPeriod
                   />
                   {error && (
-                    <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                    <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">
                       {error}
                     </p>
                   )}
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="submit"
-                      className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                      className={PRIMARY_BUTTON_CLASSES}
                       disabled={saving}
                     >
                       {saving ? "Saving…" : "Save"}
@@ -569,21 +574,21 @@ export function PayslipClientModal({
                     disabled={saving}
                   />
                   {error && (
-                    <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                    <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">
                       {error}
                     </p>
                   )}
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="submit"
-                      className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                      className={PRIMARY_BUTTON_CLASSES}
                       disabled={saving}
                     >
                       {saving ? "Saving…" : "Save"}
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
+                      className={SECONDARY_BUTTON_CLASSES}
                       onClick={() => {
                         clearPayslipModalDraft(nav);
                         setNav(null);
@@ -600,7 +605,7 @@ export function PayslipClientModal({
 }
 
 const PDF_BTN =
-  "rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800";
+  "rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800";
 
 /**
  * PDF attachment for a single payslip entry: one PDF per entry. Shows an
@@ -705,7 +710,7 @@ function PayslipPdfPanel({
           <>
             <button
               type="button"
-              className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500"
+              className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition-colors duration-150 hover:bg-indigo-500"
               onClick={() => setShowing((s) => !s)}
             >
               {showing ? "Hide payslip" : "Show payslip"}
@@ -728,7 +733,7 @@ function PayslipPdfPanel({
             </button>
             <button
               type="button"
-              className="rounded-md border border-red-300 px-3 py-2 text-sm text-red-700 transition-colors hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+              className="rounded-md border border-red-300 px-3 py-2 text-sm text-red-700 transition-colors duration-150 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
               onClick={() => void handleRemove()}
               disabled={busy}
             >
@@ -762,13 +767,18 @@ function PayslipPdfPanel({
         <p className="mt-2 text-xs text-red-600 dark:text-red-400">{err}</p>
       )}
       {hasPdf && blobUrl && (
-        <div className={`mt-3 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700${showing ? "" : " hidden"}`}>
-          <iframe
-            key={blobUrl}
-            src={blobUrl}
-            title="Payslip PDF"
-            className="h-[75vh] w-full bg-white"
-          />
+        <div className={`mt-3${showing ? "" : " hidden"}`}>
+          <p className="mb-1.5 text-xs text-zinc-500 dark:text-zinc-500">
+            Preview
+          </p>
+          <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+            <iframe
+              key={blobUrl}
+              src={blobUrl}
+              title="Payslip PDF"
+              className="h-[75vh] w-full bg-white"
+            />
+          </div>
         </div>
       )}
     </div>
