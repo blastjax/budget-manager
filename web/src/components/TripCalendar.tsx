@@ -331,12 +331,34 @@ type CalendarActions = {
   saving: boolean;
 };
 
-/** One combined, chronologically-sorted list entry — a flight, itinerary
- * item, or accommodation — used by the "whole trip" view. Flights with no
- * date sort to the end rather than the top. */
+type EventCategory = "flight" | "transport" | "itinerary" | "accommodation";
+
+const CATEGORY_LABELS: Record<EventCategory, { legend: string; heading: string }> = {
+  flight: { legend: "Flights", heading: "All flights" },
+  transport: { legend: "Bus/Train", heading: "All bus/train legs" },
+  itinerary: { legend: "Itinerary", heading: "All itinerary items" },
+  accommodation: { legend: "Accommodation", heading: "All accommodations" },
+};
+
+/** The legend doubles as a filter — clicking a swatch shows every item of
+ * that kind in the details panel below the calendar, same as "Show whole
+ * trip" but narrowed to one category. `activeClasses` reuses each kind's
+ * own pill/banner tint so the active swatch reads as "this color". */
+const LEGEND_ITEMS: { category: EventCategory; dot: string; activeClasses: string }[] = [
+  { category: "flight", dot: "bg-sky-500", activeClasses: FLIGHT_PILL_CLASSES },
+  { category: "transport", dot: "bg-violet-500", activeClasses: TRANSPORT_PILL_CLASSES },
+  { category: "itinerary", dot: "bg-amber-500", activeClasses: ITINERARY_PILL_CLASSES },
+  { category: "accommodation", dot: "bg-emerald-500", activeClasses: ACCOMMODATION_BANNER_CLASSES },
+];
+
+/** One combined, chronologically-sorted list entry — a flight, bus/train
+ * leg, itinerary item, or accommodation — used by the "whole trip" view
+ * and by clicking a legend swatch to see just that one category. Flights
+ * and transport legs with no date sort to the end rather than the top. */
 type EventDescriptor = {
   key: string;
   sortKey: string;
+  category: EventCategory;
   dotClass: string;
   title: string;
   subtitle?: string;
@@ -361,6 +383,7 @@ function buildAllEvents(
     events.push({
       key: `f-${f.id}`,
       sortKey: `${f.flight_date ?? "9999-99-99"} ${f.departure_time ?? "00:00"}`,
+      category: "flight",
       dotClass: "bg-sky-500",
       title: flightLabel(f),
       subtitle:
@@ -376,6 +399,7 @@ function buildAllEvents(
     events.push({
       key: `t-${t.id}`,
       sortKey: `${t.travel_date ?? "9999-99-99"} ${t.departure_time ?? "00:00"}`,
+      category: "transport",
       dotClass: "bg-violet-500",
       title: transportLabel(t),
       subtitle:
@@ -391,6 +415,7 @@ function buildAllEvents(
     events.push({
       key: `i-${item.id}`,
       sortKey: `${item.item_date} ${item.start_time ?? "00:00"}`,
+      category: "itinerary",
       dotClass: "bg-amber-500",
       title: item.activity,
       subtitle: itineraryDetailSubtitle(item, true),
@@ -405,6 +430,7 @@ function buildAllEvents(
     events.push({
       key: `a-${a.id}`,
       sortKey: `${a.checkin_date} 00:00`,
+      category: "accommodation",
       dotClass: "bg-emerald-500",
       title: accommodationLabel(a),
       subtitle: accommodationDetailSubtitle(a),
@@ -520,18 +546,30 @@ function DayDetails({
           />
         ))}
       </div>
+      <div className={`flex justify-end ${hasAny ? "mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800" : "mt-3"}`}>
+        <button
+          type="button"
+          disabled={actions.saving}
+          onClick={() => actions.onAddItinerary(iso)}
+          className={ADD_BUTTON_CLASSES}
+        >
+          + Add itinerary item
+        </button>
+      </div>
     </div>
   );
 }
 
-/** The "Show whole trip" view: every flight, bus/train leg, itinerary
- * item, and stay across every month of the trip, in one chronological
- * list — not just the currently viewed month or a single clicked day. */
+/** The "Show whole trip" view: every flight, bus/train leg, itinerary item,
+ * and stay across every month of the trip, in one chronological list — not
+ * just the currently viewed month or a single clicked day. Pass `category`
+ * (set by clicking a legend swatch) to narrow that down to just one kind. */
 function TripFullSpanDetails({
   flights,
   transport,
   itinerary,
   accommodations,
+  category,
   actions,
   onClose,
 }: {
@@ -539,17 +577,20 @@ function TripFullSpanDetails({
   transport: TravelTransportRow[];
   itinerary: TravelItineraryRow[];
   accommodations: TravelAccommodationRow[];
+  category: EventCategory | null;
   actions: CalendarActions;
   onClose: () => void;
 }) {
-  const events = buildAllEvents(flights, transport, itinerary, accommodations, actions);
+  const allEvents = buildAllEvents(flights, transport, itinerary, accommodations, actions);
+  const events = category ? allEvents.filter((e) => e.category === category) : allEvents;
+  const heading = category
+    ? CATEGORY_LABELS[category].heading
+    : "Whole trip — every flight, bus/train leg, itinerary item, and stay";
 
   return (
     <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Whole trip — every flight, bus/train leg, itinerary item, and stay
-        </h6>
+        <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{heading}</h6>
         <button type="button" onClick={onClose} className={CLOSE_BUTTON_CLASSES}>
           Close
         </button>
@@ -703,7 +744,10 @@ function FullScreenCalendar({
   const [viewYear, setViewYear] = useState(trip.entry_year);
   const [viewMonth, setViewMonth] = useState(trip.entry_month);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [showAllEvents, setShowAllEvents] = useState(false);
+  // "all" is the "Show whole trip" toggle; a category is set by clicking
+  // one of the legend swatches, narrowing the same span view to just that
+  // kind. Only one of these (or a selected date) is ever active.
+  const [spanFilter, setSpanFilter] = useState<"all" | EventCategory | null>(null);
 
   const today = toIsoDateLocal(new Date());
   const weeks = buildWeeks(viewYear, viewMonth);
@@ -714,14 +758,32 @@ function FullScreenCalendar({
     setViewMonth(n.m);
   };
 
+  /** True if any flight/transport/itinerary/accommodation touches this date. */
+  const dayHasEvents = (iso: string): boolean =>
+    flights.some((f) => f.flight_date === iso) ||
+    transport.some((t) => t.travel_date === iso) ||
+    itinerary.some((item) => item.item_date <= iso && iso <= (item.item_end_date ?? item.item_date)) ||
+    accommodations.some((a) => a.checkin_date <= iso && iso <= a.checkout_date);
+
   const selectDate = (iso: string) => {
-    setShowAllEvents(false);
-    setSelectedDate((cur) => (cur === iso ? null : iso));
+    setSpanFilter(null);
+    const wasSelected = selectedDate === iso;
+    setSelectedDate(wasSelected ? null : iso);
+    // An empty date has nothing to review — go straight to logging
+    // something there instead of showing a blank "Nothing logged" panel.
+    if (!wasSelected && !dayHasEvents(iso)) {
+      actions.onAddItinerary(iso);
+    }
   };
 
   const toggleShowAll = () => {
     setSelectedDate(null);
-    setShowAllEvents((v) => !v);
+    setSpanFilter((v) => (v === "all" ? null : "all"));
+  };
+
+  const toggleCategory = (category: EventCategory) => {
+    setSelectedDate(null);
+    setSpanFilter((v) => (v === category ? null : category));
   };
 
   return (
@@ -740,9 +802,9 @@ function FullScreenCalendar({
           <button
             type="button"
             onClick={toggleShowAll}
-            className={showAllEvents ? TOGGLE_ACTIVE_BUTTON_CLASSES : TOGGLE_INACTIVE_BUTTON_CLASSES}
+            className={spanFilter === "all" ? TOGGLE_ACTIVE_BUTTON_CLASSES : TOGGLE_INACTIVE_BUTTON_CLASSES}
           >
-            {showAllEvents ? "Hide whole trip" : "Show whole trip"}
+            {spanFilter === "all" ? "Hide whole trip" : "Show whole trip"}
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
@@ -788,19 +850,22 @@ function FullScreenCalendar({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 border-b border-zinc-200 px-4 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400 sm:px-6">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-sky-500" /> Flights
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-violet-500" /> Bus/Train
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-amber-500" /> Itinerary
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" /> Accommodation
-        </span>
+      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-4 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400 sm:px-6">
+        {LEGEND_ITEMS.map(({ category, dot, activeClasses }) => (
+          <button
+            key={category}
+            type="button"
+            onClick={() => toggleCategory(category)}
+            title={`Show every ${CATEGORY_LABELS[category].legend.toLowerCase()} in this trip`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-medium transition-colors duration-150 ${
+              spanFilter === category
+                ? activeClasses
+                : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${dot}`} /> {CATEGORY_LABELS[category].legend}
+          </button>
+        ))}
         <div className="ml-auto flex flex-wrap gap-2">
           <button
             type="button"
@@ -865,14 +930,15 @@ function FullScreenCalendar({
             ))}
           </div>
 
-          {showAllEvents ? (
+          {spanFilter ? (
             <TripFullSpanDetails
               flights={flights}
               transport={transport}
               itinerary={itinerary}
               accommodations={accommodations}
+              category={spanFilter === "all" ? null : spanFilter}
               actions={actions}
-              onClose={() => setShowAllEvents(false)}
+              onClose={() => setSpanFilter(null)}
             />
           ) : (
             selectedDate && (
