@@ -10,8 +10,11 @@ import {
   type AppUserRow,
 } from "@/lib/api";
 import {
+  ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
   DASHED_EMPTY_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
@@ -271,14 +274,14 @@ export function UsersSettingsPanel() {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        className={SECONDARY_BUTTON_CLASSES}
+                        className={EDIT_BUTTON_CLASSES}
                         onClick={() => startEdit(user)}
                       >
                         Edit
                       </button>
                       <button
                         type="button"
-                        className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+                        className={DELETE_BUTTON_CLASSES}
                         onClick={() => handleDelete(user)}
                       >
                         Delete
@@ -336,7 +339,7 @@ export function UsersSettingsPanel() {
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            className={SECONDARY_BUTTON_CLASSES}
+            className={ACTION_BUTTON_CLASSES}
             disabled={verifying}
             onClick={handleVerify}
           >

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
   INPUT_CLASSES,
   PRIMARY_BUTTON_CLASSES,
@@ -605,7 +606,7 @@ export default function MamboClient() {
         </div>
         <button
           type="button"
-          className={`${SECONDARY_BUTTON_CLASSES} shrink-0`}
+          className={`${ACTION_BUTTON_CLASSES} shrink-0`}
           onClick={() => setFullscreen((v) => !v)}
         >
           {fullscreen ? "✕ Exit full screen" : "⛶ Full screen"}
@@ -668,7 +669,7 @@ export default function MamboClient() {
             >
               {generating ? "🎯 Generating…" : "🎯 Generate puzzle"}
             </button>
-            <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={newBlankBoard}>
+            <button type="button" className={ACTION_BUTTON_CLASSES} onClick={newBlankBoard}>
               New blank board
             </button>
             {generateStatus && (
@@ -684,10 +685,10 @@ export default function MamboClient() {
           <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
             <h2 className={sectionHeading}>Board</h2>
             <div className="flex gap-2">
-              <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={resetBoard}>
+              <button type="button" className={ACTION_BUTTON_CLASSES} onClick={resetBoard}>
                 ↺ Reset
               </button>
-              <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={clearSigns}>
+              <button type="button" className={ACTION_BUTTON_CLASSES} onClick={clearSigns}>
                 Clear signs
               </button>
             </div>
@@ -822,7 +823,7 @@ export default function MamboClient() {
                 className={`${INPUT_CLASSES} min-w-0 flex-1 px-2 py-1.5 text-xs`}
                 onFocus={(e) => e.currentTarget.select()}
               />
-              <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={copyCode}>
+              <button type="button" className={ACTION_BUTTON_CLASSES} onClick={copyCode}>
                 📋
               </button>
             </div>
@@ -836,7 +837,7 @@ export default function MamboClient() {
                 onChange={(e) => setCodeInput(e.target.value)}
                 className={`${INPUT_CLASSES} min-w-0 flex-1 px-2 py-1.5 text-xs`}
               />
-              <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={loadFromCode}>
+              <button type="button" className={ACTION_BUTTON_CLASSES} onClick={loadFromCode}>
                 Load
               </button>
             </div>

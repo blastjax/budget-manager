@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { CARD_CLASSES, PRIMARY_BUTTON_CLASSES, SECONDARY_BUTTON_CLASSES } from "@/lib/ui";
+import {
+  ACTION_BUTTON_CLASSES,
+  CARD_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+} from "@/lib/ui";
 import {
   breakdownSet,
   COLOR_PALETTE,
@@ -156,10 +160,10 @@ export default function SetsClient() {
           <div className="flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
             <h2 className={sectionHeading}>Board</h2>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={() => dealNew(DEFAULT_BOARD_SIZE)}>
+              <button type="button" className={ACTION_BUTTON_CLASSES} onClick={() => dealNew(DEFAULT_BOARD_SIZE)}>
                 Deal {DEFAULT_BOARD_SIZE} random
               </button>
-              <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={clearBoard}>
+              <button type="button" className={ACTION_BUTTON_CLASSES} onClick={clearBoard}>
                 Clear board
               </button>
             </div>

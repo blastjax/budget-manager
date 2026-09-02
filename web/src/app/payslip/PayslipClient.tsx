@@ -43,7 +43,16 @@ import { PayslipClientModal } from "./PayslipClientModal";
 import { PayslipYearStatsSection } from "./PayslipYearStatsSection";
 import { YearPayslipBlock } from "./YearPayslipBlock";
 import { Modal } from "@/components/Modal";
-import { CARD_CLASSES, ERROR_ALERT_CLASSES } from "@/lib/ui";
+import {
+  ACTION_BUTTON_CLASSES,
+  CARD_CLASSES,
+  CLOSE_BUTTON_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  DETAIL_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
+  ERROR_ALERT_CLASSES,
+  ICON_BUTTON_CLASSES,
+} from "@/lib/ui";
 import { PdfBulkUploadClient } from "./pdfs/PdfBulkUploadClient";
 
 /** localStorage key for the show/hide-gross toggle on the calendar. */
@@ -484,7 +493,7 @@ export default function PayslipClient() {
             <button
               type="button"
               onClick={() => setPdfModalOpen(true)}
-              className="flex h-9 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className={`flex h-9 items-center gap-1.5 ${ACTION_BUTTON_CLASSES}`}
             >
               <PdfUploadIcon className="h-4 w-4" />
               Upload PDFs
@@ -503,7 +512,7 @@ export default function PayslipClient() {
                   ? "Hide gross amounts in calendar"
                   : "Show gross amounts in calendar"
               }
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-zinc-300 dark:border-zinc-600`}
             >
               {showGross ? <EyeIcon /> : <EyeOffIcon />}
             </button>
@@ -545,7 +554,7 @@ export default function PayslipClient() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs hover:bg-white dark:border-zinc-600 sm:px-3 sm:text-sm dark:hover:bg-zinc-800"
+                      className={DETAIL_BUTTON_CLASSES}
                       onClick={() =>
                         setNav({ screen: "detail", row: r })
                       }
@@ -554,7 +563,7 @@ export default function PayslipClient() {
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs hover:bg-white dark:border-zinc-600 sm:px-3 sm:text-sm dark:hover:bg-zinc-800"
+                      className={EDIT_BUTTON_CLASSES}
                       onClick={() => {
                         setModalForm(formFromRow(r));
                         setNav({ screen: "edit", row: r });
@@ -564,7 +573,7 @@ export default function PayslipClient() {
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 sm:px-3 sm:text-sm dark:hover:bg-red-950/40"
+                      className={DELETE_BUTTON_CLASSES}
                       onClick={() => void handleDelete(r.id)}
                     >
                       Delete
@@ -609,7 +618,7 @@ export default function PayslipClient() {
             </h2>
             <button
               type="button"
-              className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+              className={CLOSE_BUTTON_CLASSES}
               onClick={() => setPdfModalOpen(false)}
             >
               Close

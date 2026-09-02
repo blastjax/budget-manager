@@ -13,9 +13,9 @@ import {
 } from "@/lib/chartPalette";
 import type { BudgetTheme } from "@/lib/theme";
 import {
+  ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
   PRIMARY_BUTTON_CLASSES,
-  SECONDARY_BUTTON_CLASSES,
   SEGMENTED_BUTTON_ACTIVE_CLASSES,
   SEGMENTED_BUTTON_CLASSES,
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
@@ -78,10 +78,10 @@ export function ChartColorsSettingsPanel() {
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={() => setTheme("light")}>
+        <button type="button" className={ACTION_BUTTON_CLASSES} onClick={() => setTheme("light")}>
           App: light
         </button>
-        <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={() => setTheme("dark")}>
+        <button type="button" className={ACTION_BUTTON_CLASSES} onClick={() => setTheme("dark")}>
           App: dark
         </button>
       </div>
@@ -130,7 +130,7 @@ export function ChartColorsSettingsPanel() {
         </button>
         <button
           type="button"
-          className={SECONDARY_BUTTON_CLASSES}
+          className={ACTION_BUTTON_CLASSES}
           onClick={() => {
             setChartPalette((p) => ({
               ...p,
@@ -147,7 +147,7 @@ export function ChartColorsSettingsPanel() {
         </button>
         <button
           type="button"
-          className={SECONDARY_BUTTON_CLASSES}
+          className={ACTION_BUTTON_CLASSES}
           onClick={() => {
             setChartPalette(defaultChartPalette());
             setPaletteSaveMsg(
@@ -159,7 +159,7 @@ export function ChartColorsSettingsPanel() {
         </button>
         <button
           type="button"
-          className={SECONDARY_BUTTON_CLASSES}
+          className={ACTION_BUTTON_CLASSES}
           onClick={() => {
             setChartPalette(loadChartPalette());
             setPaletteSaveMsg("Reloaded palette from storage.");

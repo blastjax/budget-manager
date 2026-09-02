@@ -29,7 +29,10 @@ import { formatDateTime, formatMonthDayShort } from "@/lib/dateFormat";
 import { fmtIntegerOrDash } from "@/lib/formatNumber";
 import {
   CARD_CLASSES,
+  CLOSE_BUTTON_CLASSES,
   DASHED_EMPTY_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   PRIMARY_BUTTON_CLASSES,
@@ -524,7 +527,7 @@ export default function BloodPressureClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800 sm:px-3 sm:text-sm"
+                      className={EDIT_BUTTON_CLASSES}
                       onClick={() => openEdit(r)}
                     >
                       Edit
@@ -532,7 +535,7 @@ export default function BloodPressureClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
+                      className={DELETE_BUTTON_CLASSES}
                       onClick={() => void onDelete(r.id)}
                     >
                       Delete
@@ -561,7 +564,7 @@ export default function BloodPressureClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeModal}
           >
             Close

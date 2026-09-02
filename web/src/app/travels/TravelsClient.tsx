@@ -9,13 +9,17 @@ import { Modal } from "@/components/Modal";
 import { TimeField } from "@/components/TimeField";
 import { TripCalendar } from "@/components/TripCalendar";
 import {
-  TRAVEL_ADD_BUTTON,
-  TRAVEL_CLOSE_BUTTON,
-  TRAVEL_DELETE_BUTTON,
-  TRAVEL_EDIT_BUTTON,
-  TRAVEL_PRIMARY_BUTTON,
-  TRAVEL_SECONDARY_BUTTON,
-} from "@/app/travels/travelButtonStyles";
+  ADD_BUTTON_CLASSES,
+  CARD_CLASSES,
+  CLOSE_BUTTON_CLASSES,
+  DASHED_EMPTY_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
+  ERROR_ALERT_CLASSES,
+  INPUT_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
+} from "@/lib/ui";
 import {
   createTravelAccommodation,
   createTravelFlight,
@@ -41,7 +45,6 @@ import {
 } from "@/lib/api";
 import { formatDate, formatTimeLabel, formatTimeRange, MONTH_NAMES_FULL } from "@/lib/dateFormat";
 import { mapsUrlFor } from "@/lib/maps";
-import { CARD_CLASSES, DASHED_EMPTY_CLASSES, ERROR_ALERT_CLASSES, INPUT_CLASSES } from "@/lib/ui";
 
 const TIME_HELP =
   "Enter time as HH:MM in 24-hour format (e.g. 14:30) — or just digits, e.g. 1430.";
@@ -111,13 +114,13 @@ function ItemRow({
     <li className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="min-w-0 flex-1 text-sm">{children}</div>
       <div className="flex shrink-0 items-center gap-2">
-        <button type="button" disabled={saving} className={TRAVEL_EDIT_BUTTON} onClick={onEdit}>
+        <button type="button" disabled={saving} className={EDIT_BUTTON_CLASSES} onClick={onEdit}>
           Edit
         </button>
         <button
           type="button"
           disabled={saving}
-          className={TRAVEL_DELETE_BUTTON}
+          className={DELETE_BUTTON_CLASSES}
           onClick={onDelete}
         >
           Delete
@@ -839,7 +842,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_EDIT_BUTTON}
+              className={EDIT_BUTTON_CLASSES}
               onClick={() => openEditTrip(detail)}
             >
               Edit
@@ -847,7 +850,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_DELETE_BUTTON}
+              className={DELETE_BUTTON_CLASSES}
               onClick={() => void onDeleteTrip(trip.id)}
             >
               Delete
@@ -887,7 +890,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_ADD_BUTTON}
+              className={ADD_BUTTON_CLASSES}
               onClick={() => openAddFlight(trip.id)}
             >
               + Add flight
@@ -951,7 +954,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_ADD_BUTTON}
+              className={ADD_BUTTON_CLASSES}
               onClick={() => openAddTransport(trip.id)}
             >
               + Add bus/train
@@ -1015,7 +1018,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_ADD_BUTTON}
+              className={ADD_BUTTON_CLASSES}
               onClick={() => openAddItinerary(trip.id)}
             >
               + Add item
@@ -1075,7 +1078,7 @@ export default function TravelsClient() {
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_ADD_BUTTON}
+              className={ADD_BUTTON_CLASSES}
               onClick={() => openAddAccommodation(trip.id)}
             >
               + Add stay
@@ -1227,7 +1230,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className={TRAVEL_CLOSE_BUTTON}
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeTripModal}
           >
             Close
@@ -1325,13 +1328,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
+            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
               {saving ? "Saving…" : tripModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_SECONDARY_BUTTON}
+              className={SECONDARY_BUTTON_CLASSES}
               onClick={closeTripModal}
             >
               Cancel
@@ -1351,7 +1354,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className={TRAVEL_CLOSE_BUTTON}
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeFlightModal}
           >
             Close
@@ -1482,13 +1485,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
+            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
               {saving ? "Saving…" : flightModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_SECONDARY_BUTTON}
+              className={SECONDARY_BUTTON_CLASSES}
               onClick={closeFlightModal}
             >
               Cancel
@@ -1510,7 +1513,7 @@ export default function TravelsClient() {
           >
             {transportModal.editId != null ? "Edit bus/train leg" : "Add bus/train leg"}
           </h2>
-          <button type="button" className={TRAVEL_CLOSE_BUTTON} onClick={closeTransportModal}>
+          <button type="button" className={CLOSE_BUTTON_CLASSES} onClick={closeTransportModal}>
             Close
           </button>
         </div>
@@ -1654,13 +1657,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
+            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
               {saving ? "Saving…" : transportModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_SECONDARY_BUTTON}
+              className={SECONDARY_BUTTON_CLASSES}
               onClick={closeTransportModal}
             >
               Cancel
@@ -1684,7 +1687,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className={TRAVEL_CLOSE_BUTTON}
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeItineraryModal}
           >
             Close
@@ -1807,13 +1810,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
+            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
               {saving ? "Saving…" : itineraryModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_SECONDARY_BUTTON}
+              className={SECONDARY_BUTTON_CLASSES}
               onClick={closeItineraryModal}
             >
               Cancel
@@ -1837,7 +1840,7 @@ export default function TravelsClient() {
           </h2>
           <button
             type="button"
-            className={TRAVEL_CLOSE_BUTTON}
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeAccommodationModal}
           >
             Close
@@ -1974,13 +1977,13 @@ export default function TravelsClient() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={saving} className={TRAVEL_PRIMARY_BUTTON}>
+            <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
               {saving ? "Saving…" : accommodationModal.editId != null ? "Update" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
-              className={TRAVEL_SECONDARY_BUTTON}
+              className={SECONDARY_BUTTON_CLASSES}
               onClick={closeAccommodationModal}
             >
               Cancel

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
   INPUT_CLASSES,
   PRIMARY_BUTTON_CLASSES,
@@ -656,7 +657,7 @@ export default function MosaicClient() {
         </div>
         <button
           type="button"
-          className={`${SECONDARY_BUTTON_CLASSES} shrink-0`}
+          className={`${ACTION_BUTTON_CLASSES} shrink-0`}
           onClick={() => setFullscreen((v) => !v)}
         >
           {fullscreen ? "✕ Exit full screen" : "⛶ Full screen"}
@@ -707,7 +708,7 @@ export default function MosaicClient() {
             <button type="button" className={PRIMARY_BUTTON_CLASSES} onClick={newBoard}>
               New blank board
             </button>
-            <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={randomFill}>
+            <button type="button" className={ACTION_BUTTON_CLASSES} onClick={randomFill}>
               🎲 Random fill
             </button>
           </div>
@@ -719,20 +720,20 @@ export default function MosaicClient() {
             <div className="flex gap-2">
               <button
                 type="button"
-                className={mode === "paint" ? PRIMARY_BUTTON_CLASSES : SECONDARY_BUTTON_CLASSES}
+                className={mode === "paint" ? PRIMARY_BUTTON_CLASSES : ACTION_BUTTON_CLASSES}
                 onClick={togglePaint}
               >
                 🖌 Paint tiles
               </button>
               <button
                 type="button"
-                className={mode === "seed" ? PRIMARY_BUTTON_CLASSES : SECONDARY_BUTTON_CLASSES}
+                className={mode === "seed" ? PRIMARY_BUTTON_CLASSES : ACTION_BUTTON_CLASSES}
                 onClick={toggleSeed}
               >
                 📍 Set start
               </button>
             </div>
-            <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={resetPuzzle}>
+            <button type="button" className={ACTION_BUTTON_CLASSES} onClick={resetPuzzle}>
               ↺ Reset
             </button>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{modeLabel}</p>
@@ -804,7 +805,7 @@ export default function MosaicClient() {
                 onChange={(e) => setCodeInput(e.target.value)}
                 className={`${INPUT_CLASSES} flex-1 px-2 py-1.5 text-xs`}
               />
-              <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={loadFromCode}>
+              <button type="button" className={ACTION_BUTTON_CLASSES} onClick={loadFromCode}>
                 Load
               </button>
             </div>
@@ -886,7 +887,7 @@ export default function MosaicClient() {
                   >
                     Next ⏭
                   </button>
-                  <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={togglePlay}>
+                  <button type="button" className={ACTION_BUTTON_CLASSES} onClick={togglePlay}>
                     {playing ? "⏸ Pause" : "▶ Play"}
                   </button>
                 </div>

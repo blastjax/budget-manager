@@ -8,6 +8,7 @@ const sidebarNavInactiveHover =
 import { dataApiBase } from "@/lib/api";
 import { clearSessionToken, getSessionToken } from "@/lib/auth";
 import { useShellLayout } from "@/lib/shellLayoutContext";
+import { ICON_BUTTON_CLASSES, SECONDARY_BUTTON_CLASSES } from "@/lib/ui";
 import { useLgUp } from "@/lib/useLgUp";
 
 type NavLink = { href: string; label: string; indent?: boolean };
@@ -112,7 +113,7 @@ export function SidebarNav() {
         <div className="flex shrink-0 items-center justify-end gap-1 lg:hidden">
           <button
             type="button"
-            className="rounded-md px-2 py-1.5 text-sm text-zinc-600 transition-colors duration-150 hover:bg-zinc-200/60 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+            className={ICON_BUTTON_CLASSES}
             aria-label="Close menu"
             onClick={closeMobileNav}
           >
@@ -164,7 +165,7 @@ export function SidebarNav() {
             <button
               type="button"
               onClick={handleLogout}
-              className={`w-full rounded-md px-3 py-2 text-left text-sm text-zinc-700 dark:text-zinc-300 ${sidebarNavInactiveHover}`}
+              className={`w-full ${SECONDARY_BUTTON_CLASSES}`}
             >
               Log out
             </button>

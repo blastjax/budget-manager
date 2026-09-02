@@ -32,6 +32,11 @@ import { fmtNum, fmtPayPeriod, slotTitle } from "./payslipDisplay";
 import type { FormState } from "./payslipModalForm";
 import type { Nav } from "./payslipNav";
 import {
+  ACTION_BUTTON_CLASSES,
+  CLOSE_BUTTON_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  DETAIL_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
@@ -93,7 +98,7 @@ export function PayslipClientModal({
                   </h2>
                   <button
                     type="button"
-                    className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                    className={CLOSE_BUTTON_CLASSES}
                     onClick={() => setNav(null)}
                   >
                     Close
@@ -133,7 +138,7 @@ export function PayslipClientModal({
                                 <div className="flex shrink-0 gap-1">
                                   <button
                                     type="button"
-                                    className="rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                                    className={DETAIL_BUTTON_CLASSES}
                                     onClick={() =>
                                       setNav({ screen: "detail", row: r })
                                     }
@@ -142,7 +147,7 @@ export function PayslipClientModal({
                                   </button>
                                   <button
                                     type="button"
-                                    className="rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-600"
+                                    className={EDIT_BUTTON_CLASSES}
                                     onClick={() => {
                                       setModalForm(formFromRow(r));
                                       setNav({ screen: "edit", row: r });
@@ -152,7 +157,7 @@ export function PayslipClientModal({
                                   </button>
                                   <button
                                     type="button"
-                                    className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                                    className={DELETE_BUTTON_CLASSES}
                                     onClick={() => void handleDelete(r.id)}
                                   >
                                     Delete
@@ -233,7 +238,7 @@ export function PayslipClientModal({
                   </div>
                   <button
                     type="button"
-                    className="shrink-0 rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+                    className={`shrink-0 ${CLOSE_BUTTON_CLASSES}`}
                     onClick={() => setNav(null)}
                   >
                     Close
@@ -384,7 +389,7 @@ export function PayslipClientModal({
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
-                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm text-white transition-colors duration-150 hover:bg-indigo-500"
+                    className={PRIMARY_BUTTON_CLASSES}
                     onClick={() => {
                       setModalForm(formFromRow(row));
                       setNav({ screen: "edit", row });
@@ -394,7 +399,7 @@ export function PayslipClientModal({
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-red-300 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:text-red-300"
+                    className={DELETE_BUTTON_CLASSES}
                     onClick={() => void handleDelete(row.id)}
                   >
                     Delete
@@ -453,7 +458,7 @@ export function PayslipClientModal({
                   </div>
                   <button
                     type="button"
-                    className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+                    className={CLOSE_BUTTON_CLASSES}
                     onClick={goBack}
                   >
                     Back
@@ -507,7 +512,7 @@ export function PayslipClientModal({
                   </h2>
                   <button
                     type="button"
-                    className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+                    className={CLOSE_BUTTON_CLASSES}
                     onClick={goBack}
                   >
                     Back
@@ -552,7 +557,7 @@ export function PayslipClientModal({
                   </h2>
                   <button
                     type="button"
-                    className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+                    className={CLOSE_BUTTON_CLASSES}
                     onClick={() => {
                       stashPayslipModalDraft(nav, modalFormRef.current);
                       setNav(null);
@@ -604,8 +609,6 @@ export function PayslipClientModal({
   );
 }
 
-const PDF_BTN =
-  "rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800";
 
 /**
  * PDF attachment for a single payslip entry: one PDF per entry. Shows an
@@ -710,13 +713,13 @@ function PayslipPdfPanel({
           <>
             <button
               type="button"
-              className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition-colors duration-150 hover:bg-indigo-500"
+              className={PRIMARY_BUTTON_CLASSES}
               onClick={() => setShowing((s) => !s)}
             >
               {showing ? "Hide payslip" : "Show payslip"}
             </button>
             <a
-              className={`${PDF_BTN}${blobUrl ? "" : " pointer-events-none opacity-50"}`}
+              className={`${SECONDARY_BUTTON_CLASSES}${blobUrl ? "" : " pointer-events-none opacity-50"}`}
               href={blobUrl ?? undefined}
               target="_blank"
               rel="noreferrer"
@@ -725,7 +728,7 @@ function PayslipPdfPanel({
             </a>
             <button
               type="button"
-              className={PDF_BTN}
+              className={ACTION_BUTTON_CLASSES}
               onClick={() => fileRef.current?.click()}
               disabled={busy}
             >
@@ -733,7 +736,7 @@ function PayslipPdfPanel({
             </button>
             <button
               type="button"
-              className="rounded-md border border-red-300 px-3 py-2 text-sm text-red-700 transition-colors duration-150 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+              className={DELETE_BUTTON_CLASSES}
               onClick={() => void handleRemove()}
               disabled={busy}
             >
@@ -743,7 +746,7 @@ function PayslipPdfPanel({
         ) : (
           <button
             type="button"
-            className={PDF_BTN}
+            className={ACTION_BUTTON_CLASSES}
             onClick={() => fileRef.current?.click()}
             disabled={busy}
           >

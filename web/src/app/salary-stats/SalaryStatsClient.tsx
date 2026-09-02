@@ -36,6 +36,7 @@ import {
   parseMonthKey as sharedParseMonthKey,
 } from "@/lib/dateFormat";
 import {
+  ACTION_BUTTON_CLASSES,
   AMOUNT_NEGATIVE_CLASSES,
   AMOUNT_POSITIVE_CLASSES,
   CARD_CLASSES,
@@ -43,7 +44,6 @@ import {
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
-  SECONDARY_BUTTON_CLASSES,
   SEGMENTED_BUTTON_ACTIVE_CLASSES,
   SEGMENTED_BUTTON_CLASSES,
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
@@ -226,8 +226,7 @@ function formatMonthKeyButtonLabel(key: string): string {
   return formatMonthYear(p.y, p.m);
 }
 
-const pickerBtnClass =
-  "w-full min-w-[10rem] rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-left text-sm font-medium text-zinc-900 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800/60";
+const pickerBtnClass = `w-full min-w-[10rem] text-left ${ACTION_BUTTON_CLASSES}`;
 const pickerYearNavBtnClass = `${CHART_ZOOM_BUTTON_CLASSES} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-500`;
 
 type LineRangePickerAlign = "left" | "right";
@@ -350,10 +349,10 @@ function LineRangeMonthPicker({
                 <button
                   key={mk}
                   type="button"
-                  className={`rounded-md border px-1.5 py-2 text-center text-xs font-medium transition-colors duration-150 sm:px-2 sm:text-sm ${
+                  className={`rounded-full border-2 px-1.5 py-2 text-center text-xs font-medium transition-colors duration-150 sm:px-2 sm:text-sm ${
                     selected
                       ? "border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-600"
-                      : "border-zinc-200 bg-zinc-50 text-zinc-800 hover:border-zinc-300 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:border-zinc-500 dark:hover:bg-zinc-700"
+                      : "border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/70"
                   }`}
                   onClick={() => {
                     onChange(mk);
@@ -787,21 +786,21 @@ export default function SalaryStatsClient() {
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button
                   type="button"
-                  className={SECONDARY_BUTTON_CLASSES}
+                  className={ACTION_BUTTON_CLASSES}
                   onClick={toggleAllSeries}
                 >
                   Toggle all series
                 </button>
                 <button
                   type="button"
-                  className={SECONDARY_BUTTON_CLASSES}
+                  className={ACTION_BUTTON_CLASSES}
                   onClick={toggleAdditionsSeries}
                 >
                   Toggle additions
                 </button>
                 <button
                   type="button"
-                  className={SECONDARY_BUTTON_CLASSES}
+                  className={ACTION_BUTTON_CLASSES}
                   onClick={toggleDeductionsSeries}
                 >
                   Toggle deductions

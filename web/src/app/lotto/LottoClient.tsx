@@ -19,19 +19,24 @@ import {
 import { formatDate } from "@/lib/dateFormat";
 import { fmtAmountOrDash, fmtCount } from "@/lib/formatNumber";
 import {
+  ACTION_BUTTON_CLASSES,
+  ADD_BUTTON_CLASSES,
   CARD_CLASSES,
+  CLOSE_BUTTON_CLASSES,
   DASHED_EMPTY_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  DETAIL_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
+  alertClasses,
 } from "@/lib/ui";
 
 /** Success-tone banner box, matching ui.ts's `ERROR_ALERT_CLASSES` pattern
  * (border + tinted background + tinted text, no shadow) for the tone it
  * doesn't cover. */
-const SUCCESS_ALERT_CLASSES =
-  "rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200";
 
 const NUMBERS_HELP =
   "6 unique numbers, 1-58 — separate with commas, spaces, or dashes (e.g. 3, 17, 29, 42, 58, 1 or 03-17-29-42-58-01)";
@@ -894,7 +899,7 @@ export default function LottoClient() {
           <button
             type="button"
             disabled={saving}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            className={EDIT_BUTTON_CLASSES}
             onClick={() => openEditAttempt(detail.draw.id, attempt)}
           >
             Edit
@@ -902,7 +907,7 @@ export default function LottoClient() {
           <button
             type="button"
             disabled={saving}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            className={DETAIL_BUTTON_CLASSES}
             onClick={() => void onToggleAttemptHidden(detail.draw.id, attempt)}
           >
             {attempt.hidden ? "Unhide" : "Hide"}
@@ -910,7 +915,7 @@ export default function LottoClient() {
           <button
             type="button"
             disabled={saving}
-            className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+            className={DELETE_BUTTON_CLASSES}
             onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
           >
             Delete
@@ -983,7 +988,7 @@ export default function LottoClient() {
             <button
               type="button"
               disabled={saving}
-              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+              className={`${ADD_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
               onClick={() => openAddAttempt(detail.draw.id)}
             >
               + Add attempt
@@ -991,7 +996,7 @@ export default function LottoClient() {
             <button
               type="button"
               disabled={saving}
-              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+              className={`${EDIT_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
               onClick={() => openEditDraw(detail)}
             >
               Edit
@@ -999,7 +1004,7 @@ export default function LottoClient() {
             <button
               type="button"
               disabled={saving}
-              className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
+              className={DELETE_BUTTON_CLASSES}
               onClick={() => void onDeleteDraw(detail.draw.id)}
             >
               Delete
@@ -1022,7 +1027,7 @@ export default function LottoClient() {
               <button
                 type="button"
                 disabled={saving}
-                className="rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-medium text-zinc-500 transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className={DETAIL_BUTTON_CLASSES}
                 onClick={() => toggleShowHiddenForDraw(detail.draw.id)}
               >
                 {showHiddenForDraw
@@ -1073,7 +1078,7 @@ export default function LottoClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                      className={DETAIL_BUTTON_CLASSES}
                       onClick={() =>
                         void onToggleTicketHidden(
                           detail.draw.id,
@@ -1087,7 +1092,7 @@ export default function LottoClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-normal transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                      className={ADD_BUTTON_CLASSES}
                       onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
                     >
                       + Add to this ticket
@@ -1131,7 +1136,7 @@ export default function LottoClient() {
           <button
             type="button"
             disabled={saving}
-            className={`${SECONDARY_BUTTON_CLASSES} mt-3 px-2 py-1 text-xs`}
+            className={`${ADD_BUTTON_CLASSES} mt-3 px-2 py-1 text-xs`}
             onClick={() => openAddAttempt(detail.draw.id)}
           >
             + Add attempt
@@ -1160,7 +1165,7 @@ export default function LottoClient() {
           <div className="flex shrink-0 flex-wrap gap-2">
             <button
               type="button"
-              className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+              className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
               onClick={openImport}
               title="Bulk-load historic results (date, numbers, jackpot, winners) from a pipe-delimited text file"
             >
@@ -1168,7 +1173,7 @@ export default function LottoClient() {
             </button>
             <button
               type="button"
-              className={`${SECONDARY_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+              className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
               onClick={openUpload}
             >
               Upload from txt
@@ -1192,7 +1197,7 @@ export default function LottoClient() {
           {totalHiddenAttempts > 0 && (
             <button
               type="button"
-              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+              className={`${ACTION_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
               onClick={toggleShowHiddenAll}
             >
               {allHiddenShown
@@ -1203,7 +1208,7 @@ export default function LottoClient() {
           {collapsibleDraws.length > 0 && (
             <button
               type="button"
-              className={`${SECONDARY_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+              className={`${ACTION_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
               onClick={toggleCollapseAll}
             >
               {allCollapsed ? "Expand all" : "Collapse all"}
@@ -1266,7 +1271,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeDrawModal}
           >
             Close
@@ -1329,7 +1334,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeAttemptModal}
           >
             Close
@@ -1393,7 +1398,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeUploadModal}
           >
             Close
@@ -1458,7 +1463,7 @@ export default function LottoClient() {
           </h2>
           <button
             type="button"
-            className="rounded border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeImportModal}
           >
             Close
@@ -1471,7 +1476,7 @@ export default function LottoClient() {
             </div>
           )}
           {importSummary && (
-            <div className={SUCCESS_ALERT_CLASSES}>
+            <div className={alertClasses("success")}>
               Imported {fmtCount(importSummary.total)} row
               {importSummary.total === 1 ? "" : "s"}: {fmtCount(importSummary.inserted)} added,{" "}
               {fmtCount(importSummary.updated)} updated.

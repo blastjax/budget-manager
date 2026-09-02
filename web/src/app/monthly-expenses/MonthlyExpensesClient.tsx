@@ -20,7 +20,9 @@ import {
 import {
   AMOUNT_NEGATIVE_CLASSES,
   CARD_CLASSES,
+  CLOSE_BUTTON_CLASSES,
   DASHED_EMPTY_CLASSES,
+  DELETE_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
@@ -265,7 +267,7 @@ export default function MonthlyExpensesClient() {
                         </span>
                         <button
                           type="button"
-                          className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+                          className={DELETE_BUTTON_CLASSES}
                           onClick={(e) => {
                             e.stopPropagation();
                             void onDelete(exp.id);
@@ -300,7 +302,7 @@ export default function MonthlyExpensesClient() {
           </div>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeModal}
           >
             Close
@@ -375,7 +377,7 @@ export default function MonthlyExpensesClient() {
                 <button
                   key={half}
                   type="button"
-                  className={`flex-1 rounded-md px-4 py-3 text-base font-medium transition-colors duration-150 ${
+                  className={`flex-1 rounded-full px-4 py-3 text-base font-medium transition-colors duration-150 ${
                     form.period_half === half
                       ? SEGMENTED_BUTTON_ACTIVE_CLASSES
                       : SEGMENTED_BUTTON_INACTIVE_CLASSES

@@ -37,8 +37,13 @@ import {
   parseFormNumber,
 } from "@/lib/parseFormNumber";
 import {
+  ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
+  CLOSE_BUTTON_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
+  ICON_BUTTON_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
   PRIMARY_BUTTON_CLASSES,
@@ -367,7 +372,16 @@ const DayGridCell = memo(function DayGridCell({
               : "text-zinc-600 dark:text-zinc-400"
         }`}
       >
-        {dailyBudget != null ? fmtCompactMoney(dailyBudget) : "–"}
+        {dailyBudget != null ? (
+          <>
+            {/* Narrow cells only fit the rounded form; from `sm` up there is room
+                for the exact amount, which is what the day is actually worth. */}
+            <span className="sm:hidden">{fmtCompactMoney(dailyBudget)}</span>
+            <span className="hidden sm:inline">{fmtMoney(dailyBudget)}</span>
+          </>
+        ) : (
+          "–"
+        )}
       </span>
     </div>
   );
@@ -1447,7 +1461,7 @@ export default function CalendarClient() {
                       type="button"
                       aria-label="Adjust pay date"
                       onClick={() => openPayDateModal(half)}
-                      className="absolute right-3 top-3 rounded-md border border-emerald-300 bg-white/80 px-1.5 py-1 text-[11px] font-medium text-emerald-700 hover:bg-white dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      className={`absolute right-3 top-3 ${EDIT_BUTTON_CLASSES}`}
                     >
                       Edit date
                     </button>
@@ -1525,7 +1539,7 @@ export default function CalendarClient() {
                   type="button"
                   aria-label="Previous month"
                   onClick={goToPrevMonth}
-                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition-colors duration-150 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                  className={`${ICON_BUTTON_CLASSES} text-2xl leading-none`}
                 >
                   ‹
                 </button>
@@ -1536,7 +1550,7 @@ export default function CalendarClient() {
                   type="button"
                   aria-label="Next month"
                   onClick={goToNextMonth}
-                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 text-2xl leading-none text-zinc-600 transition-colors duration-150 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                  className={`${ICON_BUTTON_CLASSES} text-2xl leading-none`}
                 >
                   ›
                 </button>
@@ -1546,7 +1560,7 @@ export default function CalendarClient() {
                   <button
                     type="button"
                     onClick={goToToday}
-                    className="rounded-md border-2 border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors duration-150 hover:border-purple-400 hover:text-purple-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-purple-500 dark:hover:text-purple-300"
+                    className={ACTION_BUTTON_CLASSES}
                   >
                     Today
                   </button>
@@ -1556,7 +1570,7 @@ export default function CalendarClient() {
                   onClick={() => void autoDivideActiveDays()}
                   disabled={autoDividing}
                   title="Reset today and future days this month to an even split of their pay period's budget"
-                  className="rounded-md border-2 border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors duration-150 hover:border-purple-400 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-purple-500 dark:hover:text-purple-300"
+                  className={`${ACTION_BUTTON_CLASSES} disabled:cursor-not-allowed`}
                 >
                   {autoDividing ? "Dividing…" : "Auto-divide"}
                 </button>
@@ -1629,7 +1643,7 @@ export default function CalendarClient() {
           </div>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeExpenseModal}
           >
             Close
@@ -1734,7 +1748,7 @@ export default function CalendarClient() {
                     <td className="py-2 text-right">
                       <button
                         type="button"
-                        className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                        className={DELETE_BUTTON_CLASSES}
                         onClick={() => void onDeleteExpense(exp.id)}
                       >
                         Delete
@@ -1787,7 +1801,7 @@ export default function CalendarClient() {
                     <td className="py-2 text-right">
                       <button
                         type="button"
-                        className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                        className={DELETE_BUTTON_CLASSES}
                         onClick={() => void onDeleteMonthlyExpense(exp.id)}
                       >
                         Delete
@@ -1861,7 +1875,7 @@ export default function CalendarClient() {
                   />
                   <button
                     type="button"
-                    className={SECONDARY_BUTTON_CLASSES}
+                    className={ACTION_BUTTON_CLASSES}
                     onClick={() => setTransferAmount(formatAmountNumber(roundCents(transfer.fromAmount)))}
                     disabled={savingTransfer}
                   >

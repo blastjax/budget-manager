@@ -9,10 +9,10 @@ import {
   setSessionToken,
 } from "@/lib/auth";
 import {
+  ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
   INPUT_CLASSES,
   PRIMARY_BUTTON_CLASSES,
-  SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 
 type Status = "checking" | "unreachable" | "unauthenticated" | "authenticated";
@@ -116,7 +116,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={checkStatus}
-            className={`w-full ${SECONDARY_BUTTON_CLASSES} text-center`}
+            className={`w-full ${ACTION_BUTTON_CLASSES} text-center`}
           >
             Retry
           </button>

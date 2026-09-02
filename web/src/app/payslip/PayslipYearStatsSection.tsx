@@ -7,6 +7,7 @@ import {
   type PayslipIndex,
 } from "./payslipAggregates";
 import { fmtAmount } from "@/lib/formatNumber";
+import { ICON_BUTTON_CLASSES } from "@/lib/ui";
 import { fmtNum, fmtPctOfTotal } from "./payslipDisplay";
 import {
   DEFAULT_STAT_CARD_ORDER,
@@ -247,7 +248,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
       <div className="mb-3 flex items-center justify-center gap-2 tabular-nums sm:mb-4 sm:gap-3">
         <button
           type="button"
-          className="flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-white text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-zinc-300 dark:border-zinc-600`}
           aria-label="Previous year"
           disabled={statsYear <= 1900}
           onClick={() => setStatsYear((y) => Math.max(1900, y - 1))}
@@ -259,7 +260,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
         </span>
         <button
           type="button"
-          className="flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-white text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-zinc-300 dark:border-zinc-600`}
           aria-label="Next year"
           disabled={statsYear >= 2200}
           onClick={() => setStatsYear((y) => Math.min(2200, y + 1))}

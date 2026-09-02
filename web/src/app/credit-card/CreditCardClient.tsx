@@ -25,7 +25,10 @@ import { formatDate } from "@/lib/dateFormat";
 import { fmtAmountOrDash } from "@/lib/formatNumber";
 import {
   CARD_CLASSES,
+  CLOSE_BUTTON_CLASSES,
   DASHED_EMPTY_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
@@ -437,14 +440,14 @@ export default function CreditCardClient() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className={SECONDARY_BUTTON_CLASSES}
+                  className={EDIT_BUTTON_CLASSES}
                   onClick={openCardModal}
                 >
                   Edit
                 </button>
                 <button
                   type="button"
-                  className="rounded-md border border-red-200 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:text-red-300"
+                  className={DELETE_BUTTON_CLASSES}
                   onClick={() => void onRemoveCard()}
                 >
                   Remove
@@ -818,7 +821,7 @@ export default function CreditCardClient() {
                       </span>
                       <button
                         type="button"
-                        className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 dark:border-red-900 dark:text-red-300"
+                        className={DELETE_BUTTON_CLASSES}
                         onClick={() => void onDeletePayment(p.id)}
                       >
                         Delete
@@ -846,7 +849,7 @@ export default function CreditCardClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeCardModal}
           >
             Close
@@ -983,7 +986,7 @@ export default function CreditCardClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closePaymentModal}
           >
             Close
@@ -1064,7 +1067,7 @@ export default function CreditCardClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closeBalanceModal}
           >
             Close

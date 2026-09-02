@@ -24,9 +24,11 @@ import {
 import { formatDate as fmtDate } from "@/lib/dateFormat";
 import { fmtAmountOrDash, fmtCount } from "@/lib/formatNumber";
 import {
-  alertClasses,
   AMOUNT_POSITIVE_CLASSES,
+  CLOSE_BUTTON_CLASSES,
   DASHED_EMPTY_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
@@ -37,6 +39,7 @@ import {
   TABLE_HEAD_ROW_CLASSES,
   TABLE_ROW_CLASSES,
   TABLE_WRAPPER_CLASSES,
+  alertClasses,
 } from "@/lib/ui";
 
 const fmtMoney = fmtAmountOrDash;
@@ -322,7 +325,7 @@ export default function HousePaymentsClient() {
           </h2>
           <button
             type="button"
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+            className={CLOSE_BUTTON_CLASSES}
             onClick={closePlanModal}
           >
             Close
@@ -414,7 +417,7 @@ export default function HousePaymentsClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800/60 sm:px-3 sm:text-sm"
+                      className={EDIT_BUTTON_CLASSES}
                       onClick={(e) => {
                         e.stopPropagation();
                         startEditPlan(r);
@@ -425,7 +428,7 @@ export default function HousePaymentsClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className="rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 sm:px-3 sm:text-sm"
+                      className={DELETE_BUTTON_CLASSES}
                       onClick={(e) => {
                         e.stopPropagation();
                         void onDeletePlan(r.id);
@@ -492,7 +495,7 @@ export default function HousePaymentsClient() {
               </div>
               <button
                 type="button"
-                className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+                className={CLOSE_BUTTON_CLASSES}
                 onClick={closeEntriesModal}
               >
                 Close
@@ -604,7 +607,7 @@ export default function HousePaymentsClient() {
                                     <button
                                       type="button"
                                       disabled={savingEntry}
-                                      className="rounded-md border border-zinc-300 px-2 py-1 text-xs transition-colors duration-150 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800/60"
+                                      className={EDIT_BUTTON_CLASSES}
                                       onClick={() => startEditEntry(entry)}
                                     >
                                       Edit
@@ -612,7 +615,7 @@ export default function HousePaymentsClient() {
                                     <button
                                       type="button"
                                       disabled={savingEntry}
-                                      className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors duration-150 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+                                      className={DELETE_BUTTON_CLASSES}
                                       onClick={() => void onDeleteEntry(entry.id)}
                                     >
                                       Delete

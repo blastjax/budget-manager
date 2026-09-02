@@ -4,16 +4,16 @@ import { useState } from "react";
 import { LocationLink } from "@/components/LocationLink";
 import { Modal } from "@/components/Modal";
 import {
-  TRAVEL_ADD_BUTTON,
-  TRAVEL_CLOSE_BUTTON,
-  TRAVEL_DELETE_BUTTON,
-  TRAVEL_EDIT_BUTTON,
-  TRAVEL_ICON_BUTTON,
-  TRAVEL_PRIMARY_BUTTON,
-  TRAVEL_SECONDARY_BUTTON,
-  TRAVEL_TOGGLE_ACTIVE_BUTTON,
-  TRAVEL_TOGGLE_INACTIVE_BUTTON,
-} from "@/app/travels/travelButtonStyles";
+  ACTION_BUTTON_CLASSES,
+  ADD_BUTTON_CLASSES,
+  CLOSE_BUTTON_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  EDIT_BUTTON_CLASSES,
+  ICON_BUTTON_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+  TOGGLE_ACTIVE_BUTTON_CLASSES,
+  TOGGLE_INACTIVE_BUTTON_CLASSES,
+} from "@/lib/ui";
 import {
   addMonths,
   formatDate,
@@ -289,14 +289,14 @@ function DetailRow({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <button type="button" disabled={saving} onClick={onEdit} className={TRAVEL_EDIT_BUTTON}>
+        <button type="button" disabled={saving} onClick={onEdit} className={EDIT_BUTTON_CLASSES}>
           Edit
         </button>
         <button
           type="button"
           disabled={saving}
           onClick={onDelete}
-          className={TRAVEL_DELETE_BUTTON}
+          className={DELETE_BUTTON_CLASSES}
         >
           Delete
         </button>
@@ -447,7 +447,7 @@ function DayDetails({
         <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
           {formatDate(iso)}
         </h6>
-        <button type="button" onClick={onClose} className={TRAVEL_CLOSE_BUTTON}>
+        <button type="button" onClick={onClose} className={CLOSE_BUTTON_CLASSES}>
           Close
         </button>
       </div>
@@ -540,7 +540,7 @@ function TripFullSpanDetails({
         <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
           Whole trip — every flight, bus/train leg, itinerary item, and stay
         </h6>
-        <button type="button" onClick={onClose} className={TRAVEL_CLOSE_BUTTON}>
+        <button type="button" onClick={onClose} className={CLOSE_BUTTON_CLASSES}>
           Close
         </button>
       </div>
@@ -730,7 +730,7 @@ function FullScreenCalendar({
           <button
             type="button"
             onClick={toggleShowAll}
-            className={showAllEvents ? TRAVEL_TOGGLE_ACTIVE_BUTTON : TRAVEL_TOGGLE_INACTIVE_BUTTON}
+            className={showAllEvents ? TOGGLE_ACTIVE_BUTTON_CLASSES : TOGGLE_INACTIVE_BUTTON_CLASSES}
           >
             {showAllEvents ? "Hide whole trip" : "Show whole trip"}
           </button>
@@ -741,7 +741,7 @@ function FullScreenCalendar({
               type="button"
               aria-label="Previous month"
               onClick={() => goToMonth(-1)}
-              className={TRAVEL_ICON_BUTTON}
+              className={ICON_BUTTON_CLASSES}
             >
               ‹
             </button>
@@ -752,14 +752,14 @@ function FullScreenCalendar({
               type="button"
               aria-label="Next month"
               onClick={() => goToMonth(1)}
-              className={TRAVEL_ICON_BUTTON}
+              className={ICON_BUTTON_CLASSES}
             >
               ›
             </button>
           </div>
           <button
             type="button"
-            className={`${TRAVEL_SECONDARY_BUTTON} px-3.5 py-1.5 text-sm`}
+            className={`${ACTION_BUTTON_CLASSES} px-3.5 py-1.5 text-sm`}
             onClick={() => {
               const now = new Date();
               setViewYear(now.getFullYear());
@@ -770,7 +770,7 @@ function FullScreenCalendar({
           </button>
           <button
             type="button"
-            className={`${TRAVEL_SECONDARY_BUTTON} px-3.5 py-1.5 text-sm`}
+            className={`${CLOSE_BUTTON_CLASSES} px-3.5 py-1.5 text-sm`}
             onClick={onClose}
           >
             Close
@@ -796,7 +796,7 @@ function FullScreenCalendar({
             type="button"
             disabled={actions.saving}
             onClick={() => actions.onAddFlight(selectedDate ?? undefined)}
-            className={TRAVEL_ADD_BUTTON}
+            className={ADD_BUTTON_CLASSES}
           >
             + Add flight
           </button>
@@ -804,7 +804,7 @@ function FullScreenCalendar({
             type="button"
             disabled={actions.saving}
             onClick={() => actions.onAddTransport(selectedDate ?? undefined)}
-            className={TRAVEL_ADD_BUTTON}
+            className={ADD_BUTTON_CLASSES}
           >
             + Add bus/train
           </button>
@@ -812,7 +812,7 @@ function FullScreenCalendar({
             type="button"
             disabled={actions.saving}
             onClick={() => actions.onAddItinerary(selectedDate ?? undefined)}
-            className={TRAVEL_ADD_BUTTON}
+            className={ADD_BUTTON_CLASSES}
           >
             + Add itinerary item
           </button>
@@ -820,7 +820,7 @@ function FullScreenCalendar({
             type="button"
             disabled={actions.saving}
             onClick={() => actions.onAddAccommodation(selectedDate ?? undefined)}
-            className={TRAVEL_ADD_BUTTON}
+            className={ADD_BUTTON_CLASSES}
           >
             + Add stay
           </button>
@@ -918,7 +918,7 @@ export function TripCalendar({
           ? "Nothing logged yet."
           : `${flights.length} flight${flights.length === 1 ? "" : "s"} · ${transport.length} bus/train leg${transport.length === 1 ? "" : "s"} · ${itinerary.length} itinerary item${itinerary.length === 1 ? "" : "s"} · ${accommodations.length} stay${accommodations.length === 1 ? "" : "s"}`}
       </p>
-      <button type="button" className={TRAVEL_PRIMARY_BUTTON} onClick={() => setOpen(true)}>
+      <button type="button" className={PRIMARY_BUTTON_CLASSES} onClick={() => setOpen(true)}>
         Open full calendar
       </button>
       {open && (

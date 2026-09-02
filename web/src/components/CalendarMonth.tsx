@@ -1,6 +1,6 @@
 "use client";
 
-import { TRAVEL_ICON_BUTTON } from "@/app/travels/travelButtonStyles";
+import { ICON_BUTTON_CLASSES } from "@/lib/ui";
 import { MONTH_NAMES_FULL } from "@/lib/dateFormat";
 
 export type DayState = "none" | "today" | "selected" | "range-start" | "range-end" | "range-middle";
@@ -50,7 +50,7 @@ export function CalendarMonth({
           onClick={onPrev}
           disabled={!onPrev}
           aria-label="Previous month"
-          className={TRAVEL_ICON_BUTTON}
+          className={ICON_BUTTON_CLASSES}
         >
           ‹
         </button>
@@ -62,7 +62,7 @@ export function CalendarMonth({
           onClick={onNext}
           disabled={!onNext}
           aria-label="Next month"
-          className={TRAVEL_ICON_BUTTON}
+          className={ICON_BUTTON_CLASSES}
         >
           ›
         </button>

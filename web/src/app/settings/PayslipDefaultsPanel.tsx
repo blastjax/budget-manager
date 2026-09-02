@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState, type SetStateAction } from "react";
 import {
+  ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
   PRIMARY_BUTTON_CLASSES,
-  SECONDARY_BUTTON_CLASSES,
   SEGMENTED_BUTTON_ACTIVE_CLASSES,
   SEGMENTED_BUTTON_CLASSES,
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
@@ -162,7 +162,7 @@ export function PayslipDefaultsPanel() {
         </button>
         <button
           type="button"
-          className={SECONDARY_BUTTON_CLASSES}
+          className={ACTION_BUTTON_CLASSES}
           disabled={busy}
           onClick={async () => {
             setBusy(true);

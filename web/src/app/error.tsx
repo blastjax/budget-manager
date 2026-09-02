@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { SECONDARY_BUTTON_CLASSES } from "@/lib/ui";
+import { ACTION_BUTTON_CLASSES } from "@/lib/ui";
 
 /**
  * Root error boundary — surfaces recoverable UI when a route segment throws.
@@ -33,7 +33,7 @@ export default function AppError({
       ) : null}
       <button
         type="button"
-        className={SECONDARY_BUTTON_CLASSES}
+        className={ACTION_BUTTON_CLASSES}
         onClick={() => reset()}
       >
         Try again

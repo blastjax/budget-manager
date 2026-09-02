@@ -8,7 +8,13 @@ import {
 } from "@/lib/api";
 import { rowsForSlot } from "@/app/payslip/payslipAggregates";
 import { slotTitle } from "@/app/payslip/payslipDisplay";
-import { ERROR_ALERT_CLASSES } from "@/lib/ui";
+import {
+  ACTION_BUTTON_CLASSES,
+  ADD_BUTTON_CLASSES,
+  DELETE_BUTTON_CLASSES,
+  ERROR_ALERT_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+} from "@/lib/ui";
 
 const MONTH_MAP: Record<string, number> = {
   jan: 1, january: 1,
@@ -268,7 +274,7 @@ export function PdfBulkUploadClient() {
                   type="button"
                   disabled={uploading}
                   onClick={() => void uploadAll()}
-                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                  className={PRIMARY_BUTTON_CLASSES}
                 >
                   {uploading ? "Uploading…" : `Upload all (${pendingCount})`}
                 </button>
@@ -277,7 +283,7 @@ export function PdfBulkUploadClient() {
                 type="button"
                 onClick={clearAll}
                 disabled={uploading}
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className={ACTION_BUTTON_CLASSES}
               >
                 Clear all
               </button>
@@ -382,7 +388,7 @@ function FileRow({
             type="button"
             onClick={onUpload}
             disabled={uploading}
-            className="rounded border border-indigo-300 px-2 py-1 text-xs text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+            className={ADD_BUTTON_CLASSES}
           >
             Upload
           </button>
@@ -392,7 +398,7 @@ function FileRow({
             type="button"
             onClick={onRemove}
             disabled={uploading}
-            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            className={DELETE_BUTTON_CLASSES}
           >
             Remove
           </button>
@@ -401,7 +407,7 @@ function FileRow({
           <button
             type="button"
             onClick={onRemove}
-            className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            className={DELETE_BUTTON_CLASSES}
           >
             Remove
           </button>

@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CARD_CLASSES, INPUT_CLASSES, PRIMARY_BUTTON_CLASSES, SECONDARY_BUTTON_CLASSES } from "@/lib/ui";
+import {
+  ACTION_BUTTON_CLASSES,
+  CARD_CLASSES,
+  INPUT_CLASSES,
+  PRIMARY_BUTTON_CLASSES,
+} from "@/lib/ui";
 import {
   allCodes,
   cycleFeedbackPeg,
@@ -250,7 +255,7 @@ export default function MastermindClient() {
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {CODE_LENGTH} pegs · {MAX_ATTEMPTS} attempts
             </p>
-            <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={resetGame}>
+            <button type="button" className={ACTION_BUTTON_CLASSES} onClick={resetGame}>
               ↺ New game
             </button>
           </div>
@@ -384,7 +389,7 @@ export default function MastermindClient() {
 
           {!gameOver && (
             <div className="flex gap-2">
-              <button type="button" className={SECONDARY_BUTTON_CLASSES} onClick={clearActiveGuess}>
+              <button type="button" className={ACTION_BUTTON_CLASSES} onClick={clearActiveGuess}>
                 Clear
               </button>
               <button
@@ -399,7 +404,7 @@ export default function MastermindClient() {
           )}
           <button
             type="button"
-            className={`${SECONDARY_BUTTON_CLASSES} disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`${ACTION_BUTTON_CLASSES} disabled:cursor-not-allowed disabled:opacity-50`}
             onClick={undoLast}
             disabled={submittedCount === 0}
           >
