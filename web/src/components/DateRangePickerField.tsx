@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarMonth, type DayState } from "@/components/CalendarMonth";
 import { addMonths, formatDate, toIsoDateLocal } from "@/lib/dateFormat";
+import { usePopoverPosition } from "@/lib/usePopoverPosition";
 import { ACTION_BUTTON_CLASSES, INPUT_CLASSES } from "@/lib/ui";
 
 export type DateRangePickerFieldProps = {
@@ -16,9 +17,20 @@ export type DateRangePickerFieldProps = {
   placeholder?: string;
 };
 
+const MAX_POPOVER_WIDTH = 680; // two months side by side
+
+/** How wide the popover can actually be on this screen right now — capped
+ * to the viewport (with margin) so it's never wider than there's room for. */
+function responsiveWidth(): number {
+  return Math.min(MAX_POPOVER_WIDTH, window.innerWidth - 16);
+}
+
 /** A button that opens a two-month calendar popover for picking a start/end
  * date pair (e.g. an accommodation's check-in/check-out) by clicking the
- * first date then the second, in place of two separate date inputs. */
+ * first date then the second, in place of two separate date inputs. Fixed-
+ * positioned from the trigger's screen rect (see `usePopoverPosition`)
+ * rather than anchored inside the form, so it can't be clipped by a
+ * modal's scroll container. */
 export function DateRangePickerField({
   startValue,
   endValue,
@@ -26,18 +38,23 @@ export function DateRangePickerField({
   disabled,
   placeholder = "Select dates",
 }: DateRangePickerFieldProps) {
-  const [open, setOpen] = useState(false);
   const today = toIsoDateLocal(new Date());
   const base = startValue || endValue || today;
   const [anchorYear, setAnchorYear] = useState(() => Number(base.slice(0, 4)));
   const [anchorMonth, setAnchorMonth] = useState(() => Number(base.slice(5, 7)));
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { triggerRef, open, position, openAt, close } = usePopoverPosition<HTMLButtonElement>(420);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverWidth, setPopoverWidth] = useState(MAX_POPOVER_WIDTH);
 
   useEffect(() => {
     if (!open) return;
     const onDocMouseDown = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
+      const target = e.target as Node;
+      if (
+        !triggerRef.current?.contains(target) &&
+        !popoverRef.current?.contains(target)
+      ) {
+        close();
       }
     };
     // Capture phase + stopPropagation so Escape closes only this popover,
@@ -45,7 +62,7 @@ export function DateRangePickerField({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        setOpen(false);
+        close();
       }
     };
     document.addEventListener("mousedown", onDocMouseDown);
@@ -54,14 +71,16 @@ export function DateRangePickerField({
       document.removeEventListener("mousedown", onDocMouseDown);
       window.removeEventListener("keydown", onKey, true);
     };
-  }, [open]);
+  }, [open, close, triggerRef]);
 
   const openPicker = () => {
     if (disabled) return;
     const b = startValue || endValue || today;
     setAnchorYear(Number(b.slice(0, 4)));
     setAnchorMonth(Number(b.slice(5, 7)));
-    setOpen((o) => !o);
+    const width = responsiveWidth();
+    setPopoverWidth(width);
+    openAt(width);
   };
 
   const pickDay = (iso: string) => {
@@ -77,7 +96,7 @@ export function DateRangePickerField({
     } else {
       onChange(startValue, iso);
     }
-    setOpen(false);
+    close();
   };
 
   const stateFor = (iso: string): DayState => {
@@ -98,8 +117,9 @@ export function DateRangePickerField({
         : "";
 
   return (
-    <div ref={containerRef} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={openPicker}
@@ -109,8 +129,12 @@ export function DateRangePickerField({
       >
         {label || <span className="text-zinc-400">{placeholder}</span>}
       </button>
-      {open && (
-        <div className="absolute z-20 mt-2 w-[min(90vw,34rem)] rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10">
+      {open && position && (
+        <div
+          ref={popoverRef}
+          style={{ position: "fixed", top: position.top, left: position.left, width: popoverWidth }}
+          className="z-50 rounded-lg border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <CalendarMonth
               year={anchorYear}

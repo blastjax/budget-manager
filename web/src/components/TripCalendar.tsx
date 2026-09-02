@@ -18,6 +18,7 @@ import {
   addMonths,
   formatDate,
   formatMonthYear,
+  formatTimeLabel,
   formatTimeRange,
   toIsoDateLocal,
 } from "@/lib/dateFormat";
@@ -62,6 +63,15 @@ function transportLabel(t: TravelTransportRow): string {
 
 function accommodationLabel(a: TravelAccommodationRow): string {
   return `Stay at ${a.name}`;
+}
+
+/** "Aug 10 · 15:00 – Aug 15 · 11:00 (5 nights)" — check-in/check-out dates
+ * with their times folded in when set, same as the plain list on the trip
+ * card (this used to drop the times in the calendar's detail panels). */
+function accommodationDetailSubtitle(a: TravelAccommodationRow): string {
+  const checkin = formatDate(a.checkin_date) + (a.checkin_time ? ` · ${formatTimeLabel(a.checkin_time)}` : "");
+  const checkout = formatDate(a.checkout_date) + (a.checkout_time ? ` · ${formatTimeLabel(a.checkout_time)}` : "");
+  return `${checkin} – ${checkout} (${a.nights} night${a.nights === 1 ? "" : "s"})`;
 }
 
 type WeekDay = { iso: string; day: number; inMonth: boolean };
@@ -397,7 +407,7 @@ function buildAllEvents(
       sortKey: `${a.checkin_date} 00:00`,
       dotClass: "bg-emerald-500",
       title: accommodationLabel(a),
-      subtitle: `${formatDate(a.checkin_date)} – ${formatDate(a.checkout_date)} (${a.nights} night${a.nights === 1 ? "" : "s"})`,
+      subtitle: accommodationDetailSubtitle(a),
       locationName: a.location_name,
       locationUrl: mapsUrlFor(a.location_name, a.location_map_url),
       bookingConfirmation: a.booking_confirmation,
@@ -498,7 +508,7 @@ function DayDetails({
             key={`a-${a.id}`}
             dotClass="bg-emerald-500"
             title={accommodationLabel(a)}
-            subtitle={`${formatDate(a.checkin_date)} – ${formatDate(a.checkout_date)} (${a.nights} night${a.nights === 1 ? "" : "s"})`}
+            subtitle={accommodationDetailSubtitle(a)}
             locationName={a.location_name}
             locationUrl={mapsUrlFor(a.location_name, a.location_map_url)}
             bookingConfirmation={a.booking_confirmation}

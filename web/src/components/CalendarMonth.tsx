@@ -44,7 +44,7 @@ export function CalendarMonth({
 
   return (
     <div className="w-full">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <button
           type="button"
           onClick={onPrev}
@@ -54,7 +54,7 @@ export function CalendarMonth({
         >
           ‹
         </button>
-        <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        <div className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
           {MONTH_NAMES_FULL[month - 1]} {year}
         </div>
         <button
@@ -71,7 +71,7 @@ export function CalendarMonth({
         {WEEKDAY_LABELS.map((w, i) => (
           <div
             key={i}
-            className="pb-1 text-center text-[11px] font-medium text-zinc-400 dark:text-zinc-500"
+            className="pb-1 text-center text-xs font-medium text-zinc-400 dark:text-zinc-500"
           >
             {w}
           </div>
@@ -79,7 +79,7 @@ export function CalendarMonth({
       </div>
       <div className="grid grid-cols-7">
         {cells.map((day, i) => {
-          if (day == null) return <div key={i} className="h-9" />;
+          if (day == null) return <div key={i} className="h-11" />;
           const iso = `${year}-${pad(month)}-${pad(day)}`;
           const state = dayState(iso);
           const col = i % 7;
@@ -95,12 +95,12 @@ export function CalendarMonth({
                 .join(" ")
             : "";
           return (
-            <div key={i} className={`flex h-10 items-center justify-center ${bgClasses}`}>
+            <div key={i} className={`flex h-11 items-center justify-center ${bgClasses}`}>
               <button
                 type="button"
                 onClick={() => onSelectDay(iso)}
                 className={[
-                  "flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors duration-150",
+                  "flex h-10 w-10 items-center justify-center rounded-full text-base font-medium transition-colors duration-150",
                   isCap
                     ? "bg-indigo-600 font-semibold text-white"
                     : state === "today"
