@@ -41,7 +41,8 @@ import {
 const NUMBERS_HELP =
   "6 unique numbers, 1-58 — separate with commas, spaces, or dashes (e.g. 3, 17, 29, 42, 58, 1 or 03-17-29-42-58-01)";
 
-const DRAW_DATE_HELP = "MM/DD/YYYY (e.g. 8/28/2026)";
+const DRAW_DATE_HELP =
+  "MM/DD/YYYY, MM-DD-YYYY, or MM DD YYYY — 2- or 4-digit year (e.g. 8/28/2026, 08-28-26, 8 28 2026)";
 
 /** Turns a validated y/m/d into "YYYY-MM-DD", rejecting dates like Feb 30. */
 function toIsoDate(year: number, month: number, day: number): string {
@@ -65,13 +66,22 @@ function isoToUsDate(iso: string): string {
   return `${m}/${d}/${y}`;
 }
 
-/** Accepts a typed "MM/DD/YYYY" (e.g. 8/28/2026). */
+/** Two-digit years pivot the same way POSIX strptime's %y does: 00-68 lands
+ * in the 2000s, 69-99 in the 1900s. Lotto history doesn't reach back past
+ * that, so the pivot never actually has to bite. */
+function twoDigitYearToFour(yy: number): number {
+  return yy <= 68 ? 2000 + yy : 1900 + yy;
+}
+
+/** Accepts a typed date separated by "/", "-", or spaces, with a 2- or
+ * 4-digit year — e.g. "8/28/2026", "08-28-26", "8 28 2026". */
 function parseDrawDate(text: string): string {
   const trimmed = text.trim();
-  const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
-  if (us) {
-    const [, m, d, y] = us;
-    return toIsoDate(Number(y), Number(m), Number(d));
+  const m = /^(\d{1,2})[/\-\s]+(\d{1,2})[/\-\s]+(\d{2}|\d{4})$/.exec(trimmed);
+  if (m) {
+    const [, mo, d, y] = m;
+    const year = y.length === 2 ? twoDigitYearToFour(Number(y)) : Number(y);
+    return toIsoDate(year, Number(mo), Number(d));
   }
   throw new Error(`Enter a date as ${DRAW_DATE_HELP}.`);
 }

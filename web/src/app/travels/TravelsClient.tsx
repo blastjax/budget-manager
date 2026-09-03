@@ -314,6 +314,19 @@ export default function TravelsClient() {
     });
   };
 
+  // Individual trip cards default open — only ids explicitly collapsed by
+  // the user are tracked, so newly loaded/added trips start expanded.
+  const [collapsedTripIds, setCollapsedTripIds] = useState<Set<number>>(new Set());
+
+  const toggleTripCollapsed = (tripId: number) => {
+    setCollapsedTripIds((s) => {
+      const next = new Set(s);
+      if (next.has(tripId)) next.delete(tripId);
+      else next.add(tripId);
+      return next;
+    });
+  };
+
   const [tripModal, setTripModal] = useState<TripFormState>(CLOSED_TRIP_MODAL);
   const [tripError, setTripError] = useState<string | null>(null);
 
@@ -822,23 +835,45 @@ export default function TravelsClient() {
 
   const renderTripCard = (detail: TravelTripDetail) => {
     const { trip, flights, transport, itinerary, accommodations } = detail;
+    const collapsed = collapsedTripIds.has(trip.id);
+    const itemCount = flights.length + transport.length + itinerary.length + accommodations.length;
     return (
       <div
         key={trip.id}
         className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-900/40"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-              {trip.title}
-            </h4>
-            {trip.notes && (
-              <p className="mt-1 whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-400">
-                {trip.notes}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="-m-1 flex min-w-0 flex-1 items-start gap-2 rounded-lg p-1 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+            aria-expanded={!collapsed}
+            onClick={() => toggleTripCollapsed(trip.id)}
+          >
+            <span
+              aria-hidden
+              className={`mt-0.5 shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
+                collapsed ? "" : "rotate-90"
+              }`}
+            >
+              ›
+            </span>
+            <span className="min-w-0">
+              <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                {trip.title}
+                {collapsed && itemCount > 0 && (
+                  <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                    ({itemCount} item{itemCount === 1 ? "" : "s"})
+                  </span>
+                )}
+              </h4>
+              {trip.notes && !collapsed && (
+                <p className="mt-1 whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-400">
+                  {trip.notes}
+                </p>
+              )}
+            </span>
+          </button>
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               disabled={saving}
@@ -858,6 +893,8 @@ export default function TravelsClient() {
           </div>
         </div>
 
+        {!collapsed && (
+          <>
         {/* Calendar */}
         <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <h5 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">Calendar</h5>
@@ -1135,6 +1172,8 @@ export default function TravelsClient() {
             </ul>
           )}
         </div>
+          </>
+        )}
       </div>
     );
   };
