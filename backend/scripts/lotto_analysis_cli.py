@@ -22,6 +22,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.services.lotto_analysis import analyze_draws, format_report  # noqa: E402
 from app.services.lotto_import import parse_lotto_draw_text  # noqa: E402
+from app.services.lotto_prize_analysis import (  # noqa: E402
+    DrawRecord,
+    analyze_prizes,
+    format_prize_report,
+)
 
 
 def main() -> None:
@@ -29,6 +34,13 @@ def main() -> None:
     parser.add_argument("file", type=Path, help="Pipe-delimited historic results .txt file")
     parser.add_argument(
         "--top", type=int, default=10, help="How many hot/cold/overdue numbers and pairs to list"
+    )
+    parser.add_argument(
+        "--section",
+        choices=("numbers", "prizes", "all"),
+        default="all",
+        help="Which analysis to print: the winning numbers, the jackpot/winner/date "
+        "context around them, or both (default)",
     )
     args = parser.parse_args()
 
@@ -44,8 +56,23 @@ def main() -> None:
     # both depend on chronological order, come out right regardless of how
     # the file itself was ordered.
     rows.sort(key=lambda r: r.draw_date)
-    analysis = analyze_draws([r.numbers for r in rows], top_n=args.top)
-    print(format_report(analysis))
+    if args.section in ("numbers", "all"):
+        print(format_report(analyze_draws([r.numbers for r in rows], top_n=args.top)))
+    if args.section == "all":
+        print()
+        print("=" * 72)
+        print()
+    if args.section in ("prizes", "all"):
+        records = [
+            DrawRecord(
+                draw_date=r.draw_date,
+                numbers=r.numbers,
+                jackpot_prize=r.jackpot_prize,
+                winners=r.winners,
+            )
+            for r in rows
+        ]
+        print(format_prize_report(analyze_prizes(records, top_n=args.top)))
 
 
 if __name__ == "__main__":

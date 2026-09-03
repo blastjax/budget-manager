@@ -11,6 +11,7 @@ via ``draw_id``.
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -20,6 +21,7 @@ from app.deps import require_db
 from app.schemas.lotto import LottoAttemptCreate, LottoAttemptHiddenUpdate, LottoDrawCreate
 from app.services.lotto_analysis import LottoAnalysis, NumberStat, PairStat, analyze_draws
 from app.services.lotto_import import import_rows_to_bulk_params, parse_lotto_draw_text
+from app.services.lotto_prize_analysis import DrawRecord, PrizeAnalysis, analyze_prizes
 from db import (
     delete_lotto_attempt,
     delete_lotto_draw,
@@ -118,17 +120,124 @@ def _serialize_analysis(a: LottoAnalysis) -> dict[str, Any]:
     }
 
 
+def _serialize_bucket(b: Any) -> dict[str, Any]:
+    return {
+        "label": b.label,
+        "draws": b.draws,
+        "winner_draws": b.winner_draws,
+        "total_winners": b.total_winners,
+        "win_rate": b.win_rate,
+        "mean_jackpot": b.mean_jackpot,
+    }
+
+
+def _serialize_prize_analysis(a: PrizeAnalysis) -> dict[str, Any]:
+    return {
+        "draw_count": a.draw_count,
+        "first_date": a.first_date.isoformat(),
+        "last_date": a.last_date.isoformat(),
+        "missing_jackpot_draws": a.missing_jackpot_draws,
+        "winner_draws": a.winner_draws,
+        "total_winners": a.total_winners,
+        "win_rate": a.win_rate,
+        "winner_count_distribution": [
+            {"winners": w, "draws": n} for w, n in a.winner_count_distribution
+        ],
+        "multi_winner_draws": [
+            {
+                "draw_date": d.draw_date.isoformat(),
+                "numbers": d.numbers,
+                "jackpot_prize": d.jackpot_prize,
+                "winners": d.winners,
+            }
+            for d in a.multi_winner_draws
+        ],
+        "mean_streak_draws": a.mean_streak_draws,
+        "median_streak_draws": a.median_streak_draws,
+        "longest_streak": (
+            {
+                "start": a.longest_streak.start.isoformat(),
+                "end": a.longest_streak.end.isoformat(),
+                "draws": a.longest_streak.draws,
+                "starting_jackpot": a.longest_streak.starting_jackpot,
+                "ending_jackpot": a.longest_streak.ending_jackpot,
+            }
+            if a.longest_streak is not None
+            else None
+        ),
+        "flat_rollover_draws": a.flat_rollover_draws,
+        "growing_rollover_draws": a.growing_rollover_draws,
+        "mean_rollover_growth": a.mean_rollover_growth,
+        "mean_rollover_growth_pct": a.mean_rollover_growth_pct,
+        "max_jackpot": (
+            {"draw_date": a.max_jackpot[0].isoformat(), "jackpot_prize": a.max_jackpot[1]}
+            if a.max_jackpot is not None
+            else None
+        ),
+        "mean_jackpot_when_won": a.mean_jackpot_when_won,
+        "mean_jackpot_when_not_won": a.mean_jackpot_when_not_won,
+        "jackpot_buckets": [_serialize_bucket(b) for b in a.jackpot_buckets],
+        "weekday_buckets": [_serialize_bucket(b) for b in a.weekday_buckets],
+        "month_buckets": [_serialize_bucket(b) for b in a.month_buckets],
+        "weekdays_by_year": [{"year": y, "weekdays": days} for y, days in a.weekdays_by_year],
+        "largest_gaps": [
+            {"previous": p.isoformat(), "next": n.isoformat(), "days": d}
+            for p, n, d in a.largest_gaps
+        ],
+        "homogeneity_tests": [
+            {
+                "label": t.label,
+                "chi_square": t.chi_square,
+                "degrees_of_freedom": t.degrees_of_freedom,
+                "p_value": t.p_value,
+                "significant": t.significant,
+            }
+            for t in a.homogeneity_tests
+        ],
+        "popularity_groups": [
+            {
+                "label": g.label,
+                "draws": g.draws,
+                "mean_birthday_numbers": g.mean_birthday_numbers,
+                "z_score": g.z_score,
+                "mean_jackpot": g.mean_jackpot,
+            }
+            for g in a.popularity_groups
+        ],
+        "expected_birthday_numbers": a.expected_birthday_numbers,
+    }
+
+
 @router.get("/api/lotto/analysis")
 def lotto_analysis(top: int = Query(default=10, ge=1, le=58)) -> dict[str, Any]:
-    """Descriptive stats over every draw with an announced result — hot/cold/
-    overdue numbers, common pairs, and a goodness-of-fit check for whether the
-    history looks like a fair, random draw. See `app.services.lotto_analysis`
-    for what each field means and how it's computed."""
+    """Descriptive stats over every draw with an announced result.
+
+    ``numbers`` covers the winning numbers themselves — hot/cold/overdue,
+    common pairs, and a goodness-of-fit check against a fair random draw.
+    ``prizes`` covers the context around them — jackpot rollover structure,
+    winner counts, draw dates, and how crowd-pleasing the winning
+    combinations were. See the two ``lotto_*_analysis`` services for what
+    each field means."""
     rows = list_lotto_draw_numbers()
     if not rows:
         raise HTTPException(status_code=404, detail="No draws with results yet to analyze.")
-    draws = [_numbers(r) for r in rows]
-    return _serialize_analysis(analyze_draws(draws, top_n=top))
+    numbers_analysis = analyze_draws([_numbers(r) for r in rows], top_n=top)
+    # The lean number query carries no jackpot/winner columns, so the prize
+    # side reads the full draw rows.
+    records = [
+        DrawRecord(
+            draw_date=dt.date.fromisoformat(str(d["draw_date"])[:10]),
+            numbers=_numbers(d),
+            jackpot_prize=d["jackpot_prize"],
+            winners=d["winners"],
+        )
+        for detail in list_lotto_draws(limit=2000)
+        if (d := detail["draw"])["n1"] is not None
+    ]
+    return {
+        "numbers": _serialize_analysis(numbers_analysis),
+        "prizes": _serialize_prize_analysis(analyze_prizes(records, top_n=top)),
+    }
 
 
 @router.post("/api/lotto")

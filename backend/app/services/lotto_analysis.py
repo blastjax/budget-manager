@@ -77,15 +77,55 @@ class LottoAnalysis:
     theoretical_repeat_avg: float
 
 
-def _chi_square_p_value(chi_square: float, df: int) -> float:
-    """Upper-tail p-value for a chi-square statistic, via the Wilson-Hilferty
-    cube-root normal approximation. Accurate to a few thousandths at the one
-    degrees-of-freedom value this module actually uses (57 = 58 numbers - 1),
-    which avoids pulling in scipy for a single function."""
-    if df <= 0:
+def _gamma_q(a: float, x: float) -> float:
+    """Regularized upper incomplete gamma Q(a, x), by the standard pairing of
+    a series expansion below the transition point and a Lentz continued
+    fraction above it. Converges to machine precision, so the chi-square
+    tails built on it are exact at every degrees-of-freedom — including the
+    small ones (2, 11) where a normal approximation is worst."""
+    if x <= 0:
         return 1.0
-    z = ((chi_square / df) ** (1 / 3) - (1 - 2 / (9 * df))) / math.sqrt(2 / (9 * df))
-    return 0.5 * math.erfc(z / math.sqrt(2))
+    log_prefix = -x + a * math.log(x) - math.lgamma(a)
+    if x < a + 1:
+        # Series for the *lower* tail P(a, x), which converges fastest here.
+        ap = a
+        term = 1.0 / a
+        total = term
+        for _ in range(1000):
+            ap += 1
+            term *= x / ap
+            total += term
+            if abs(term) < abs(total) * 1e-16:
+                break
+        return 1.0 - total * math.exp(log_prefix)
+    tiny = 1e-300
+    b = x + 1 - a
+    c = 1 / tiny
+    d = 1 / b if b else 1 / tiny
+    h = d
+    for i in range(1, 1000):
+        an = -i * (i - a)
+        b += 2
+        d = an * d + b
+        if abs(d) < tiny:
+            d = tiny
+        c = b + an / c
+        if abs(c) < tiny:
+            c = tiny
+        d = 1 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1) < 1e-16:
+            break
+    return h * math.exp(log_prefix)
+
+
+def chi_square_p_value(chi_square: float, df: int) -> float:
+    """Upper-tail probability of a chi-square statistic: the chance of seeing
+    a deviation at least this large when nothing is actually going on."""
+    if df <= 0 or chi_square <= 0:
+        return 1.0
+    return _gamma_q(df / 2, chi_square / 2)
 
 
 def analyze_draws(draws: list[list[int]], *, top_n: int = 10) -> LottoAnalysis:
@@ -137,7 +177,7 @@ def analyze_draws(draws: list[list[int]], *, top_n: int = 10) -> LottoAnalysis:
         (s.count - expected_count_per_number) ** 2 / expected_count_per_number for s in numbers
     )
     degrees_of_freedom = POOL_SIZE - 1
-    chi_square_p_value = _chi_square_p_value(chi_square, degrees_of_freedom)
+    p_value = chi_square_p_value(chi_square, degrees_of_freedom)
 
     sums = [sum(draw) for draw in draws]
     sum_mean = sum(sums) / draw_count
@@ -175,7 +215,7 @@ def analyze_draws(draws: list[list[int]], *, top_n: int = 10) -> LottoAnalysis:
         top_pairs=top_pairs,
         expected_count_per_number=expected_count_per_number,
         chi_square=chi_square,
-        chi_square_p_value=chi_square_p_value,
+        chi_square_p_value=p_value,
         degrees_of_freedom=degrees_of_freedom,
         sum_mean=sum_mean,
         sum_stdev=sum_stdev,
