@@ -15,6 +15,7 @@ import { ChartZoomControls } from "@/components/ChartZoomControls";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import { useTheme } from "@/components/ThemeProvider";
+import { ToggleLegendList } from "@/components/ToggleLegendList";
 import {
   createBloodPressure,
   deleteBloodPressure,
@@ -70,22 +71,13 @@ const fmtDateTime = formatDateTime;
 const fmtChartLabel = formatMonthDayShort;
 
 const SERIES = [
-  { key: "systolic", label: "Systolic (mmHg)", color: "#ef4444", group: "bp" },
-  { key: "diastolic", label: "Diastolic (mmHg)", color: "#6366f1", group: "bp" },
-  { key: "pulse", label: "Pulse (bpm)", color: "#10b981", group: "bp" },
-  { key: "spo2", label: "SpO2 (%)", color: "#0ea5e9", group: "spo2" },
-  { key: "temperature", label: "Temperature (°C)", color: "#f97316", group: "temperature" },
-  { key: "weight", label: "Weight (kg)", color: "#a855f7", group: "weight" },
+  { key: "systolic", label: "Systolic (mmHg)", color: "#ef4444" },
+  { key: "diastolic", label: "Diastolic (mmHg)", color: "#6366f1" },
+  { key: "pulse", label: "Pulse (bpm)", color: "#10b981" },
+  { key: "spo2", label: "SpO2 (%)", color: "#0ea5e9" },
+  { key: "temperature", label: "Temperature (°C)", color: "#f97316" },
+  { key: "weight", label: "Weight (kg)", color: "#a855f7" },
 ] as const;
-
-const CHART_GROUPS = [
-  { id: "bp", label: "Blood Pressure", color: "#ef4444" },
-  { id: "spo2", label: "SpO2", color: "#0ea5e9" },
-  { id: "temperature", label: "Temperature", color: "#f97316" },
-  { id: "weight", label: "Weight", color: "#a855f7" },
-] as const;
-
-type ChartGroupId = (typeof CHART_GROUPS)[number]["id"];
 
 const emptyForm = { systolic: "", diastolic: "", pulse: "", spo2: "", temperature: "", weight: "", notes: "" };
 
@@ -97,12 +89,15 @@ export default function BloodPressureClient() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeGroups, setActiveGroups] = useState<Record<ChartGroupId, boolean>>(() =>
-    Object.fromEntries(CHART_GROUPS.map((g) => [g.id, true])) as Record<ChartGroupId, boolean>,
-  );
+  const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(() => new Set());
 
-  const toggleGroup = (id: ChartGroupId) => {
-    setActiveGroups((g) => ({ ...g, [id]: !g[id] }));
+  const toggleSeries = (key: string) => {
+    setHiddenSeries((s) => {
+      const next = new Set(s);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
 
   const { theme } = useTheme();
@@ -383,22 +378,6 @@ export default function BloodPressureClient() {
             canZoomOut={trendZoom.canZoomOut}
           />
         </div>
-        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
-          {CHART_GROUPS.map((g) => (
-            <label
-              key={g.id}
-              className="flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300"
-            >
-              <input
-                type="checkbox"
-                checked={activeGroups[g.id]}
-                onChange={() => toggleGroup(g.id)}
-                style={{ accentColor: g.color }}
-              />
-              {g.label}
-            </label>
-          ))}
-        </div>
         <div className="mt-4 h-[min(24rem,55vh)] w-full min-h-[240px]">
           {chartPoints.length === 0 ? (
             <p className={DASHED_EMPTY_CLASSES}>
@@ -423,8 +402,23 @@ export default function BloodPressureClient() {
                 />
                 <YAxis tick={{ fontSize: 11, fill: axisTickFill }} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Legend />
-                {SERIES.filter((s) => activeGroups[s.group]).map((s) => (
+                <Legend
+                  content={(props) => (
+                    <ToggleLegendList
+                      items={(props.payload ?? []).map((entry) => {
+                        const key = String(entry.dataKey ?? entry.value);
+                        return {
+                          key,
+                          label: String(entry.value),
+                          color: entry.color ?? "",
+                          hidden: hiddenSeries.has(key),
+                        };
+                      })}
+                      onToggle={toggleSeries}
+                    />
+                  )}
+                />
+                {SERIES.map((s) => (
                   <Area
                     key={s.key}
                     type="monotone"
@@ -436,6 +430,7 @@ export default function BloodPressureClient() {
                     fillOpacity={0.15}
                     dot={{ r: 3 }}
                     activeDot={{ r: 5 }}
+                    hide={hiddenSeries.has(s.key)}
                   />
                 ))}
               </ComposedChart>
