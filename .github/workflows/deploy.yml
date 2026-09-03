@@ -1,5 +1,5 @@
-name: Deploy to EC2
-run-name: Deploy to EC2 (${{ github.event_name == 'workflow_dispatch' && 'manual' || github.ref_name }})
+name: Deploy to Lightsail
+run-name: Deploy to Lightsail (${{ github.event_name == 'workflow_dispatch' && 'manual' || github.ref_name }})
 
 on:
   push:
@@ -76,39 +76,32 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: read
-      id-token: write
     # One deploy at a time; queue rather than cancel so a run that already
     # started updating the host is never interrupted half-way. Scoped to this
     # job (not the whole workflow) so concurrent pushes can still build in
-    # parallel — only the SSM/host step is serialized.
+    # parallel — only the host step is serialized.
     concurrency:
-      group: deploy-ec2
+      group: deploy-lightsail
       cancel-in-progress: false
     steps:
-      # Direct SSH from GitHub-hosted (Azure) runners to this host started
-      # timing out at the TCP level with no config on either side to
-      # explain it (SG/NACL wide open, no host firewall, instance healthy —
-      # a manual SSH from a residential IP worked fine seconds later). SSM
-      # runs over HTTPS through AWS's own endpoints instead of a public
-      # port-22 connection, so it isn't subject to whatever was dropping
-      # that path, and it means port 22 no longer needs to be open at all.
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+      # Moved off EC2+SSM onto a Lightsail instance (see git history for the
+      # migration). SSM was originally chosen here because direct SSH from
+      # GitHub-hosted runners to the old EC2 host mysteriously timed out at
+      # the TCP level; that was re-tested against this Lightsail host as part
+      # of the migration and reaches it fine, so plain SSH is back — it also
+      # means no AWS IAM role/OIDC is needed for deploys at all any more.
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy via SSM
+      - name: Deploy via SSH
         run: |
           cat > /tmp/deploy.sh <<'SCRIPT'
           set -e
           cd ${{ secrets.APP_DIR }}
-
-          # SSM runs this as root, but the repo is owned by the box's normal
-          # deploy user - without this, git refuses to touch a repo it
-          # doesn't own (CVE-2022-24765 mitigation). --system instead of
-          # --global since $HOME isn't set in the SSM execution environment.
-          git config --system --add safe.directory ${{ secrets.APP_DIR }}
 
           # --ff-only: fail loudly on divergence instead of creating a merge
           # commit on the server or leaving a half-applied tree. Pulls the
@@ -120,7 +113,7 @@ jobs:
           # so the bind-mounted DB directory has to be writable by it. Also
           # fixes ownership left behind by older root-run containers.
           mkdir -p data
-          chown -R 1000:1000 data
+          sudo chown -R 1000:1000 data
 
           # This run's GITHUB_TOKEN only, not a durable secret on the box:
           # it expires with the workflow run, so nothing long-lived to
@@ -136,7 +129,8 @@ jobs:
           # build: block is for local `docker compose build` only, per
           # docker/README.md), so a plain `pull` skips them as "buildable"
           # and `up` then falls back to building web's `next build` on this
-          # box - slow enough to blow a tight command budget.
+          # box - slow enough to blow a tight command budget (and risks OOM
+          # on a 1GB instance - see git history).
           # This flag forces the actual GHCR image to be pulled instead.
           docker compose pull --policy always api web
           docker compose up -d --remove-orphans
@@ -155,11 +149,9 @@ jobs:
               exit 1
             fi
             healthy=""
-            # 100 x 2s keeps the same 200s ceiling as the previous 40 x 5s, but
-            # with the compose healthchecks now using start_interval the
-            # containers report healthy within a few seconds, so the poll
-            # granularity - not the container - was the thing left rounding the
-            # deploy up.
+            # 100 x 2s keeps the same 200s ceiling as before: the compose
+            # healthchecks use start_interval so containers report healthy
+            # within a few seconds once actually up.
             for _ in $(seq 1 100); do
               status=$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo unknown)
               if [ "$status" = "healthy" ]; then
@@ -177,37 +169,5 @@ jobs:
           done
           SCRIPT
 
-          jq -Rs '{"commands": [.]}' /tmp/deploy.sh > /tmp/ssm-params.json
-
-          CMD_ID=$(aws ssm send-command \
-            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
-            --document-name "AWS-RunShellScript" \
-            --parameters file:///tmp/ssm-params.json \
-            --timeout-seconds 1800 \
-            --query "Command.CommandId" --output text)
-          echo "SSM CommandId: $CMD_ID"
-
-          # Poll for up to 30 minutes, matching the previous command_timeout:
-          # git pull and the GHCR login/pull alone have each taken several
-          # minutes on this instance, so the script needs real headroom.
-          STATUS="Pending"
-          for _ in $(seq 1 180); do
-            STATUS=$(aws ssm get-command-invocation \
-              --command-id "$CMD_ID" --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
-              --query "Status" --output text 2>/dev/null || echo "Pending")
-            case "$STATUS" in
-              Success|Failed|Cancelled|TimedOut) break ;;
-            esac
-            sleep 10
-          done
-
-          echo "Final status: $STATUS"
-          echo "--- stdout ---"
-          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "${{ vars.EC2_INSTANCE_ID }}" --query "StandardOutputContent" --output text
-          echo "--- stderr ---"
-          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "${{ vars.EC2_INSTANCE_ID }}" --query "StandardErrorContent" --output text
-
-          if [ "$STATUS" != "Success" ]; then
-            echo "Deploy command finished with status: $STATUS" >&2
-            exit 1
-          fi
+          scp -i ~/.ssh/deploy_key /tmp/deploy.sh "ubuntu@${{ secrets.DEPLOY_HOST }}:/tmp/deploy.sh"
+          ssh -i ~/.ssh/deploy_key "ubuntu@${{ secrets.DEPLOY_HOST }}" 'bash /tmp/deploy.sh'
