@@ -1042,11 +1042,20 @@ export async function getLottoDraws(limit?: number) {
 }
 
 /** `numbers: null` logs just the date — the result can be filled in later
- * once it's announced, so attempts can be recorded ahead of the draw. */
-export async function setLottoDraw(drawDate: string, numbers: number[] | null) {
+ * once it's announced, so attempts can be recorded ahead of the draw.
+ * `jackpotPrize`/`winners` default to "not set yet" (null / 0), same as the
+ * backend does when they're omitted. */
+export async function setLottoDraw(
+  drawDate: string,
+  numbers: number[] | null,
+  jackpotPrize?: number | null,
+  winners?: number,
+) {
   return sendJson<LottoDrawDetail>("POST", "/api/lotto", {
     draw_date: drawDate,
     numbers,
+    jackpot_prize: jackpotPrize ?? null,
+    winners: winners ?? 0,
   });
 }
 
@@ -1054,10 +1063,14 @@ export async function updateLottoDraw(
   drawId: number,
   drawDate: string,
   numbers: number[] | null,
+  jackpotPrize?: number | null,
+  winners?: number,
 ) {
   return sendJson<LottoDrawDetail>("PUT", `/api/lotto/${drawId}`, {
     draw_date: drawDate,
     numbers,
+    jackpot_prize: jackpotPrize ?? null,
+    winners: winners ?? 0,
   });
 }
 

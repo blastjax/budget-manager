@@ -2419,6 +2419,22 @@ def list_lotto_draws(limit: int = 200) -> list[dict[str, Any]]:
             ]
 
 
+def list_lotto_draw_numbers() -> list[dict[str, Any]]:
+    """Every draw with an announced result, oldest first — just the date and
+    winning numbers, no attempts. Used by the pattern-analysis endpoint,
+    which only cares about the sequence of winning numbers itself."""
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                """
+                SELECT draw_date, n1, n2, n3, n4, n5, n6 FROM lotto_draw
+                WHERE n1 IS NOT NULL
+                ORDER BY draw_date ASC, id ASC
+                """
+            )
+            return [_row_to_dict(cur, r) for r in cur.fetchall()]
+
+
 def upsert_lotto_draw(
     draw_date: Any,
     numbers: list[int] | None,

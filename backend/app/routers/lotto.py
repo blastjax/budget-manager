@@ -18,12 +18,14 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 import cache
 from app.deps import require_db
 from app.schemas.lotto import LottoAttemptCreate, LottoAttemptHiddenUpdate, LottoDrawCreate
+from app.services.lotto_analysis import LottoAnalysis, NumberStat, PairStat, analyze_draws
 from app.services.lotto_import import import_rows_to_bulk_params, parse_lotto_draw_text
 from db import (
     delete_lotto_attempt,
     delete_lotto_draw,
     get_lotto_draw_id_by_date,
     insert_lotto_attempt,
+    list_lotto_draw_numbers,
     list_lotto_draws,
     set_lotto_attempt_hidden,
     update_lotto_attempt,
@@ -81,6 +83,52 @@ def lotto_list(limit: int = Query(default=200, ge=1, le=2000)) -> dict[str, Any]
     result = {"draws": [_serialize_detail(r) for r in rows]}
     cache.set(key, result)
     return result
+
+
+def _serialize_number_stat(s: NumberStat) -> dict[str, Any]:
+    return {"number": s.number, "count": s.count, "draws_since_seen": s.draws_since_seen}
+
+
+def _serialize_pair_stat(p: PairStat) -> dict[str, Any]:
+    return {"numbers": list(p.numbers), "count": p.count}
+
+
+def _serialize_analysis(a: LottoAnalysis) -> dict[str, Any]:
+    return {
+        "draw_count": a.draw_count,
+        "numbers": [_serialize_number_stat(s) for s in a.numbers],
+        "hottest": [_serialize_number_stat(s) for s in a.hottest],
+        "coldest": [_serialize_number_stat(s) for s in a.coldest],
+        "most_overdue": [_serialize_number_stat(s) for s in a.most_overdue],
+        "top_pairs": [_serialize_pair_stat(p) for p in a.top_pairs],
+        "expected_count_per_number": a.expected_count_per_number,
+        "chi_square": a.chi_square,
+        "chi_square_p_value": a.chi_square_p_value,
+        "degrees_of_freedom": a.degrees_of_freedom,
+        "sum_mean": a.sum_mean,
+        "sum_stdev": a.sum_stdev,
+        "theoretical_sum_mean": a.theoretical_sum_mean,
+        "odd_count": a.odd_count,
+        "even_count": a.even_count,
+        "low_count": a.low_count,
+        "high_count": a.high_count,
+        "consecutive_number_draws": a.consecutive_number_draws,
+        "repeat_from_previous_draw_avg": a.repeat_from_previous_draw_avg,
+        "theoretical_repeat_avg": a.theoretical_repeat_avg,
+    }
+
+
+@router.get("/api/lotto/analysis")
+def lotto_analysis(top: int = Query(default=10, ge=1, le=58)) -> dict[str, Any]:
+    """Descriptive stats over every draw with an announced result — hot/cold/
+    overdue numbers, common pairs, and a goodness-of-fit check for whether the
+    history looks like a fair, random draw. See `app.services.lotto_analysis`
+    for what each field means and how it's computed."""
+    rows = list_lotto_draw_numbers()
+    if not rows:
+        raise HTTPException(status_code=404, detail="No draws with results yet to analyze.")
+    draws = [_numbers(r) for r in rows]
+    return _serialize_analysis(analyze_draws(draws, top_n=top))
 
 
 @router.post("/api/lotto")

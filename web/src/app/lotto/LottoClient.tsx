@@ -138,6 +138,29 @@ function parseOptionalNumbers(text: string): number[] | null {
   return parseNumbers(text);
 }
 
+/** Blank means "not set yet" (kept as `null`, same as before a jackpot's
+ * announced). Accepts comma thousands separators, e.g. "50,000,000". */
+function parseOptionalJackpot(text: string): number | null {
+  const trimmed = text.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed.replace(/,/g, ""));
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error("Jackpot prize must be zero or greater.");
+  }
+  return n;
+}
+
+/** Blank means zero winners. */
+function parseWinners(text: string): number {
+  const trimmed = text.trim();
+  if (trimmed === "") return 0;
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 0) {
+    throw new Error("Winners must be a whole number, zero or greater.");
+  }
+  return n;
+}
+
 /** A blank line's worth of numbers-lines grouped together — one physical
  * ticket, holding each of its board plays (attempts). */
 type TicketBlock = { ticket: number | null; attempts: number[][] };
@@ -247,6 +270,8 @@ type DrawModalState = {
   drawId: number | null;
   drawDate: string;
   numbersText: string;
+  jackpotText: string;
+  winnersText: string;
   isEdit: boolean;
 };
 type AttemptModalState = {
@@ -268,6 +293,8 @@ const emptyDrawModal: DrawModalState = {
   drawId: null,
   drawDate: "",
   numbersText: "",
+  jackpotText: "",
+  winnersText: "",
   isEdit: false,
 };
 const emptyAttemptModal: AttemptModalState = {
@@ -417,7 +444,15 @@ export default function LottoClient() {
 
   const openAddDraw = () => {
     setDrawFormError(null);
-    setDrawModal({ open: true, drawId: null, drawDate: "", numbersText: "", isEdit: false });
+    setDrawModal({
+      open: true,
+      drawId: null,
+      drawDate: "",
+      numbersText: "",
+      jackpotText: "",
+      winnersText: "",
+      isEdit: false,
+    });
   };
 
   const openEditDraw = (detail: LottoDrawDetail) => {
@@ -427,6 +462,9 @@ export default function LottoClient() {
       drawId: detail.draw.id,
       drawDate: isoToUsDate(detail.draw.draw_date),
       numbersText: numbersToText(detail.draw.numbers),
+      jackpotText:
+        detail.draw.jackpot_prize != null ? String(detail.draw.jackpot_prize) : "",
+      winnersText: String(detail.draw.winners),
       isEdit: true,
     });
   };
@@ -445,9 +483,13 @@ export default function LottoClient() {
     }
     let drawDate: string;
     let numbers: number[] | null;
+    let jackpotPrize: number | null;
+    let winners: number;
     try {
       drawDate = parseDrawDate(drawModal.drawDate);
       numbers = parseOptionalNumbers(drawModal.numbersText);
+      jackpotPrize = parseOptionalJackpot(drawModal.jackpotText);
+      winners = parseWinners(drawModal.winnersText);
     } catch (err) {
       setDrawFormError(err instanceof Error ? err.message : "Invalid input");
       return;
@@ -457,8 +499,8 @@ export default function LottoClient() {
     try {
       const detail =
         drawModal.isEdit && drawModal.drawId != null
-          ? await updateLottoDraw(drawModal.drawId, drawDate, numbers)
-          : await setLottoDraw(drawDate, numbers);
+          ? await updateLottoDraw(drawModal.drawId, drawDate, numbers, jackpotPrize, winners)
+          : await setLottoDraw(drawDate, numbers, jackpotPrize, winners);
       upsertLocalDraw(detail);
       closeDrawModal();
     } catch (err) {
@@ -1373,6 +1415,34 @@ export default function LottoClient() {
               once the result is announced.
             </span>
           </label>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex min-w-[10rem] flex-1 flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                Jackpot prize <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                className={INPUT_CLASSES}
+                value={drawModal.jackpotText}
+                disabled={saving}
+                onChange={(e) => setDrawModal((m) => ({ ...m, jackpotText: e.target.value }))}
+              />
+            </label>
+            <label className="flex min-w-[8rem] flex-1 flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                Winners <span className="font-normal text-zinc-400">(optional)</span>
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                className={INPUT_CLASSES}
+                value={drawModal.winnersText}
+                disabled={saving}
+                onChange={(e) => setDrawModal((m) => ({ ...m, winnersText: e.target.value }))}
+              />
+            </label>
+          </div>
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
               {saving ? "Saving…" : drawModal.isEdit ? "Update" : "Add"}
