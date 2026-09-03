@@ -105,6 +105,32 @@ function numbersToText(numbers: number[]): string {
   return numbers.join(", ");
 }
 
+/** One draw as a row in the same pipe-delimited shape "Import historic
+ * results" reads back — `| n1-n2-n3-n4-n5-n6 | m/d/yyyy | jackpot | winners |`
+ * — so an export round-trips through that importer unchanged. Draws with no
+ * result yet have no numbers to put in the row, so they're left out. */
+function drawToExportLine(detail: LottoDrawDetail): string | null {
+  if (detail.draw.numbers.length !== 6) return null;
+  const numbers = detail.draw.numbers.map((n) => String(n).padStart(2, "0")).join("-");
+  const [y, m, d] = detail.draw.draw_date.split("-").map(Number);
+  const date = `${m}/${d}/${y}`;
+  const jackpot = (detail.draw.jackpot_prize ?? 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `| ${numbers} | ${date} | ${jackpot} | ${detail.draw.winners} |`;
+}
+
+/** `draws` newest-first -> oldest-first for the export, matching how a
+ * historic results file naturally reads top to bottom. */
+function buildLottoExportText(draws: LottoDrawDetail[]): string {
+  return [...draws]
+    .reverse()
+    .map(drawToExportLine)
+    .filter((line): line is string => line != null)
+    .join("\n");
+}
+
 /** Like `parseNumbers`, but blank input means "no result yet" rather than an
  * error — a draw can be logged by date alone before its numbers are known. */
 function parseOptionalNumbers(text: string): number[] | null {
@@ -709,6 +735,23 @@ export default function LottoClient() {
     }
   };
 
+  /** Downloads every draw that has a result as a pipe-delimited .txt file —
+   * the same shape "Import historic results" reads, so this doubles as a
+   * backup that can be re-imported later. Draws with no result yet aren't
+   * included (see `drawToExportLine`). */
+  const onExportHistoric = () => {
+    const text = buildLottoExportText(draws);
+    const blob = new Blob([text + (text ? "\n" : "")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `lotto-results-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const openImport = () => {
     setImportFormError(null);
     setImportSummary(null);
@@ -1180,6 +1223,15 @@ export default function LottoClient() {
               title="Bulk-load historic results (date, numbers, jackpot, winners) from a pipe-delimited text file"
             >
               Import historic results
+            </button>
+            <button
+              type="button"
+              className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+              onClick={onExportHistoric}
+              disabled={draws.every((d) => d.draw.numbers.length !== 6)}
+              title="Download every draw with a result as a pipe-delimited text file, in the same format Import historic results reads"
+            >
+              Export historic results
             </button>
             <button
               type="button"
