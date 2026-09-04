@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import {
@@ -103,6 +103,55 @@ function parseNumbers(text: string): number[] {
 
 function numbersToText(numbers: number[]): string {
   return numbers.join(", ");
+}
+
+/** A logged attempt whose numbers exactly match some *other* draw's result
+ * somewhere else in the history — "if only you'd played this combo on that
+ * date instead." Excludes an attempt matching the very draw it was logged
+ * against — that's just a 6/6 winner, already highlighted in the draw card
+ * itself, not a coincidence worth calling out here. */
+type WhatIfMatch = {
+  key: string;
+  attempt: LottoAttemptRow;
+  numbers: number[];
+  loggedDrawId: number;
+  loggedDrawDate: string;
+  matchedDrawDate: string;
+};
+
+/** Scans every attempt against every draw result in `draws` for an exact
+ * 6-number match to a different draw than the one the attempt was logged
+ * under. `draws` order doesn't matter — the result is sorted newest-match
+ * first before it's returned. */
+function findWhatIfMatches(draws: LottoDrawDetail[]): WhatIfMatch[] {
+  const resultsByKey = new Map<string, { id: number; date: string }[]>();
+  for (const detail of draws) {
+    if (detail.draw.numbers.length !== 6) continue;
+    const key = [...detail.draw.numbers].sort((a, b) => a - b).join("-");
+    const hits = resultsByKey.get(key);
+    const entry = { id: detail.draw.id, date: detail.draw.draw_date };
+    if (hits) hits.push(entry);
+    else resultsByKey.set(key, [entry]);
+  }
+
+  const matches: WhatIfMatch[] = [];
+  for (const detail of draws) {
+    for (const attempt of detail.attempts) {
+      const key = [...attempt.numbers].sort((a, b) => a - b).join("-");
+      for (const hit of resultsByKey.get(key) ?? []) {
+        if (hit.id === detail.draw.id) continue;
+        matches.push({
+          key: `${attempt.id}-${hit.id}`,
+          attempt,
+          numbers: attempt.numbers,
+          loggedDrawId: detail.draw.id,
+          loggedDrawDate: detail.draw.draw_date,
+          matchedDrawDate: hit.date,
+        });
+      }
+    }
+  }
+  return matches.sort((a, b) => b.matchedDrawDate.localeCompare(a.matchedDrawDate));
 }
 
 /** One draw as a row in the same pipe-delimited shape "Import historic
@@ -381,6 +430,8 @@ export default function LottoClient() {
       return allAreCollapsed ? new Set() : new Set(collapsibleDraws.map((d) => d.draw.id));
     });
   };
+
+  const whatIfMatches = useMemo(() => findWhatIfMatches(draws), [draws]);
 
   // `draws` is already sorted newest-first, so same-year draws are always
   // contiguous — one pass buckets them into ordered year groups.
@@ -1294,6 +1345,44 @@ export default function LottoClient() {
 
       {!loading && draws.length === 0 && (
         <p className={DASHED_EMPTY_CLASSES}>No results yet — add one to get started.</p>
+      )}
+
+      {!loading && draws.length > 0 && (
+        <section className={CARD_CLASSES}>
+          <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">What if?</h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Numbers you&apos;ve played that exactly match a different draw&apos;s result
+            somewhere else in the history — if only you&apos;d played them that day instead.
+          </p>
+          {whatIfMatches.length === 0 ? (
+            <p className={`mt-3 ${DASHED_EMPTY_CLASSES}`}>
+              No lucky coincidences yet — none of your attempts match another draw&apos;s
+              result.
+            </p>
+          ) : (
+            <ul className="mt-3 flex flex-col gap-2">
+              {whatIfMatches.map((w) => (
+                <li
+                  key={w.key}
+                  className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-900 dark:bg-indigo-950/30"
+                >
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {w.numbers.map((n) => (
+                      <NumberBall key={n} n={n} variant="match" />
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                    Attempt from {formatDate(w.loggedDrawDate)} matches the historic draw
+                    result from{" "}
+                    <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                      {formatDate(w.matchedDrawDate)}
+                    </span>
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       {(collapsibleDraws.length > 0 || totalHiddenAttempts > 0) && (
