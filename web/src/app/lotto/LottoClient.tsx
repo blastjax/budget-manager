@@ -443,6 +443,51 @@ function NumberBall({
   );
 }
 
+/** The same tinted-card stat-tile language SalaryStatsClient uses for its
+ * All-time Summary — label in tracked-out caps, value large and bold, both
+ * in one tone. Reused here so the page's own "at a glance" strip looks like
+ * it belongs to the same app instead of inventing a new visual idiom. */
+const STAT_TILE_TONES = {
+  indigo: {
+    card: "border-indigo-200 bg-indigo-50/60 dark:border-indigo-800 dark:bg-indigo-950/30",
+    label: "text-indigo-700 dark:text-indigo-400",
+    value: "text-indigo-900 dark:text-indigo-200",
+  },
+  emerald: {
+    card: "border-emerald-200 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/30",
+    label: "text-emerald-700 dark:text-emerald-400",
+    value: "text-emerald-900 dark:text-emerald-200",
+  },
+  sky: {
+    card: "border-sky-200 bg-sky-50/60 dark:border-sky-800 dark:bg-sky-950/30",
+    label: "text-sky-700 dark:text-sky-400",
+    value: "text-sky-900 dark:text-sky-200",
+  },
+  amber: {
+    card: "border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/30",
+    label: "text-amber-700 dark:text-amber-400",
+    value: "text-amber-900 dark:text-amber-200",
+  },
+} as const;
+
+function StatTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: keyof typeof STAT_TILE_TONES;
+}) {
+  const t = STAT_TILE_TONES[tone];
+  return (
+    <div className={`rounded-lg border p-3 ${t.card}`}>
+      <p className={`text-[11px] font-semibold uppercase tracking-wide ${t.label}`}>{label}</p>
+      <p className={`mt-1 text-2xl font-bold tabular-nums ${t.value}`}>{value}</p>
+    </div>
+  );
+}
+
 /** Moves the items matching `shouldBump` to the front, otherwise leaving the
  * list exactly as it was — a stable partition, not a sort, so items never
  * get reordered relative to their own kind. */
@@ -588,6 +633,26 @@ export default function LottoClient() {
   };
 
   const whatIfMatches = useMemo(() => findWhatIfMatches(draws), [draws]);
+
+  // A one-glance orientation strip — how much history is here, and the one
+  // number worth bragging about. `bestMatch` is -1 (rendered as "—") until
+  // at least one attempt has actually been checked against a real result.
+  const overviewStats = useMemo(() => {
+    let resultsIn = 0;
+    let totalAttempts = 0;
+    let bestMatch = -1;
+    for (const d of draws) {
+      totalAttempts += d.attempts.length;
+      if (d.draw.numbers.length !== 6) continue;
+      resultsIn += 1;
+      const drawSet = new Set(d.draw.numbers);
+      for (const a of d.attempts) {
+        const count = a.numbers.filter((n) => drawSet.has(n)).length;
+        if (count > bestMatch) bestMatch = count;
+      }
+    }
+    return { drawCount: draws.length, resultsIn, totalAttempts, bestMatch };
+  }, [draws]);
 
   // `draws` is already sorted newest-first, so same-year draws are always
   // contiguous — one pass buckets them into ordered year groups.
@@ -1611,6 +1676,19 @@ export default function LottoClient() {
 
       {!loading && draws.length === 0 && (
         <p className={DASHED_EMPTY_CLASSES}>No results yet — add one to get started.</p>
+      )}
+
+      {!loading && draws.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Draws tracked" value={fmtCount(overviewStats.drawCount)} tone="indigo" />
+          <StatTile label="Results in" value={fmtCount(overviewStats.resultsIn)} tone="emerald" />
+          <StatTile label="Attempts logged" value={fmtCount(overviewStats.totalAttempts)} tone="sky" />
+          <StatTile
+            label="Best match"
+            value={overviewStats.bestMatch >= 0 ? `${overviewStats.bestMatch}/6` : "—"}
+            tone="amber"
+          />
+        </div>
       )}
 
       {/* Only worth a card when there's actually something to say — an
