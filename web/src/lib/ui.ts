@@ -58,30 +58,30 @@ export const ERROR_ALERT_CLASSES = alertClasses("error");
  * ---------------------------------------------------------------------- */
 
 export const PRIMARY_BUTTON_CLASSES =
-  "rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-500 disabled:opacity-50";
+  "whitespace-nowrap rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-500 disabled:opacity-50";
 
 export const SECONDARY_BUTTON_CLASSES =
-  "rounded-full border-2 border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 transition-colors duration-150 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70";
+  "whitespace-nowrap rounded-full border-2 border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 transition-colors duration-150 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70";
 
 /** A standalone, non-destructive page action ("Today", "Clear all", "Retry"). */
 export const ACTION_BUTTON_CLASSES =
-  "rounded-full border-2 border-violet-300 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 transition-colors duration-150 hover:bg-violet-100 disabled:opacity-50 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/70";
+  "whitespace-nowrap rounded-full border-2 border-violet-300 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 transition-colors duration-150 hover:bg-violet-100 disabled:opacity-50 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/70";
 
 export const ADD_BUTTON_CLASSES =
-  "rounded-full border-2 border-indigo-300 bg-indigo-50 px-4 py-1.5 text-xs font-semibold text-indigo-700 transition-colors duration-150 hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/70";
+  "whitespace-nowrap rounded-full border-2 border-indigo-300 bg-indigo-50 px-4 py-1.5 text-xs font-semibold text-indigo-700 transition-colors duration-150 hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/70";
 
 export const EDIT_BUTTON_CLASSES =
-  "rounded-full border-2 border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition-colors duration-150 hover:bg-sky-100 disabled:opacity-50 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-950/70";
+  "whitespace-nowrap rounded-full border-2 border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition-colors duration-150 hover:bg-sky-100 disabled:opacity-50 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-950/70";
 
 export const DELETE_BUTTON_CLASSES =
-  "rounded-full border-2 border-red-300 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors duration-150 hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70";
+  "whitespace-nowrap rounded-full border-2 border-red-300 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors duration-150 hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70";
 
 /** Compact sibling of EDIT for inspecting or toggling a row ("Details", "Hide"). */
 export const DETAIL_BUTTON_CLASSES =
-  "rounded-full border-2 border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 transition-colors duration-150 hover:bg-teal-100 disabled:opacity-50 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-950/70";
+  "whitespace-nowrap rounded-full border-2 border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 transition-colors duration-150 hover:bg-teal-100 disabled:opacity-50 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-950/70";
 
 export const CLOSE_BUTTON_CLASSES =
-  "rounded-full border-2 border-amber-300 bg-amber-50 px-4 py-1.5 text-xs font-semibold text-amber-700 transition-colors duration-150 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70";
+  "whitespace-nowrap rounded-full border-2 border-amber-300 bg-amber-50 px-4 py-1.5 text-xs font-semibold text-amber-700 transition-colors duration-150 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70";
 
 /** A round icon button (prev/next month arrows, chevrons). */
 export const ICON_BUTTON_CLASSES =
@@ -89,9 +89,9 @@ export const ICON_BUTTON_CLASSES =
 
 /** A pill toggle — active/inactive tone pair for a two-state control. */
 export const TOGGLE_ACTIVE_BUTTON_CLASSES =
-  "rounded-full bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-500";
+  "whitespace-nowrap rounded-full bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-500";
 export const TOGGLE_INACTIVE_BUTTON_CLASSES =
-  "rounded-full border-2 border-indigo-300 bg-indigo-50 px-4 py-1.5 text-sm font-semibold text-indigo-700 transition-colors duration-150 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/70";
+  "whitespace-nowrap rounded-full border-2 border-indigo-300 bg-indigo-50 px-4 py-1.5 text-sm font-semibold text-indigo-700 transition-colors duration-150 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/70";
 
 export const INPUT_CLASSES =
   "rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 text-sm text-zinc-900 transition-colors duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 dark:border-zinc-700 dark:text-zinc-100";

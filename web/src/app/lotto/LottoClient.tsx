@@ -390,6 +390,26 @@ function parseOptionalTicket(text: string): number | null {
   return n;
 }
 
+/** The body of the attempts modal: one 6-number attempt per non-blank line,
+ * whether adding fresh attempts or replacing an edited set. */
+function parseAttemptsLines(text: string): number[][] {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+  if (lines.length === 0) {
+    throw new Error("Enter at least one set of numbers.");
+  }
+  return lines.map((line, i) => {
+    try {
+      return parseNumbers(line);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Invalid numbers";
+      throw new Error(`Line ${i + 1}: ${msg}`);
+    }
+  });
+}
+
 function NumberBall({
   n,
   variant = "neutral",
@@ -408,7 +428,7 @@ function NumberBall({
   };
   return (
     <span
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold tabular-nums ${styles[variant]}`}
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums sm:h-9 sm:w-9 sm:text-sm ${styles[variant]}`}
     >
       {String(n).padStart(2, "0")}
     </span>
@@ -436,12 +456,20 @@ type DrawModalState = {
   winnersText: string;
   isEdit: boolean;
 };
-type AttemptModalState = {
+/** Adds or replaces a *set* of attempts on one draw — one textarea line per
+ * attempt, all sharing one ticket. `editingIds` is empty for a plain add;
+ * non-empty means "replace these attempts with whatever's parsed from the
+ * text" (see `submitAttemptsModal`), which is how both "edit a ticket" (many
+ * ids) and "edit a single ungrouped attempt" (one id) are the same code
+ * path — a ticket is just a set of attempts sharing a number, and an
+ * ungrouped attempt is a set of size one sharing nothing. */
+type AttemptsModalState = {
   open: boolean;
   drawId: number | null;
-  attemptId: number | null;
-  numbersText: string;
+  editingIds: number[];
+  attemptsText: string;
   ticketText: string;
+  mode: "add" | "edit";
 };
 type PasteAttemptsModalState = {
   open: boolean;
@@ -460,12 +488,13 @@ const emptyDrawModal: DrawModalState = {
   winnersText: "",
   isEdit: false,
 };
-const emptyAttemptModal: AttemptModalState = {
+const emptyAttemptsModal: AttemptsModalState = {
   open: false,
   drawId: null,
-  attemptId: null,
-  numbersText: "",
+  editingIds: [],
+  attemptsText: "",
   ticketText: "",
+  mode: "add",
 };
 const emptyPasteModal: PasteAttemptsModalState = { open: false, drawDate: "", attemptsText: "" };
 const emptyImportModal: ImportModalState = { open: false };
@@ -564,8 +593,8 @@ export default function LottoClient() {
   const [drawModal, setDrawModal] = useState<DrawModalState>(emptyDrawModal);
   const [drawFormError, setDrawFormError] = useState<string | null>(null);
 
-  const [attemptModal, setAttemptModal] = useState<AttemptModalState>(emptyAttemptModal);
-  const [attemptFormError, setAttemptFormError] = useState<string | null>(null);
+  const [attemptsModal, setAttemptsModal] = useState<AttemptsModalState>(emptyAttemptsModal);
+  const [attemptsFormError, setAttemptsFormError] = useState<string | null>(null);
 
   const [pasteModal, setPasteModal] = useState<PasteAttemptsModalState>(emptyPasteModal);
   const [pasteFormError, setPasteFormError] = useState<string | null>(null);
@@ -688,62 +717,91 @@ export default function LottoClient() {
     }
   };
 
-  const openAddAttempt = (drawId: number, ticket: number | null = null) => {
-    setAttemptFormError(null);
-    setAttemptModal({
+  const openAddAttempts = (drawId: number, ticket: number | null = null) => {
+    setAttemptsFormError(null);
+    setAttemptsModal({
       open: true,
       drawId,
-      attemptId: null,
-      numbersText: "",
+      editingIds: [],
+      attemptsText: "",
       ticketText: ticket != null ? String(ticket) : "",
+      mode: "add",
     });
   };
 
-  const openEditAttempt = (drawId: number, attempt: LottoAttemptRow) => {
-    setAttemptFormError(null);
-    setAttemptModal({
+  /** Opens the same modal pre-filled with every attempt on `items`, one per
+   * line — submitting replaces the whole ticket's attempts with whatever's
+   * parsed back out (see `submitAttemptsModal`). This is "edit a ticket":
+   * add, remove, or change any of its board plays in one pass instead of
+   * one attempt at a time. */
+  const openEditTicket = (
+    drawId: number,
+    ticket: number,
+    items: { attempt: LottoAttemptRow }[],
+  ) => {
+    setAttemptsFormError(null);
+    setAttemptsModal({
       open: true,
       drawId,
-      attemptId: attempt.id,
-      numbersText: numbersToText(attempt.numbers),
-      ticketText: attempt.ticket != null ? String(attempt.ticket) : "",
+      editingIds: items.map(({ attempt }) => attempt.id),
+      attemptsText: items.map(({ attempt }) => numbersToText(attempt.numbers)).join("\n"),
+      ticketText: String(ticket),
+      mode: "edit",
     });
   };
 
-  const closeAttemptModal = () => {
-    setAttemptModal(emptyAttemptModal);
-    setAttemptFormError(null);
+  /** Opens the same modal for a single ungrouped attempt — the one case
+   * where an attempt has no ticket to fold its edit into. */
+  const openEditLooseAttempt = (drawId: number, attempt: LottoAttemptRow) => {
+    setAttemptsFormError(null);
+    setAttemptsModal({
+      open: true,
+      drawId,
+      editingIds: [attempt.id],
+      attemptsText: numbersToText(attempt.numbers),
+      ticketText: "",
+      mode: "edit",
+    });
   };
 
-  const submitAttempt = async (e: React.FormEvent) => {
+  const closeAttemptsModal = () => {
+    setAttemptsModal(emptyAttemptsModal);
+    setAttemptsFormError(null);
+  };
+
+  /** Adds new attempts, or replaces an edited set — see `AttemptsModalState`.
+   * A replace deletes every attempt in `editingIds` first and recreates the
+   * parsed lines fresh, rather than diffing line-by-line against what was
+   * there before; simpler, at the cost of resetting `hidden` on every
+   * attempt in the edited set (there's no way to know which surviving line
+   * "was" which old attempt once the line count changes). */
+  const submitAttemptsModal = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAttemptFormError(null);
-    if (attemptModal.drawId == null) return;
-    let numbers: number[];
+    setAttemptsFormError(null);
+    if (attemptsModal.drawId == null) return;
+    let numbersList: number[][];
     let ticket: number | null;
     try {
-      numbers = parseNumbers(attemptModal.numbersText);
-      ticket = parseOptionalTicket(attemptModal.ticketText);
+      numbersList = parseAttemptsLines(attemptsModal.attemptsText);
+      ticket = parseOptionalTicket(attemptsModal.ticketText);
     } catch (err) {
-      setAttemptFormError(err instanceof Error ? err.message : "Invalid numbers");
+      setAttemptsFormError(err instanceof Error ? err.message : "Invalid input");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const detail =
-        attemptModal.attemptId != null
-          ? await updateLottoAttempt(
-              attemptModal.drawId,
-              attemptModal.attemptId,
-              numbers,
-              ticket,
-            )
-          : await createLottoAttempt(attemptModal.drawId, numbers, ticket);
-      upsertLocalDraw(detail);
-      closeAttemptModal();
+      let detail: LottoDrawDetail | null = null;
+      for (const id of attemptsModal.editingIds) {
+        detail = await deleteLottoAttempt(attemptsModal.drawId, id);
+      }
+      for (const numbers of numbersList) {
+        detail = await createLottoAttempt(attemptsModal.drawId, numbers, ticket);
+      }
+      if (detail) upsertLocalDraw(detail);
+      closeAttemptsModal();
     } catch (err) {
-      setAttemptFormError(err instanceof Error ? err.message : "Save failed");
+      setAttemptsFormError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSaving(false);
     }
@@ -756,6 +814,29 @@ export default function LottoClient() {
     try {
       const detail = await deleteLottoAttempt(drawId, attemptId);
       upsertLocalDraw(detail);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Deletes every attempt on a ticket in one go — the ticket-level
+   * counterpart to `onDeleteAttempt`. */
+  const onDeleteTicket = async (drawId: number, items: { attempt: LottoAttemptRow }[]) => {
+    if (
+      !confirm(`Delete this ticket and its ${items.length} attempt${items.length === 1 ? "" : "s"}?`)
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      let detail: LottoDrawDetail | null = null;
+      for (const { attempt } of items) {
+        detail = await deleteLottoAttempt(drawId, attempt.id);
+      }
+      if (detail) upsertLocalDraw(detail);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed");
     } finally {
@@ -778,10 +859,11 @@ export default function LottoClient() {
     }
   };
 
-  /** Hides or unhides every board play on a physical ticket in one go,
-   * instead of one attempt at a time. Attempts already at the target state
-   * are skipped. */
-  const onToggleTicketHidden = async (
+  /** Hides or unhides a whole group of attempts in one go, instead of one at
+   * a time — used both for a single ticket's board plays and for every
+   * attempt on a draw ("Hide/Show all attempts"). Attempts already at the
+   * target state are skipped. */
+  const onToggleAttemptsHidden = async (
     drawId: number,
     items: { attempt: LottoAttemptRow }[],
     hidden: boolean,
@@ -797,7 +879,7 @@ export default function LottoClient() {
       }
       if (detail) upsertLocalDraw(detail);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update ticket");
+      setError(e instanceof Error ? e.message : "Failed to update attempts");
     } finally {
       setSaving(false);
     }
@@ -962,13 +1044,6 @@ export default function LottoClient() {
     );
   };
 
-  /** Downloads one draw's attempts in the same shape "Paste attempts"
-   * reads, so it can be pasted back in against this or another date. */
-  const onExportDrawAttempts = (detail: LottoDrawDetail) => {
-    const text = attemptsToTicketBlocksText(detail.attempts);
-    downloadTextFile(`lotto-attempts-${detail.draw.draw_date}.txt`, text + (text ? "\n" : ""));
-  };
-
   const openImport = () => {
     setImportFormError(null);
     setImportSummary(null);
@@ -1027,6 +1102,7 @@ export default function LottoClient() {
     // switched on.
     const showHiddenForDraw = shownHiddenDrawIds.has(detail.draw.id);
     const rawHiddenCount = detail.attempts.filter((a) => a.hidden).length;
+    const allAttemptsHidden = totalAttempts > 0 && rawHiddenCount === totalAttempts;
     const visibleAttempts = showHiddenForDraw
       ? detail.attempts
       : detail.attempts.filter((a) => !a.hidden);
@@ -1099,7 +1175,7 @@ export default function LottoClient() {
       (c) => c.bestMatch >= 3,
     );
     const drawNumbersDisplay = hasResult ? (
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <div className="mt-2 flex flex-wrap gap-1 sm:gap-1.5">
         {detail.draw.numbers.map((n) => (
           <NumberBall key={n} n={n} variant="result" />
         ))}
@@ -1148,7 +1224,7 @@ export default function LottoClient() {
           void onDropOnAttempt(detail.draw.id, attempt, e);
         }}
       >
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
           {attempt.numbers.map((n) => (
             <NumberBall
               key={n}
@@ -1156,8 +1232,15 @@ export default function LottoClient() {
               variant={hasResult ? (drawSet.has(n) ? "match" : "miss") : "neutral"}
             />
           ))}
-          <span className="ml-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            {hasResult ? `${matchCount}/6 matched` : "Awaiting result"}
+          <span className="ml-1 whitespace-nowrap text-xs font-medium text-zinc-500 sm:ml-2 dark:text-zinc-400">
+            {hasResult ? (
+              <>
+                <span className="sm:hidden">{matchCount}/6</span>
+                <span className="hidden sm:inline">{matchCount}/6 matched</span>
+              </>
+            ) : (
+              "Awaiting result"
+            )}
           </span>
           {attempt.hidden && (
             <span className="ml-1 rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
@@ -1165,15 +1248,20 @@ export default function LottoClient() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={saving}
-            className={EDIT_BUTTON_CLASSES}
-            onClick={() => openEditAttempt(detail.draw.id, attempt)}
-          >
-            Edit
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* A ticketed attempt is edited/deleted as part of its ticket
+           * (see the ticket cluster's own Edit/Delete) — only an ungrouped
+           * attempt gets its own, since there's no ticket to fold it into. */}
+          {attempt.ticket == null && (
+            <button
+              type="button"
+              disabled={saving}
+              className={EDIT_BUTTON_CLASSES}
+              onClick={() => openEditLooseAttempt(detail.draw.id, attempt)}
+            >
+              Edit
+            </button>
+          )}
           <button
             type="button"
             disabled={saving}
@@ -1182,14 +1270,16 @@ export default function LottoClient() {
           >
             {attempt.hidden ? "Unhide" : "Hide"}
           </button>
-          <button
-            type="button"
-            disabled={saving}
-            className={DELETE_BUTTON_CLASSES}
-            onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
-          >
-            Delete
-          </button>
+          {attempt.ticket == null && (
+            <button
+              type="button"
+              disabled={saving}
+              className={DELETE_BUTTON_CLASSES}
+              onClick={() => void onDeleteAttempt(detail.draw.id, attempt.id)}
+            >
+              Delete
+            </button>
+          )}
         </div>
       </li>
     );
@@ -1252,26 +1342,35 @@ export default function LottoClient() {
             {matchBreakdownDisplay}
           </div>
           <div
-            className="flex items-center gap-2"
+            className="flex flex-wrap items-center gap-1.5 sm:gap-2"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               disabled={saving}
               className={`${ADD_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
-              onClick={() => openAddAttempt(detail.draw.id)}
+              onClick={() => openAddAttempts(detail.draw.id)}
             >
-              + Add attempt
+              <span className="sm:hidden">+ Add</span>
+              <span className="hidden sm:inline">+ Add attempt</span>
             </button>
             {hasAttempts && (
               <button
                 type="button"
                 disabled={saving}
-                className={`${ACTION_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
-                onClick={() => onExportDrawAttempts(detail)}
-                title="Download this draw's attempts as a text file, in the same format Paste attempts reads"
+                className={`${DETAIL_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+                onClick={() =>
+                  void onToggleAttemptsHidden(
+                    detail.draw.id,
+                    detail.attempts.map((attempt) => ({ attempt })),
+                    !allAttemptsHidden,
+                  )
+                }
               >
-                Export attempts
+                <span className="sm:hidden">{allAttemptsHidden ? "Show all" : "Hide all"}</span>
+                <span className="hidden sm:inline">
+                  {allAttemptsHidden ? "Show all attempts" : "Hide all attempts"}
+                </span>
               </button>
             )}
             <button
@@ -1285,7 +1384,7 @@ export default function LottoClient() {
             <button
               type="button"
               disabled={saving}
-              className={DELETE_BUTTON_CLASSES}
+              className={`${DELETE_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
               onClick={() => void onDeleteDraw(detail.draw.id)}
             >
               Delete
@@ -1355,26 +1454,44 @@ export default function LottoClient() {
                       Hidden
                     </span>
                   )}
-                  <div className="ml-auto flex items-center gap-2">
+                  <div className="ml-auto flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       disabled={saving}
-                      className={DETAIL_BUTTON_CLASSES}
-                      onClick={() =>
-                        void onToggleTicketHidden(
-                          detail.draw.id,
-                          cluster.items,
-                          !cluster.allHidden,
-                        )
-                      }
+                      className={EDIT_BUTTON_CLASSES}
+                      onClick={() => openEditTicket(detail.draw.id, cluster.ticket, cluster.items)}
                     >
-                      {cluster.allHidden ? "Unhide ticket" : "Hide ticket"}
+                      Edit
                     </button>
                     <button
                       type="button"
                       disabled={saving}
+                      className={DELETE_BUTTON_CLASSES}
+                      onClick={() => void onDeleteTicket(detail.draw.id, cluster.items)}
+                    >
+                      Delete
+                    </button>
+                    {/* Only a real hide is a persisted action here — a
+                     * fully-hidden ticket only ever renders once "Show
+                     * hidden" has already revealed it, so un-hiding is left
+                     * to that toggle (or to each attempt's own Unhide)
+                     * rather than a bulk button that would quietly wipe
+                     * every attempt's hidden status at once. */}
+                    {!cluster.allHidden && (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        className={DETAIL_BUTTON_CLASSES}
+                        onClick={() => void onToggleAttemptsHidden(detail.draw.id, cluster.items, true)}
+                      >
+                        Hide ticket
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={saving}
                       className={ADD_BUTTON_CLASSES}
-                      onClick={() => openAddAttempt(detail.draw.id, cluster.ticket)}
+                      onClick={() => openAddAttempts(detail.draw.id, cluster.ticket)}
                     >
                       + Add to this ticket
                     </button>
@@ -1418,7 +1535,7 @@ export default function LottoClient() {
             type="button"
             disabled={saving}
             className={`${ADD_BUTTON_CLASSES} mt-3 px-2 py-1 text-xs`}
-            onClick={() => openAddAttempt(detail.draw.id)}
+            onClick={() => openAddAttempts(detail.draw.id)}
           >
             + Add attempt
           </button>
@@ -1428,7 +1545,14 @@ export default function LottoClient() {
     );
   };
 
-  const anyModalOpen = drawModal.open || attemptModal.open || pasteModal.open || importModal.open;
+  const anyModalOpen = drawModal.open || attemptsModal.open || pasteModal.open || importModal.open;
+
+  const attemptsModalTitle =
+    attemptsModal.mode === "add"
+      ? "Add attempt(s)"
+      : attemptsModal.editingIds.length > 1
+        ? `Edit ticket ${attemptsModal.ticketText}`
+        : "Edit attempt";
 
   return (
     <div className="relative mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
@@ -1510,7 +1634,7 @@ export default function LottoClient() {
                   key={w.key}
                   className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-900 dark:bg-indigo-950/30"
                 >
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
                     {w.numbers.map((n) => (
                       <NumberBall key={n} n={n} variant="match" />
                     ))}
@@ -1692,36 +1816,42 @@ export default function LottoClient() {
         </form>
       </Modal>
 
-      <Modal open={attemptModal.open} onClose={closeAttemptModal} ariaLabelledBy="lotto-attempt-title">
+      <Modal open={attemptsModal.open} onClose={closeAttemptsModal} ariaLabelledBy="lotto-attempts-title">
         <div className="mb-4 flex items-start justify-between gap-2">
-          <h2 id="lotto-attempt-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            {attemptModal.attemptId != null ? "Edit attempt" : "Add attempt"}
+          <h2 id="lotto-attempts-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            {attemptsModalTitle}
           </h2>
           <button
             type="button"
             className={CLOSE_BUTTON_CLASSES}
-            onClick={closeAttemptModal}
+            onClick={closeAttemptsModal}
           >
             Close
           </button>
         </div>
-        <form onSubmit={submitAttempt} className="flex flex-col gap-4">
-          {attemptFormError && (
+        <form onSubmit={submitAttemptsModal} className="flex flex-col gap-4">
+          {attemptsFormError && (
             <div className={ERROR_ALERT_CLASSES} role="alert">
-              {attemptFormError}
+              {attemptsFormError}
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-zinc-600 dark:text-zinc-400">Your numbers</span>
-            <input
+            <textarea
               required
-              type="text"
-              className={INPUT_CLASSES}
-              value={attemptModal.numbersText}
+              rows={attemptsModal.editingIds.length > 1 ? 6 : 3}
+              className={`${INPUT_CLASSES} font-mono`}
+              placeholder={"03 12 19 27 41 58\n01 02 34 37 52 57"}
+              value={attemptsModal.attemptsText}
               disabled={saving}
-              onChange={(e) => setAttemptModal((m) => ({ ...m, numbersText: e.target.value }))}
+              onChange={(e) =>
+                setAttemptsModal((m) => ({ ...m, attemptsText: e.target.value }))
+              }
             />
-            <span className="text-xs text-zinc-500">{NUMBERS_HELP}</span>
+            <span className="text-xs text-zinc-500">
+              One attempt per line, {NUMBERS_HELP} — add more lines for more attempts on the
+              same ticket.
+            </span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-zinc-600 dark:text-zinc-400">
@@ -1731,24 +1861,24 @@ export default function LottoClient() {
               type="text"
               inputMode="numeric"
               className={INPUT_CLASSES}
-              value={attemptModal.ticketText}
+              value={attemptsModal.ticketText}
               disabled={saving}
-              onChange={(e) => setAttemptModal((m) => ({ ...m, ticketText: e.target.value }))}
+              onChange={(e) => setAttemptsModal((m) => ({ ...m, ticketText: e.target.value }))}
             />
             <span className="text-xs text-zinc-500">
-              Groups this with the other attempts on the same physical ticket, so they
-              cluster together — leave blank if it isn&apos;t part of a ticket.
+              Groups every line above onto the same physical ticket, so they cluster
+              together — leave blank if they aren&apos;t part of a ticket.
             </span>
           </label>
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
-              {saving ? "Saving…" : attemptModal.attemptId != null ? "Update" : "Add"}
+              {saving ? "Saving…" : attemptsModal.mode === "edit" ? "Save changes" : "Add"}
             </button>
             <button
               type="button"
               disabled={saving}
               className={SECONDARY_BUTTON_CLASSES}
-              onClick={closeAttemptModal}
+              onClick={closeAttemptsModal}
             >
               Cancel
             </button>
