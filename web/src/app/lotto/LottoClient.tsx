@@ -232,18 +232,18 @@ function buildLottoExportText(draws: LottoDrawDetail[]): string {
 }
 
 /** Renders a draw's attempts in the same blank-line-separated "ticket
- * blocks" shape "Upload from txt" reads: attempts sharing a ticket number
+ * blocks" shape "Paste attempts" reads: attempts sharing a ticket number
  * are grouped under a "Ticket N" header, one 6-number line per attempt;
  * attempts with no ticket each stand alone as their own headerless block.
- * Re-uploading this file recreates every attempt — though since the
- * importer turns every block into a ticket (see `submitUpload`), a
- * previously ungrouped attempt comes back with a new ticket number of its
- * own rather than staying ungrouped. That's a limitation of the importer's
- * format, not something this exporter can route around.
+ * Pasting this text back in recreates every attempt — though since pasting
+ * turns every block into a ticket (see `submitPasteAttempts`), a previously
+ * ungrouped attempt comes back with a new ticket number of its own rather
+ * than staying ungrouped. That's a limitation of the paste format, not
+ * something this exporter can route around.
  *
  * `tagHidden` appends "[hidden]" to a hidden attempt's line — useful for a
- * human-readable export, but never set it on a file meant to be
- * re-uploaded, since it isn't part of the grammar `parseNumbers` accepts. */
+ * human-readable export, but never set it on text meant to be pasted back
+ * in, since it isn't part of the grammar `parseNumbers` accepts. */
 function attemptsToTicketBlocksText(
   attempts: LottoAttemptRow[],
   { tagHidden = false }: { tagHidden?: boolean } = {},
@@ -275,9 +275,9 @@ function attemptsToTicketBlocksText(
 /** `draws` newest-first -> oldest-first, matching `buildLottoExportText`.
  * Draws with no attempts logged are skipped — nothing to export for them.
  * Each draw's section opens with a date + result header (not part of the
- * "Upload from txt" grammar, so this file is for reading, not
- * re-importing whole) followed by its attempts in the usual ticket-block
- * shape, hidden attempts tagged inline. */
+ * "Paste attempts" grammar, so this file is for reading, not pasting back
+ * in whole) followed by its attempts in the usual ticket-block shape,
+ * hidden attempts tagged inline. */
 function buildAllAttemptsExportText(draws: LottoDrawDetail[]): string {
   const withAttempts = [...draws].reverse().filter((d) => d.attempts.length > 0);
   return withAttempts
@@ -351,11 +351,11 @@ function parseTicketBlock(lines: string[], blockIndex: number): TicketBlock {
   return { ticket, attempts };
 }
 
-/** A .txt upload is one or more tickets, each a blank-line-separated group of
- * lines — every line under a ticket is one attempt's 6 numbers. A ticket's
- * first line may optionally read "ticket N" to pin its number explicitly;
- * otherwise tickets are numbered in file order. */
-function parseTicketsFile(text: string): TicketBlock[] {
+/** Pasted attempt text is one or more tickets, each a blank-line-separated
+ * group of lines — every line under a ticket is one attempt's 6 numbers. A
+ * ticket's first line may optionally read "ticket N" to pin its number
+ * explicitly; otherwise tickets are numbered in the order they're pasted. */
+function parseTicketsText(text: string): TicketBlock[] {
   const rawLines = text.split(/\r?\n/);
   const blocks: TicketBlock[] = [];
   let current: string[] = [];
@@ -374,7 +374,7 @@ function parseTicketsFile(text: string): TicketBlock[] {
   }
   flush();
   if (blocks.length === 0) {
-    throw new Error("That file doesn't have any numbers in it.");
+    throw new Error("Paste in some numbers first.");
   }
   return blocks;
 }
@@ -410,7 +410,7 @@ function NumberBall({
     <span
       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold tabular-nums ${styles[variant]}`}
     >
-      {n}
+      {String(n).padStart(2, "0")}
     </span>
   );
 }
@@ -443,9 +443,10 @@ type AttemptModalState = {
   numbersText: string;
   ticketText: string;
 };
-type UploadModalState = {
+type PasteAttemptsModalState = {
   open: boolean;
   drawDate: string;
+  attemptsText: string;
 };
 type ImportModalState = { open: boolean };
 type ImportSummary = { inserted: number; updated: number; total: number; errors: string[] };
@@ -466,7 +467,7 @@ const emptyAttemptModal: AttemptModalState = {
   numbersText: "",
   ticketText: "",
 };
-const emptyUploadModal: UploadModalState = { open: false, drawDate: "" };
+const emptyPasteModal: PasteAttemptsModalState = { open: false, drawDate: "", attemptsText: "" };
 const emptyImportModal: ImportModalState = { open: false };
 
 export default function LottoClient() {
@@ -566,9 +567,8 @@ export default function LottoClient() {
   const [attemptModal, setAttemptModal] = useState<AttemptModalState>(emptyAttemptModal);
   const [attemptFormError, setAttemptFormError] = useState<string | null>(null);
 
-  const [uploadModal, setUploadModal] = useState<UploadModalState>(emptyUploadModal);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadFormError, setUploadFormError] = useState<string | null>(null);
+  const [pasteModal, setPasteModal] = useState<PasteAttemptsModalState>(emptyPasteModal);
+  const [pasteFormError, setPasteFormError] = useState<string | null>(null);
 
   const [importModal, setImportModal] = useState<ImportModalState>(emptyImportModal);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -872,36 +872,34 @@ export default function LottoClient() {
     await setAttemptTicket(drawId, dragged, null);
   };
 
-  const openUpload = () => {
-    setUploadFormError(null);
-    setUploadFile(null);
-    setUploadModal({ open: true, drawDate: "" });
+  const openPasteAttempts = () => {
+    setPasteFormError(null);
+    setPasteModal({ open: true, drawDate: "", attemptsText: "" });
   };
 
-  const closeUploadModal = () => {
-    setUploadModal(emptyUploadModal);
-    setUploadFile(null);
-    setUploadFormError(null);
+  const closePasteModal = () => {
+    setPasteModal(emptyPasteModal);
+    setPasteFormError(null);
   };
 
-  const submitUpload = async (e: React.FormEvent) => {
+  const submitPasteAttempts = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUploadFormError(null);
-    if (!uploadModal.drawDate) {
-      setUploadFormError("Enter a date.");
+    setPasteFormError(null);
+    if (!pasteModal.drawDate) {
+      setPasteFormError("Enter a date.");
       return;
     }
-    if (!uploadFile) {
-      setUploadFormError("Choose a .txt file.");
+    if (!pasteModal.attemptsText.trim()) {
+      setPasteFormError("Paste in some numbers first.");
       return;
     }
     let drawDate: string;
     let blocks: TicketBlock[];
     try {
-      drawDate = parseDrawDate(uploadModal.drawDate);
-      blocks = parseTicketsFile(await uploadFile.text());
+      drawDate = parseDrawDate(pasteModal.drawDate);
+      blocks = parseTicketsText(pasteModal.attemptsText);
     } catch (err) {
-      setUploadFormError(err instanceof Error ? err.message : "Invalid input");
+      setPasteFormError(err instanceof Error ? err.message : "Invalid input");
       return;
     }
     setSaving(true);
@@ -917,8 +915,8 @@ export default function LottoClient() {
         upsertLocalDraw(created);
       }
       // Tickets without an explicit "ticket N" header are numbered after
-      // whatever's already on this draw (so a second upload doesn't collide
-      // with tickets from the first), in file order.
+      // whatever's already on this draw (so a second paste doesn't collide
+      // with tickets from the first), in the order they're pasted.
       const priorMaxTicket = (existing?.attempts ?? []).reduce(
         (max, a) => (a.ticket != null && a.ticket > max ? a.ticket : max),
         0,
@@ -933,9 +931,9 @@ export default function LottoClient() {
         }
       }
       if (detail) upsertLocalDraw(detail);
-      closeUploadModal();
+      closePasteModal();
     } catch (err) {
-      setUploadFormError(err instanceof Error ? err.message : "Upload failed");
+      setPasteFormError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSaving(false);
     }
@@ -955,7 +953,7 @@ export default function LottoClient() {
 
   /** Downloads every attempt logged across every draw, grouped by date. See
    * `buildAllAttemptsExportText` — this is a full backup/review file, not
-   * something meant to be re-uploaded as a whole. */
+   * something meant to be pasted back in as a whole. */
   const onExportAllAttempts = () => {
     const text = buildAllAttemptsExportText(draws);
     downloadTextFile(
@@ -964,8 +962,8 @@ export default function LottoClient() {
     );
   };
 
-  /** Downloads one draw's attempts in the same shape "Upload from txt"
-   * reads, so it can be re-uploaded against this or another date. */
+  /** Downloads one draw's attempts in the same shape "Paste attempts"
+   * reads, so it can be pasted back in against this or another date. */
   const onExportDrawAttempts = (detail: LottoDrawDetail) => {
     const text = attemptsToTicketBlocksText(detail.attempts);
     downloadTextFile(`lotto-attempts-${detail.draw.draw_date}.txt`, text + (text ? "\n" : ""));
@@ -1271,7 +1269,7 @@ export default function LottoClient() {
                 disabled={saving}
                 className={`${ACTION_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
                 onClick={() => onExportDrawAttempts(detail)}
-                title="Download this draw's attempts as a text file, in the same format Upload from txt reads"
+                title="Download this draw's attempts as a text file, in the same format Paste attempts reads"
               >
                 Export attempts
               </button>
@@ -1430,7 +1428,7 @@ export default function LottoClient() {
     );
   };
 
-  const anyModalOpen = drawModal.open || attemptModal.open || uploadModal.open || importModal.open;
+  const anyModalOpen = drawModal.open || attemptModal.open || pasteModal.open || importModal.open;
 
   return (
     <div className="relative mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
@@ -1475,9 +1473,9 @@ export default function LottoClient() {
             <button
               type="button"
               className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
-              onClick={openUpload}
+              onClick={openPasteAttempts}
             >
-              Upload from txt
+              Paste attempts
             </button>
           </div>
         </div>
@@ -1758,23 +1756,23 @@ export default function LottoClient() {
         </form>
       </Modal>
 
-      <Modal open={uploadModal.open} onClose={closeUploadModal} ariaLabelledBy="lotto-upload-title">
+      <Modal open={pasteModal.open} onClose={closePasteModal} ariaLabelledBy="lotto-paste-title">
         <div className="mb-4 flex items-start justify-between gap-2">
-          <h2 id="lotto-upload-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Upload from txt
+          <h2 id="lotto-paste-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Paste attempts
           </h2>
           <button
             type="button"
             className={CLOSE_BUTTON_CLASSES}
-            onClick={closeUploadModal}
+            onClick={closePasteModal}
           >
             Close
           </button>
         </div>
-        <form onSubmit={submitUpload} className="flex flex-col gap-4">
-          {uploadFormError && (
+        <form onSubmit={submitPasteAttempts} className="flex flex-col gap-4">
+          {pasteFormError && (
             <div className={ERROR_ALERT_CLASSES} role="alert">
-              {uploadFormError}
+              {pasteFormError}
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
@@ -1783,39 +1781,42 @@ export default function LottoClient() {
               required
               type="text"
               className={INPUT_CLASSES}
-              value={uploadModal.drawDate}
+              value={pasteModal.drawDate}
               disabled={saving}
-              onChange={(e) => setUploadModal((m) => ({ ...m, drawDate: e.target.value }))}
+              onChange={(e) => setPasteModal((m) => ({ ...m, drawDate: e.target.value }))}
             />
             <span className="text-xs text-zinc-500">{DRAW_DATE_HELP}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Text file</span>
-            <input
+            <span className="text-zinc-600 dark:text-zinc-400">Attempts</span>
+            <textarea
               required
-              type="file"
-              accept=".txt,text/plain"
+              rows={10}
+              className={`${INPUT_CLASSES} font-mono`}
+              placeholder={"01 02 34 37 52 57\n\nTicket 2\n03 12 19 27 41 58"}
+              value={pasteModal.attemptsText}
               disabled={saving}
-              className="text-sm text-zinc-700 file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-white file:px-2 file:py-1 file:text-xs file:font-medium file:text-zinc-700 dark:text-zinc-300 dark:file:border-zinc-600 dark:file:bg-zinc-900 dark:file:text-zinc-200"
-              onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+              onChange={(e) =>
+                setPasteModal((m) => ({ ...m, attemptsText: e.target.value }))
+              }
             />
             <span className="text-xs text-zinc-500">
               6 numbers per line (e.g. &quot;01 02 34 37 52 57&quot;) — a blank line starts a
               new ticket, so each group of lines becomes one ticket&apos;s attempts against
               the draw date above. A group&apos;s first line may optionally read
-              &quot;ticket N&quot; to pin its number; otherwise tickets are numbered in
-              file order.
+              &quot;ticket N&quot; to pin its number; otherwise tickets are numbered in the
+              order they&apos;re pasted.
             </span>
           </label>
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={saving} className={PRIMARY_BUTTON_CLASSES}>
-              {saving ? "Uploading…" : "Upload"}
+              {saving ? "Saving…" : "Add attempts"}
             </button>
             <button
               type="button"
               disabled={saving}
               className={SECONDARY_BUTTON_CLASSES}
-              onClick={closeUploadModal}
+              onClick={closePasteModal}
             >
               Cancel
             </button>
