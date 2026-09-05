@@ -513,6 +513,11 @@ export default function LottoClient() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Import/export/paste are bulk data-management actions, not the thing
+  // most visits to this page are for — tucked behind one toggle instead of
+  // four buttons competing with the page's actual content for attention.
+  const [showDataTools, setShowDataTools] = useState(false);
+
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
   // Hidden attempts are tucked out of view by default. This tracks which
   // draws currently have theirs revealed — per-draw, so one draw's hidden
@@ -867,10 +872,8 @@ export default function LottoClient() {
     }
   };
 
-  /** Hides or unhides a whole group of attempts in one go, instead of one at
-   * a time — used both for a single ticket's board plays and for every
-   * attempt on a draw ("Hide/Show all attempts"). Attempts already at the
-   * target state are skipped. */
+  /** Hides or unhides every board play on a ticket in one go, instead of one
+   * at a time. Attempts already at the target state are skipped. */
   const onToggleAttemptsHidden = async (
     drawId: number,
     items: { attempt: LottoAttemptRow }[],
@@ -1110,7 +1113,6 @@ export default function LottoClient() {
     // switched on.
     const showHiddenForDraw = shownHiddenDrawIds.has(detail.draw.id);
     const rawHiddenCount = detail.attempts.filter((a) => a.hidden).length;
-    const allAttemptsHidden = totalAttempts > 0 && rawHiddenCount === totalAttempts;
     const visibleAttempts = showHiddenForDraw
       ? detail.attempts
       : detail.attempts.filter((a) => !a.hidden);
@@ -1367,25 +1369,6 @@ export default function LottoClient() {
               <span className="sm:hidden">+ Add</span>
               <span className="hidden sm:inline">+ Add attempt</span>
             </button>
-            {hasAttempts && (
-              <button
-                type="button"
-                disabled={saving}
-                className={`${DETAIL_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
-                onClick={() =>
-                  void onToggleAttemptsHidden(
-                    detail.draw.id,
-                    detail.attempts.map((attempt) => ({ attempt })),
-                    !allAttemptsHidden,
-                  )
-                }
-              >
-                <span className="sm:hidden">{allAttemptsHidden ? "Show all" : "Hide all"}</span>
-                <span className="hidden sm:inline">
-                  {allAttemptsHidden ? "Show all attempts" : "Hide all attempts"}
-                </span>
-              </button>
-            )}
             <button
               type="button"
               disabled={saving}
@@ -1428,22 +1411,13 @@ export default function LottoClient() {
                   : `Show hidden (${rawHiddenCount})`}
               </button>
             )}
-            {matchBreakdown.length > 0 && (
-              <span className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                {matchBreakdown.map(({ tier, count }) => (
-                  <span key={tier} className={count === 0 ? "opacity-40" : ""}>
-                    {tier}/6 &times;{count}
-                  </span>
-                ))}
-              </span>
-            )}
           </div>
 
           <div className="mt-3 flex flex-col gap-3">
             {ticketClusters.map((cluster) => (
               <div
                 key={`ticket-${cluster.ticket}`}
-                className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-900/40"
+                className="rounded-lg border-2 border-white bg-zinc-50/60 p-3 dark:bg-zinc-900/40"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.dataTransfer.dropEffect = "move";
@@ -1471,18 +1445,18 @@ export default function LottoClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className={EDIT_BUTTON_CLASSES}
-                      onClick={() => openEditTicket(detail.draw.id, cluster.ticket, cluster.items)}
+                      className={ADD_BUTTON_CLASSES}
+                      onClick={() => openAddAttempts(detail.draw.id, cluster.ticket)}
                     >
-                      Edit
+                      + Add to this ticket
                     </button>
                     <button
                       type="button"
                       disabled={saving}
-                      className={DELETE_BUTTON_CLASSES}
-                      onClick={() => void onDeleteTicket(detail.draw.id, cluster.items)}
+                      className={EDIT_BUTTON_CLASSES}
+                      onClick={() => openEditTicket(detail.draw.id, cluster.ticket, cluster.items)}
                     >
-                      Delete
+                      Edit
                     </button>
                     {/* Only a real hide is a persisted action here — a
                      * fully-hidden ticket only ever renders once "Show
@@ -1503,10 +1477,10 @@ export default function LottoClient() {
                     <button
                       type="button"
                       disabled={saving}
-                      className={ADD_BUTTON_CLASSES}
-                      onClick={() => openAddAttempts(detail.draw.id, cluster.ticket)}
+                      className={DELETE_BUTTON_CLASSES}
+                      onClick={() => void onDeleteTicket(detail.draw.id, cluster.items)}
                     >
-                      + Add to this ticket
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -1580,7 +1554,18 @@ export default function LottoClient() {
               numbers turn green.
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            type="button"
+            className={`${ACTION_BUTTON_CLASSES} shrink-0 px-3 py-1.5 text-sm`}
+            aria-expanded={showDataTools}
+            onClick={() => setShowDataTools((v) => !v)}
+          >
+            Data tools <span aria-hidden>{showDataTools ? "▴" : "▾"}</span>
+          </button>
+        </div>
+
+        {showDataTools && (
+          <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
@@ -1615,7 +1600,7 @@ export default function LottoClient() {
               Paste attempts
             </button>
           </div>
-        </div>
+        )}
       </header>
 
       {error && (
@@ -1628,41 +1613,36 @@ export default function LottoClient() {
         <p className={DASHED_EMPTY_CLASSES}>No results yet — add one to get started.</p>
       )}
 
-      {!loading && draws.length > 0 && (
+      {/* Only worth a card when there's actually something to say — an
+       * empty "no coincidences" box on every visit is noise, not insight. */}
+      {whatIfMatches.length > 0 && (
         <section className={CARD_CLASSES}>
           <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">What if?</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Numbers you&apos;ve played that exactly match a different draw&apos;s result
             somewhere else in the history — if only you&apos;d played them that day instead.
           </p>
-          {whatIfMatches.length === 0 ? (
-            <p className={`mt-3 ${DASHED_EMPTY_CLASSES}`}>
-              No lucky coincidences yet — none of your attempts match another draw&apos;s
-              result.
-            </p>
-          ) : (
-            <ul className="mt-3 flex flex-col gap-2">
-              {whatIfMatches.map((w) => (
-                <li
-                  key={w.key}
-                  className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-900 dark:bg-indigo-950/30"
-                >
-                  <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                    {w.numbers.map((n) => (
-                      <NumberBall key={n} n={n} variant="match" />
-                    ))}
-                  </div>
-                  <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                    Attempt from {formatDate(w.loggedDrawDate)} matches the historic draw
-                    result from{" "}
-                    <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                      {formatDate(w.matchedDrawDate)}
-                    </span>
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul className="mt-3 flex flex-col gap-2">
+            {whatIfMatches.map((w) => (
+              <li
+                key={w.key}
+                className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-900 dark:bg-indigo-950/30"
+              >
+                <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+                  {w.numbers.map((n) => (
+                    <NumberBall key={n} n={n} variant="match" />
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                  Attempt from {formatDate(w.loggedDrawDate)} matches the historic draw
+                  result from{" "}
+                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                    {formatDate(w.matchedDrawDate)}
+                  </span>
+                </p>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
