@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  CalendarIcon,
+  LayersIcon,
+  WalletIcon,
+} from "@/components/Icons";
+import { PageHeader } from "@/components/PageHeader";
+import { StatCard } from "@/components/StatCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
@@ -29,13 +36,13 @@ import { fmtAmount, fmtAmountOrDash } from "@/lib/formatNumber";
 import {
   ACTION_BUTTON_CLASSES,
   AMOUNT_POSITIVE_CLASSES,
-  CARD_CLASSES,
   CLOSE_BUTTON_CLASSES,
   DASHED_EMPTY_CLASSES,
   DELETE_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
   TABLE_CELL_CLASSES,
@@ -45,7 +52,6 @@ import {
   TABLE_WRAPPER_CLASSES,
   TOGGLE_ACTIVE_BUTTON_CLASSES,
   TOGGLE_INACTIVE_BUTTON_CLASSES,
-  alertClasses,
 } from "@/lib/ui";
 import { InstallmentFieldGrid } from "./installmentFieldGrid";
 
@@ -765,40 +771,40 @@ export default function InstallmentsClient() {
   }, [activeRows]);
 
   return (
-    <div className="relative mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Installments
-          </h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Installments"
+        description={
+          <>
             Track scheduled installment plans and record payments as they&apos;re made.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {doneRows.length > 0 && (
+          </>
+        }
+        actions={
+          <>
+            {doneRows.length > 0 && (
+              <button
+                type="button"
+                className={
+                  showArchived
+                    ? TOGGLE_ACTIVE_BUTTON_CLASSES
+                    : TOGGLE_INACTIVE_BUTTON_CLASSES
+                }
+                onClick={() => setShowArchived((v) => !v)}
+              >
+                Archived ({doneRows.length})
+              </button>
+            )}
             <button
               type="button"
-              className={
-                showArchived
-                  ? TOGGLE_ACTIVE_BUTTON_CLASSES
-                  : TOGGLE_INACTIVE_BUTTON_CLASSES
-              }
-              onClick={() => setShowArchived((v) => !v)}
+              disabled={loading || rows.length === 0}
+              className={ACTION_BUTTON_CLASSES}
+              onClick={() => void openPayments()}
             >
-              Archived ({doneRows.length})
+              Payments by month
             </button>
-          )}
-          <button
-            type="button"
-            disabled={loading || rows.length === 0}
-            className={ACTION_BUTTON_CLASSES}
-            onClick={() => void openPayments()}
-          >
-            Payments by month
-          </button>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -807,31 +813,25 @@ export default function InstallmentsClient() {
       )}
 
       {!loading && (
-        <section className="grid gap-3 sm:grid-cols-3">
-          <div className={`${CARD_CLASSES} !p-4`}>
-            <p className="text-xs font-medium uppercase text-zinc-500">
-              Total (active plans)
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-              {fmtMoney(summary.sum_original_total)}
-            </p>
-          </div>
-          <div className={`${CARD_CLASSES} !p-4`}>
-            <p className="text-xs font-medium uppercase text-zinc-500">
-              Remaining
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-800 dark:text-amber-200">
-              {fmtMoney(summary.sum_remaining)}
-            </p>
-          </div>
-          <div className={`${alertClasses("success")} !p-4`}>
-            <p className="text-xs font-medium uppercase text-emerald-800 dark:text-emerald-200">
-              Due this month
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-900 dark:text-emerald-100">
-              {fmtMoney(summary.due_this_month)}
-            </p>
-          </div>
+        <section className="grid gap-4 sm:grid-cols-3">
+          <StatCard
+            label="Total (active plans)"
+            value={fmtMoney(summary.sum_original_total)}
+            icon={<LayersIcon className="size-5" />}
+            tone="brand"
+          />
+          <StatCard
+            label="Remaining"
+            value={fmtMoney(summary.sum_remaining)}
+            icon={<WalletIcon className="size-5" />}
+            tone="warning"
+          />
+          <StatCard
+            label="Due this month"
+            value={fmtMoney(summary.due_this_month)}
+            icon={<CalendarIcon className="size-5" />}
+            tone="success"
+          />
         </section>
       )}
 
@@ -839,12 +839,12 @@ export default function InstallmentsClient() {
         open={addModalOpen}
         onClose={closeAddModal}
         ariaLabelledBy="installment-add-title"
-        dialogClassName="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-line bg-surface p-5 shadow-pop"
       >
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="installment-add-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             Add installment
           </h2>
@@ -865,12 +865,12 @@ export default function InstallmentsClient() {
           />
           {draftTotal > 0 && (
             <div className="sm:col-span-2">
-              <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <p className="mb-2 text-sm font-medium text-ink-2">
                 Per-payment amounts ({draftTotal} row{draftTotal === 1 ? "" : "s"})
               </p>
               <div className={`${TABLE_WRAPPER_CLASSES} max-h-64 overflow-x-auto overflow-y-auto`}>
                 <table className="w-full min-w-[420px] text-left text-sm">
-                  <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-900/60">
+                  <thead className="sticky top-0 bg-surface-2">
                     <tr className={TABLE_HEAD_ROW_CLASSES}>
                       <th className={TABLE_HEAD_CELL_CLASSES}>#</th>
                       <th className={TABLE_HEAD_CELL_CLASSES}>Due</th>
@@ -980,7 +980,7 @@ export default function InstallmentsClient() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <p className="mt-2 text-xs text-ink-2">
                 Sum: principal {fmtMoney(draftSums.principal)} + interest{" "}
                 {fmtMoney(draftSums.interest)} = {fmtMoney(draftSums.total)}
               </p>
@@ -994,7 +994,7 @@ export default function InstallmentsClient() {
                 onChange={(e) => setLinkToCard(e.target.checked)}
                 disabled={saving}
               />
-              <span className="text-zinc-600 dark:text-zinc-400">On my credit card</span>
+              <span className="text-ink-2">On my credit card</span>
             </label>
           )}
           <div className="flex flex-wrap gap-2 sm:col-span-2">
@@ -1018,7 +1018,7 @@ export default function InstallmentsClient() {
       </Modal>
 
       <section>
-        <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+        <h2 className="text-lg font-medium text-ink">
           Plans
         </h2>
         <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
@@ -1046,15 +1046,15 @@ export default function InstallmentsClient() {
                   className={`min-w-0 cursor-pointer rounded-lg border p-3 transition-colors duration-150 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:hover:ring-indigo-700/50 ${
                     due
                       ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20"
-                      : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                      : "border-line bg-surface"
                   }`}
                 >
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-zinc-900 sm:text-base dark:text-zinc-50">
+                      <h3 className="truncate text-sm font-semibold text-ink sm:text-base">
                         {r.name}
                       </h3>
-                      <p className="mt-1 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
+                      <p className="mt-1 text-xs text-ink-2 sm:text-sm">
                         Installment{" "}
                         <span className="font-mono font-medium tabular-nums">
                           {nn}
@@ -1095,43 +1095,43 @@ export default function InstallmentsClient() {
                   </div>
                   <dl className="mt-3 grid gap-2 text-xs sm:mt-4 sm:gap-3 sm:text-sm sm:grid-cols-2 lg:grid-cols-4">
                     <div>
-                      <dt className="text-xs text-zinc-500">Principal</dt>
+                      <dt className="text-xs text-ink-3">Principal</dt>
                       <dd className="tabular-nums font-medium">{fmtMoney(r.principal)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Interest</dt>
+                      <dt className="text-xs text-ink-3">Interest</dt>
                       <dd className="tabular-nums font-medium">
                         {r.interest != null ? fmtMoney(r.interest) : "—"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Total (per payment)</dt>
+                      <dt className="text-xs text-ink-3">Total (per payment)</dt>
                       <dd className="tabular-nums font-medium">
                         {fmtMoney(r.payment_total)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Next due</dt>
-                      <dd className="text-zinc-800 dark:text-zinc-200">
+                      <dt className="text-xs text-ink-3">Next due</dt>
+                      <dd className="text-ink">
                         {r.installment_current <= r.installment_total
                           ? fmtMonthYearFromDate(nextDueDate(r))
                           : "—"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Start</dt>
+                      <dt className="text-xs text-ink-3">Start</dt>
                       <dd className="tabular-nums">{fmtMonthYear(r.start_date)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Finish</dt>
+                      <dt className="text-xs text-ink-3">Finish</dt>
                       <dd className="tabular-nums">{fmtMonthYear(r.finish_date)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Original total</dt>
+                      <dt className="text-xs text-ink-3">Original total</dt>
                       <dd className="tabular-nums">{fmtMoney(r.original_total)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Remaining</dt>
+                      <dt className="text-xs text-ink-3">Remaining</dt>
                       <dd className="tabular-nums font-semibold text-amber-800 dark:text-amber-200">
                         {fmtMoney(r.remaining)}
                       </dd>
@@ -1143,7 +1143,7 @@ export default function InstallmentsClient() {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
+                  <p className="mt-2 text-xs text-ink-2">
                     {fmtPct2(pct)}% of schedule
                   </p>
                 </li>
@@ -1159,7 +1159,7 @@ export default function InstallmentsClient() {
 
       {showArchived && doneRows.length > 0 && (
         <section>
-          <h2 className="text-lg font-medium text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-lg font-medium text-ink-3">
             Archived — Fully Paid
           </h2>
           <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
@@ -1179,16 +1179,16 @@ export default function InstallmentsClient() {
                       void openDetail(r.id);
                     }
                   }}
-                  className="min-w-0 cursor-pointer rounded-lg border border-zinc-200 bg-zinc-50 p-3 opacity-70 transition-colors duration-150 hover:opacity-100 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:ring-indigo-700/50"
+                  className="min-w-0 cursor-pointer rounded-lg border border-line bg-surface-2 p-3 opacity-70 transition-colors duration-150 hover:opacity-100 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:hover:ring-indigo-700/50"
                 >
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-zinc-900 sm:text-base dark:text-zinc-50">
+                      <h3 className="truncate text-sm font-semibold text-ink sm:text-base">
                         {r.name}
                       </h3>
-                      <p className="mt-1 text-xs text-zinc-500 sm:text-sm dark:text-zinc-400">
+                      <p className="mt-1 text-xs text-ink-3 sm:text-sm">
                         {r.installment_total}/{r.installment_total} payments ·{" "}
-                        <span className="rounded-md bg-zinc-300 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                        <span className="rounded-md bg-zinc-300 px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-zinc-700">
                           Paid off
                         </span>
                       </p>
@@ -1209,31 +1209,31 @@ export default function InstallmentsClient() {
                   </div>
                   <dl className="mt-3 grid gap-2 text-xs sm:mt-4 sm:gap-3 sm:text-sm sm:grid-cols-2 lg:grid-cols-4">
                     <div>
-                      <dt className="text-xs text-zinc-500">Principal</dt>
+                      <dt className="text-xs text-ink-3">Principal</dt>
                       <dd className="tabular-nums font-medium">{fmtMoney(r.principal)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Interest</dt>
+                      <dt className="text-xs text-ink-3">Interest</dt>
                       <dd className="tabular-nums font-medium">
                         {r.interest != null ? fmtMoney(r.interest) : "—"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Total (per payment)</dt>
+                      <dt className="text-xs text-ink-3">Total (per payment)</dt>
                       <dd className="tabular-nums font-medium">
                         {fmtMoney(r.payment_total)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Original total</dt>
+                      <dt className="text-xs text-ink-3">Original total</dt>
                       <dd className="tabular-nums">{fmtMoney(r.original_total)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Start</dt>
+                      <dt className="text-xs text-ink-3">Start</dt>
                       <dd className="tabular-nums">{fmtMonthYear(r.start_date)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Finish</dt>
+                      <dt className="text-xs text-ink-3">Finish</dt>
                       <dd className="tabular-nums">{fmtMonthYear(r.finish_date)}</dd>
                     </div>
                   </dl>
@@ -1243,7 +1243,7 @@ export default function InstallmentsClient() {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="mt-2 text-xs text-ink-3">
                     {fmtPct2(pct)}% of schedule
                   </p>
                 </li>
@@ -1258,12 +1258,12 @@ export default function InstallmentsClient() {
         onClose={closeScheduleModal}
         ariaLabelledBy="schedule-title"
         backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-        dialogClassName="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-pop"
       >
-            <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+            <div className="flex shrink-0 items-start justify-between gap-2 border-b border-line px-4 py-3">
               <h2
                 id="schedule-title"
-                className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+                className="text-lg font-semibold text-ink"
               >
                 {form.name.trim() || "Edit installment"}
               </h2>
@@ -1278,7 +1278,7 @@ export default function InstallmentsClient() {
             <div className="min-h-0 flex-1 overflow-auto p-4">
               <form
                 onSubmit={submitCreate}
-                className="grid gap-4 border-b border-zinc-200 pb-5 sm:grid-cols-2 dark:border-zinc-800"
+                className="grid gap-4 border-b border-line pb-5 sm:grid-cols-2"
               >
                 <InstallmentFieldGrid
                   form={form}
@@ -1293,7 +1293,7 @@ export default function InstallmentsClient() {
                       onChange={(e) => setLinkToCard(e.target.checked)}
                       disabled={saving}
                     />
-                    <span className="text-zinc-600 dark:text-zinc-400">
+                    <span className="text-ink-2">
                       On my credit card
                     </span>
                   </label>
@@ -1313,13 +1313,13 @@ export default function InstallmentsClient() {
                 <p className={LOADING_TEXT_CLASSES}>Loading schedule…</p>
               )}
               {!detailLoading && detail && detail.lines.length === 0 && (
-                <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                <p className="text-sm text-ink">
                   No monthly rows yet.
                 </p>
               )}
               {!detailLoading && detail && detail.lines.length > 0 && (
                 <div>
-                <p className="mb-3 text-xs text-zinc-600 dark:text-zinc-400">
+                <p className="mb-3 text-xs text-ink-2">
                   Drag a row to reorder payments. Due dates follow the new row order after you save.
                 </p>
                 <div className={`${TABLE_WRAPPER_CLASSES} overflow-x-auto`}>
@@ -1509,7 +1509,7 @@ export default function InstallmentsClient() {
               </div>
             </div>
             {!detailLoading && detail && detail.lines.length > 0 && (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line bg-surface px-4 py-3">
                 <button
                   type="button"
                   disabled={savingSchedule || !scheduleHasChanges}
@@ -1527,12 +1527,12 @@ export default function InstallmentsClient() {
         onClose={closePayments}
         ariaLabelledBy="payments-title"
         backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-        dialogClassName="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-pop"
       >
-        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-line px-4 py-3">
           <h2
             id="payments-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             Payments by month
           </h2>
@@ -1546,15 +1546,15 @@ export default function InstallmentsClient() {
         </div>
 
         {!paymentsLoading && (
-          <div className="grid shrink-0 grid-cols-3 gap-2 border-b border-zinc-200 px-4 py-3 text-center dark:border-zinc-800">
+          <div className="grid shrink-0 grid-cols-3 gap-2 border-b border-line px-4 py-3 text-center">
             <div>
-              <p className="text-[11px] font-medium uppercase text-zinc-500">Done</p>
+              <p className="text-[11px] font-medium uppercase text-ink-3">Done</p>
               <p className={`mt-0.5 text-base ${AMOUNT_POSITIVE_CLASSES}`}>
                 {fmtMoney(paymentsByMonth.grandDone)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-medium uppercase text-zinc-500">
+              <p className="text-[11px] font-medium uppercase text-ink-3">
                 To be made
               </p>
               <p className="mt-0.5 text-base font-semibold tabular-nums text-amber-700 dark:text-amber-300">
@@ -1562,8 +1562,8 @@ export default function InstallmentsClient() {
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-medium uppercase text-zinc-500">Total</p>
-              <p className="mt-0.5 text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+              <p className="text-[11px] font-medium uppercase text-ink-3">Total</p>
+              <p className="mt-0.5 text-base font-semibold tabular-nums text-ink">
                 {fmtMoney(paymentsByMonth.grandTotal)}
               </p>
             </div>
@@ -1575,7 +1575,7 @@ export default function InstallmentsClient() {
             <p className={LOADING_TEXT_CLASSES}>Loading payments…</p>
           )}
           {!paymentsLoading && paymentsByMonth.years.length === 0 && (
-            <p className="text-sm text-zinc-800 dark:text-zinc-200">
+            <p className="text-sm text-ink">
               No scheduled payments.
             </p>
           )}
@@ -1583,7 +1583,7 @@ export default function InstallmentsClient() {
             <div className="flex flex-col gap-6">
               {paymentsByMonth.years.map((year) => (
                 <div key={year}>
-                  <h3 className="mb-2 text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                  <h3 className="mb-2 text-sm font-semibold tabular-nums text-ink">
                     {year}
                   </h3>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -1593,7 +1593,7 @@ export default function InstallmentsClient() {
                         return (
                           <div
                             key={m}
-                            className="flex min-h-[5rem] flex-col rounded-lg border border-dashed border-zinc-200 px-2 py-2 text-zinc-400 dark:border-zinc-800 dark:text-zinc-600"
+                            className="flex min-h-[5rem] flex-col rounded-lg border border-dashed border-line px-2 py-2 text-ink-4"
                           >
                             <span className="text-xs font-medium">{abbr}</span>
                           </div>
@@ -1610,10 +1610,10 @@ export default function InstallmentsClient() {
                           }`}
                         >
                           <div className="flex items-baseline justify-between gap-1">
-                            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+                            <span className="text-xs font-semibold text-ink-2">
                               {abbr}
                             </span>
-                            <span className="text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                            <span className="text-xs font-semibold tabular-nums text-ink">
                               {fmtMoney(g.subtotal)}
                             </span>
                           </div>
@@ -1633,7 +1633,7 @@ export default function InstallmentsClient() {
                                 >
                                   {it.planName}
                                 </span>
-                                <span className="shrink-0 tabular-nums text-zinc-700 dark:text-zinc-300">
+                                <span className="shrink-0 tabular-nums text-ink-2">
                                   {fmtMoney(it.amount)}
                                 </span>
                               </li>

@@ -189,7 +189,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
             </div>
             <div className="mt-auto w-full shrink-0 pt-2 text-right">
               <span
-                className="text-xs font-medium tabular-nums leading-tight text-zinc-500 dark:text-zinc-400"
+                className="text-xs font-medium tabular-nums leading-tight text-ink-3"
                 title="Total + deductions (withholding, SSS, Philhealth, Pag-ibig, MP2)"
               >
                 Gross: {fmtNum(totalPlusDeductions)}
@@ -248,19 +248,19 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
       <div className="mb-3 flex items-center justify-center gap-2 tabular-nums sm:mb-4 sm:gap-3">
         <button
           type="button"
-          className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-zinc-300 dark:border-zinc-600`}
+          className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-line-strong`}
           aria-label="Previous year"
           disabled={statsYear <= 1900}
           onClick={() => setStatsYear((y) => Math.max(1900, y - 1))}
         >
           ‹
         </button>
-        <span className="min-w-[4rem] text-center text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+        <span className="min-w-[4rem] text-center text-sm font-semibold text-ink">
           {statsYear}
         </span>
         <button
           type="button"
-          className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-zinc-300 dark:border-zinc-600`}
+          className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-line-strong`}
           aria-label="Next year"
           disabled={statsYear >= 2200}
           onClick={() => setStatsYear((y) => Math.min(2200, y + 1))}
@@ -358,7 +358,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
       />
 
       <div className="mt-1">
-        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
           Deductions
         </h3>
         <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 sm:grid-cols-2 sm:gap-4 md:gap-5">

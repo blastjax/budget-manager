@@ -1,12 +1,12 @@
 "use client";
 
 import { Suspense } from "react";
+import { Header } from "@/components/Header";
+import { SidebarNav } from "@/components/SidebarNav";
 import {
   ShellLayoutProvider,
   useShellLayout,
 } from "@/lib/shellLayoutContext";
-import { MobileTopBar } from "@/components/MobileTopBar";
-import { SidebarNav } from "@/components/SidebarNav";
 
 function MobileNavBackdrop() {
   const { mobileNavOpen, closeMobileNav } = useShellLayout();
@@ -15,7 +15,7 @@ function MobileNavBackdrop() {
     <button
       type="button"
       aria-label="Close navigation menu"
-      className="fixed inset-x-0 bottom-0 top-14 z-[50] bg-zinc-900/45 backdrop-blur-[1px] lg:hidden"
+      className="fixed inset-0 z-[55] bg-zinc-950/50 backdrop-blur-[2px] lg:hidden"
       onClick={closeMobileNav}
     />
   );
@@ -23,14 +23,15 @@ function MobileNavBackdrop() {
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen min-h-[100dvh] w-full min-w-0 flex-1 flex-col bg-[var(--background)] lg:flex-row">
-      <MobileTopBar />
-      <MobileNavBackdrop />
+    // Scrolling happens at the document level so both the sidebar and the
+    // header can be plain `sticky` elements instead of fixed overlays the
+    // content has to be padded around.
+    <div className="flex min-h-screen min-h-[100dvh] w-full bg-page">
       <SidebarNav />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col pt-14 lg:pt-0">
-        <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto">
-          {children}
-        </div>
+      <MobileNavBackdrop />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header />
+        <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
   );

@@ -268,10 +268,10 @@ function DetailRow({
       <div className="flex min-w-0 gap-2.5">
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`} aria-hidden />
         <div className="min-w-0">
-          <div className="font-medium text-zinc-900 dark:text-zinc-50">
+          <div className="font-medium text-ink">
             {title}
             {subtitle && (
-              <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+              <span className="ml-2 font-normal text-ink-3">
                 {subtitle}
               </span>
             )}
@@ -282,17 +282,17 @@ function DetailRow({
             </div>
           )}
           {bookingConfirmation && (
-            <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+            <div className="mt-0.5 whitespace-pre-line text-ink-3">
               Confirmation: {bookingConfirmation}
             </div>
           )}
           {instructions && (
-            <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+            <div className="mt-0.5 whitespace-pre-line text-ink-3">
               {instructions}
             </div>
           )}
           {notes && (
-            <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+            <div className="mt-0.5 whitespace-pre-line text-ink-3">
               {notes}
             </div>
           )}
@@ -478,9 +478,9 @@ function DayDetails({
     dayAccommodations.length > 0;
 
   return (
-    <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="mt-4 rounded-lg border border-line bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        <h6 className="text-sm font-semibold text-ink">
           {formatDate(iso)}
         </h6>
         <button type="button" onClick={onClose} className={CLOSE_BUTTON_CLASSES}>
@@ -488,7 +488,7 @@ function DayDetails({
         </button>
       </div>
       {!hasAny && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing logged for this day.</p>
+        <p className="text-sm text-ink-3">Nothing logged for this day.</p>
       )}
       <div className="flex flex-col gap-3 text-sm">
         {dayFlights.map((f) => (
@@ -546,7 +546,7 @@ function DayDetails({
           />
         ))}
       </div>
-      <div className={`flex justify-end ${hasAny ? "mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800" : "mt-3"}`}>
+      <div className={`flex justify-end ${hasAny ? "mt-3 border-t border-line pt-3" : "mt-3"}`}>
         <button
           type="button"
           disabled={actions.saving}
@@ -588,15 +588,15 @@ function TripFullSpanDetails({
     : "Whole trip — every flight, bus/train leg, itinerary item, and stay";
 
   return (
-    <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="mt-4 rounded-lg border border-line bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h6 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{heading}</h6>
+        <h6 className="text-sm font-semibold text-ink">{heading}</h6>
         <button type="button" onClick={onClose} className={CLOSE_BUTTON_CLASSES}>
           Close
         </button>
       </div>
       {events.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing logged yet.</p>
+        <p className="text-sm text-ink-3">Nothing logged yet.</p>
       ) : (
         <div className="flex flex-col gap-3 text-sm">
           {events.map((e) => (
@@ -644,7 +644,7 @@ function WeekRow({
   const laneCount = banners.reduce((max, b) => Math.max(max, b.lane + 1), 0);
 
   return (
-    <div className="border-b border-zinc-200 last:border-b-0 dark:border-zinc-800">
+    <div className="border-b border-line last:border-b-0">
       <div className="grid grid-cols-7">
         {week.map((d) => (
           <div key={d.iso} className="px-2 pt-2">
@@ -655,10 +655,10 @@ function WeekRow({
                 d.iso === todayIso
                   ? "bg-indigo-600 font-semibold text-white"
                   : selectedDate === d.iso
-                    ? "bg-zinc-200 font-semibold text-zinc-900 dark:bg-zinc-700 dark:text-zinc-50"
+                    ? "bg-zinc-200 font-semibold text-ink dark:bg-zinc-700"
                     : d.inMonth
-                      ? "font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
-                      : "text-zinc-300 hover:bg-zinc-100 dark:text-zinc-600 dark:hover:bg-zinc-800/60"
+                      ? "font-medium text-ink-2 hover:bg-surface-2"
+                      : "text-zinc-300 hover:bg-surface-2 dark:text-zinc-600"
               }`}
             >
               {d.day}
@@ -709,7 +709,7 @@ function WeekRow({
                 <button
                   type="button"
                   onClick={() => onSelectDate(d.iso)}
-                  className="text-left text-[11px] font-medium text-zinc-500 transition-colors duration-150 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  className="text-left text-[11px] font-medium text-ink-3 transition-colors duration-150 hover:text-ink"
                 >
                   +{overflow} More
                 </button>
@@ -792,10 +792,10 @@ function FullScreenCalendar({
       onClose={onClose}
       ariaLabel={`${trip.title} calendar`}
       backdropClassName="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm"
-      dialogClassName="flex h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none border-0 bg-white p-0 dark:bg-zinc-950"
+      dialogClassName="flex h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none border-0 bg-surface p-0"
     >
-      <div className="grid shrink-0 grid-cols-1 items-center gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:grid-cols-3 sm:px-6">
-        <h2 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-50 sm:justify-self-start">
+      <div className="grid shrink-0 grid-cols-1 items-center gap-3 border-b border-line px-4 py-3 sm:grid-cols-3 sm:px-6">
+        <h2 className="truncate text-lg font-semibold text-ink sm:justify-self-start">
           {trip.title}
         </h2>
         <div className="justify-self-center">
@@ -817,7 +817,7 @@ function FullScreenCalendar({
             >
               ‹
             </button>
-            <span className="min-w-[9rem] px-1 text-center text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <span className="min-w-[9rem] px-1 text-center text-sm font-semibold text-ink">
               {formatMonthYear(viewYear, viewMonth)}
             </span>
             <button
@@ -850,7 +850,7 @@ function FullScreenCalendar({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-4 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400 sm:px-6">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2 text-xs text-ink-2 sm:px-6">
         {LEGEND_ITEMS.map(({ category, dot, activeClasses }) => (
           <button
             key={category}
@@ -860,7 +860,7 @@ function FullScreenCalendar({
             className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-medium transition-colors duration-150 ${
               spanFilter === category
                 ? activeClasses
-                : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+                : "hover:bg-surface-2"
             }`}
           >
             <span className={`h-2 w-2 rounded-full ${dot}`} /> {CATEGORY_LABELS[category].legend}
@@ -904,17 +904,17 @@ function FullScreenCalendar({
 
       <div className="min-h-0 flex-1 overflow-auto px-4 py-3 sm:px-6">
         <div className="min-w-[46rem]">
-          <div className="grid grid-cols-7 border-b border-zinc-200 pb-2 dark:border-zinc-800">
+          <div className="grid grid-cols-7 border-b border-line pb-2">
             {WEEKDAY_LABELS.map((w) => (
               <div
                 key={w}
-                className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                className="text-center text-xs font-semibold uppercase tracking-wide text-ink-3"
               >
                 {w}
               </div>
             ))}
           </div>
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <div className="rounded-lg border border-line">
             {weeks.map((week) => (
               <WeekRow
                 key={week[0].iso}
@@ -989,7 +989,7 @@ export function TripCalendar({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-ink-2">
         {total === 0
           ? "Nothing logged yet."
           : `${flights.length} flight${flights.length === 1 ? "" : "s"} · ${transport.length} bus/train leg${transport.length === 1 ? "" : "s"} · ${itinerary.length} itinerary item${itinerary.length === 1 ? "" : "s"} · ${accommodations.length} stay${accommodations.length === 1 ? "" : "s"}`}

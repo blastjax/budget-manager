@@ -1,7 +1,9 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useState } from "react";
 import {
+  PAGE_CONTAINER_CLASSES,
   SEGMENTED_BUTTON_ACTIVE_CLASSES,
   SEGMENTED_BUTTON_CLASSES,
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
@@ -17,17 +19,11 @@ export default function SettingsClient() {
   const [tab, setTab] = useState<SettingsTab>("payslip");
 
   return (
-    <div className="box-border flex w-full min-w-0 flex-col gap-10 px-4 pb-28 pt-10 sm:px-6 lg:px-8">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Settings
-            </h1>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Manage payslip defaults, chart colors, and users.
-            </p>
-          </div>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Settings"
+        description={<>Manage payslip defaults, chart colors, and users.</>}
+        actions={
           <div
             className={`shrink-0 ${SEGMENTED_WRAPPER_CLASSES}`}
             role="tablist"
@@ -73,8 +69,8 @@ export default function SettingsClient() {
               Users
             </button>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       {tab === "payslip" && <PayslipDefaultsPanel />}
       {tab === "charts" && <ChartColorsSettingsPanel />}

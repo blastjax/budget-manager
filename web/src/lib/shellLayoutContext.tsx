@@ -12,215 +12,96 @@ import {
   type SetStateAction,
 } from "react";
 
-const LS_LEFT_COLLAPSED = "blastjax:shell:leftCollapsed";
-const LS_LEFT_WIDTH = "blastjax:shell:leftWidth";
-const LS_RIGHT_COLLAPSED = "blastjax:shell:rightCollapsed";
-const LS_RIGHT_WIDTH = "blastjax:shell:rightWidth";
+const LS_SIDEBAR_COLLAPSED = "blastjax:shell:sidebarCollapsed";
 
-export const LEFT_MIN = 160;
-export const LEFT_MAX = 420;
-export const LEFT_DEFAULT = 208;
-
-export const RIGHT_MIN = 180;
-export const RIGHT_MAX = 560;
-export const RIGHT_DEFAULT = 224;
-
-/** Width when a panel is minimized to a rail (toggle only). */
-export const RAIL_WIDTH = 44;
-
-function readNum(key: string, fallback: number, min: number, max: number): number {
-  if (typeof window === "undefined") return fallback;
-  const raw = localStorage.getItem(key);
-  if (raw == null) return fallback;
-  const n = parseInt(raw, 10);
-  if (Number.isNaN(n)) return fallback;
-  return Math.min(max, Math.max(min, n));
-}
+/** Expanded sidebar width — wide enough for an icon + label + chevron. */
+export const SIDEBAR_WIDTH = 280;
+/** Collapsed sidebar width — an icon rail with tooltips. */
+export const SIDEBAR_RAIL_WIDTH = 76;
 
 function readBool(key: string, fallback: boolean): boolean {
   if (typeof window === "undefined") return fallback;
-  const raw = localStorage.getItem(key);
-  if (raw === "1" || raw === "true") return true;
-  if (raw === "0" || raw === "false") return false;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === "1" || raw === "true") return true;
+    if (raw === "0" || raw === "false") return false;
+  } catch {
+    /* private mode / blocked storage — fall through to the default */
+  }
   return fallback;
 }
 
 type ShellLayoutValue = {
-  leftCollapsed: boolean;
-  leftWidth: number;
-  rightCollapsed: boolean;
-  rightWidth: number;
-  setLeftCollapsed: (v: boolean) => void;
-  setRightCollapsed: (v: boolean) => void;
-  setLeftWidth: (v: number) => void;
-  setRightWidth: (v: number) => void;
-  /** Collapse nav rail ⟷ expanded (width from drag or last saved). */
-  toggleLeft: () => void;
-  /** Collapse balances rail ⟷ expanded. */
-  toggleRight: () => void;
-  maximizeLeft: () => void;
-  maximizeRight: () => void;
+  /** Desktop (`lg` and up): sidebar shown as an icon rail instead of full width. */
+  sidebarCollapsed: boolean;
+  toggleSidebar: () => void;
   /** Slide-over navigation (viewports below `lg` only). */
   mobileNavOpen: boolean;
   setMobileNavOpen: Dispatch<SetStateAction<boolean>>;
   closeMobileNav: () => void;
-  /** Slide-over account balances (viewports below `lg` only). */
-  mobileBalancesOpen: boolean;
-  setMobileBalancesOpen: Dispatch<SetStateAction<boolean>>;
-  closeMobileBalances: () => void;
 };
 
 const ShellLayoutContext = createContext<ShellLayoutValue | null>(null);
 
 export function ShellLayoutProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
-  const [leftCollapsed, setLeftCollapsedState] = useState(false);
-  const [leftWidth, setLeftWidthState] = useState(LEFT_DEFAULT);
-  const [rightCollapsed, setRightCollapsedState] = useState(false);
-  const [rightWidth, setRightWidthState] = useState(RIGHT_DEFAULT);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [mobileBalancesOpen, setMobileBalancesOpen] = useState(false);
 
+  // Read persisted state after mount: the server render has no localStorage,
+  // so starting from the default and correcting here keeps hydration stable.
   useEffect(() => {
-    setLeftCollapsedState(readBool(LS_LEFT_COLLAPSED, false));
-    setLeftWidthState(readNum(LS_LEFT_WIDTH, LEFT_DEFAULT, LEFT_MIN, LEFT_MAX));
-    setRightCollapsedState(readBool(LS_RIGHT_COLLAPSED, false));
-    setRightWidthState(readNum(LS_RIGHT_WIDTH, RIGHT_DEFAULT, RIGHT_MIN, RIGHT_MAX));
+    setSidebarCollapsed(readBool(LS_SIDEBAR_COLLAPSED, false));
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(LS_LEFT_COLLAPSED, leftCollapsed ? "1" : "0");
-  }, [hydrated, leftCollapsed]);
+    try {
+      localStorage.setItem(LS_SIDEBAR_COLLAPSED, sidebarCollapsed ? "1" : "0");
+    } catch {
+      /* nothing to do — the preference just won't survive a reload */
+    }
+  }, [hydrated, sidebarCollapsed]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(LS_LEFT_WIDTH, String(leftWidth));
-  }, [hydrated, leftWidth]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(LS_RIGHT_COLLAPSED, rightCollapsed ? "1" : "0");
-  }, [hydrated, rightCollapsed]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(LS_RIGHT_WIDTH, String(rightWidth));
-  }, [hydrated, rightWidth]);
-
-  const setLeftCollapsed = useCallback((v: boolean) => {
-    setLeftCollapsedState(v);
-  }, []);
-
-  const setRightCollapsed = useCallback((v: boolean) => {
-    setRightCollapsedState(v);
-  }, []);
-
-  const setLeftWidth = useCallback((v: number) => {
-    setLeftWidthState(Math.min(LEFT_MAX, Math.max(LEFT_MIN, v)));
-  }, []);
-
-  const setRightWidth = useCallback((v: number) => {
-    setRightWidthState(Math.min(RIGHT_MAX, Math.max(RIGHT_MIN, v)));
-  }, []);
-
-  const toggleLeft = useCallback(() => {
-    setLeftCollapsedState((x) => !x);
-  }, []);
-
-  const toggleRight = useCallback(() => {
-    setRightCollapsedState((x) => !x);
-  }, []);
-
-  const maximizeLeft = useCallback(() => {
-    setLeftCollapsedState(false);
-    setLeftWidthState(LEFT_MAX);
-  }, []);
-
-  const maximizeRight = useCallback(() => {
-    setRightCollapsedState(false);
-    setRightWidthState(RIGHT_MAX);
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((v) => !v);
   }, []);
 
   const closeMobileNav = useCallback(() => {
     setMobileNavOpen(false);
   }, []);
 
-  const closeMobileBalances = useCallback(() => {
-    setMobileBalancesOpen(false);
-  }, []);
-
+  // Growing past `lg` turns the slide-over into the docked sidebar; leaving it
+  // open would strand a backdrop over the page.
   useEffect(() => {
-    if (typeof window === "undefined") return;
     const mq = window.matchMedia("(min-width: 1024px)");
     const onChange = () => {
-      if (mq.matches) {
-        setMobileNavOpen(false);
-        setMobileBalancesOpen(false);
-        setLeftCollapsedState(false);
-      }
+      if (mq.matches) setMobileNavOpen(false);
     };
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
+  // Lock the page behind the open slide-over so touch scrolling stays in it.
   useEffect(() => {
-    if (
-      (!mobileNavOpen && !mobileBalancesOpen) ||
-      typeof document === "undefined"
-    )
-      return;
-    const mq = window.matchMedia("(min-width: 1024px)");
-    if (mq.matches) return;
+    if (!mobileNavOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [mobileNavOpen, mobileBalancesOpen]);
+  }, [mobileNavOpen]);
 
   const value = useMemo(
     (): ShellLayoutValue => ({
-      leftCollapsed,
-      leftWidth,
-      rightCollapsed,
-      rightWidth,
-      setLeftCollapsed,
-      setRightCollapsed,
-      setLeftWidth,
-      setRightWidth,
-      toggleLeft,
-      toggleRight,
-      maximizeLeft,
-      maximizeRight,
+      sidebarCollapsed,
+      toggleSidebar,
       mobileNavOpen,
       setMobileNavOpen,
       closeMobileNav,
-      mobileBalancesOpen,
-      setMobileBalancesOpen,
-      closeMobileBalances,
     }),
-    [
-      leftCollapsed,
-      leftWidth,
-      rightCollapsed,
-      rightWidth,
-      setLeftCollapsed,
-      setRightCollapsed,
-      setLeftWidth,
-      setRightWidth,
-      toggleLeft,
-      toggleRight,
-      maximizeLeft,
-      maximizeRight,
-      mobileNavOpen,
-      setMobileNavOpen,
-      closeMobileNav,
-      mobileBalancesOpen,
-      setMobileBalancesOpen,
-      closeMobileBalances,
-    ],
+    [sidebarCollapsed, toggleSidebar, mobileNavOpen, closeMobileNav],
   );
 
   return (

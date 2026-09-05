@@ -220,15 +220,15 @@ export function PdfBulkUploadClient() {
           "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed px-6 py-12 text-center transition-colors duration-150",
           dragging
             ? "border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/30"
-            : "border-zinc-300 hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500",
+            : "border-line-strong hover:border-zinc-400 dark:hover:border-zinc-500",
         ].join(" ")}
       >
-        <UploadIcon className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
+        <UploadIcon className="h-8 w-8 text-ink-4" />
         <div>
-          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <p className="text-sm font-medium text-ink-2">
             Drop PDF files here or click to select
           </p>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-xs text-ink-3">
             Multiple files supported · PDF only
           </p>
         </div>
@@ -247,10 +247,10 @@ export function PdfBulkUploadClient() {
 
       {/* File list */}
       {items.length > 0 && (
-        <section className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <section className="rounded-lg border border-line bg-surface">
           {/* Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
+            <p className="text-sm text-ink-2">
               {items.length} file{items.length !== 1 ? "s" : ""}
               {pendingCount > 0 && (
                 <span className="ml-2 text-indigo-600 dark:text-indigo-400">
@@ -324,7 +324,7 @@ function FileRow({
     switch (status) {
       case "pending":
         return (
-          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+          <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-ink-2">
             Ready
           </span>
         );
@@ -365,12 +365,12 @@ function FileRow({
 
   return (
     <li className={`flex flex-wrap items-start gap-3 px-5 py-3 ${dimmed ? "opacity-60" : ""}`}>
-      <PdfIcon className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400 dark:text-zinc-500" />
+      <PdfIcon className="mt-0.5 h-5 w-5 shrink-0 text-ink-4" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+        <p className="truncate text-sm font-medium text-ink">
           {file.name}
         </p>
-        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-0.5 text-xs text-ink-3">
           {parsed
             ? periodLabel(parsed)
             : status === "parse-error"

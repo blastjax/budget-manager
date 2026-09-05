@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
@@ -32,6 +33,7 @@ import {
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
   SEGMENTED_BUTTON_ACTIVE_CLASSES,
@@ -396,20 +398,20 @@ export default function CreditCardClient() {
   const anyModalOpen = cardModalOpen || paymentModalOpen || balanceModalOpen;
 
   return (
-    <div className="relative mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Credit Card
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Track your limit, statement balance, and payments. Installments carried on this card
-          are managed on the{" "}
-          <Link href="/installments" className="underline hover:no-underline">
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Credit Card"
+        description={
+          <>
+            Track your limit, statement balance, and payments. Installments carried on this card
+            are managed on the{" "}
+            <Link href="/installments" className="underline hover:no-underline">
             Installments
-          </Link>{" "}
-          page.
-        </p>
-      </header>
+            </Link>{" "}
+            page.
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -434,7 +436,7 @@ export default function CreditCardClient() {
         <>
           <section className={CARD_CLASSES}>
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+              <h2 className="text-lg font-medium text-ink">
                 {card.name}
               </h2>
               <div className="flex gap-2">
@@ -456,25 +458,25 @@ export default function CreditCardClient() {
             </div>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <dt className="text-xs text-zinc-500">Credit limit</dt>
-                <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                <dt className="text-xs text-ink-3">Credit limit</dt>
+                <dd className="tabular-nums font-semibold text-ink">
                   {fmtMoney(card.credit_limit)}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">Last statement balance</dt>
-                <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                <dt className="text-xs text-ink-3">Last statement balance</dt>
+                <dd className="tabular-nums font-semibold text-ink">
                   {fmtMoney(card.last_statement_balance)}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">Current balance</dt>
+                <dt className="text-xs text-ink-3">Current balance</dt>
                 <dd className="tabular-nums font-semibold text-amber-800 dark:text-amber-200">
                   {fmtMoney(card.current_balance)}
                 </dd>
               </div>
               <div>
-                <dt className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <dt className="flex items-center gap-1.5 text-xs text-ink-3">
                   Available limit
                   <button
                     type="button"
@@ -489,44 +491,44 @@ export default function CreditCardClient() {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">Minimum due</dt>
-                <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                <dt className="text-xs text-ink-3">Minimum due</dt>
+                <dd className="tabular-nums font-semibold text-ink">
                   {fmtMoney(card.minimum_due)}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">Interest rate</dt>
-                <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                <dt className="text-xs text-ink-3">Interest rate</dt>
+                <dd className="tabular-nums font-semibold text-ink">
                   {card.interest_rate}%/month
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">Statement date</dt>
-                <dd className="text-zinc-800 dark:text-zinc-200">{fmtDate(card.statement_date)}</dd>
+                <dt className="text-xs text-ink-3">Statement date</dt>
+                <dd className="text-ink">{fmtDate(card.statement_date)}</dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">Due date</dt>
-                <dd className="text-zinc-800 dark:text-zinc-200">{fmtDate(card.due_date)}</dd>
+                <dt className="text-xs text-ink-3">Due date</dt>
+                <dd className="text-ink">{fmtDate(card.due_date)}</dd>
               </div>
             </dl>
-            <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500">
+            <p className="mt-3 text-xs text-ink-3">
               Editing this to record a new statement resets the current balance to the new
               statement balance.
             </p>
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">Monthly dues</h2>
+            <h2 className="text-lg font-medium text-ink">Monthly dues</h2>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
               <div>
-                <dt className="text-xs text-zinc-500">Minimum due</dt>
-                <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                <dt className="text-xs text-ink-3">Minimum due</dt>
+                <dd className="tabular-nums font-semibold text-ink">
                   {fmtMoney(card.minimum_due)}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">Installments due this month</dt>
-                <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                <dt className="text-xs text-ink-3">Installments due this month</dt>
+                <dd className="tabular-nums font-semibold text-ink">
                   {fmtMoney(installmentDues)}
                 </dd>
               </div>
@@ -542,60 +544,60 @@ export default function CreditCardClient() {
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-medium text-ink">
               If you don&apos;t pay in full
             </h2>
-            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-xs text-ink-2">
               Estimate only — assumes no new purchases and a flat monthly rate. Your bank likely
               uses an average daily balance, so the real finance charge may differ.
             </p>
             {projections && (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-                  <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                <div className="rounded-lg border border-line p-4">
+                  <h3 className="text-sm font-medium text-ink">
                     Pay half the balance
                   </h3>
                   <dl className="mt-3 grid gap-2 text-sm">
                     <div className="flex items-baseline justify-between">
-                      <dt className="text-xs text-zinc-500">Remaining after payment</dt>
+                      <dt className="text-xs text-ink-3">Remaining after payment</dt>
                       <dd className="tabular-nums font-medium">
                         {fmtMoney(projections.half.remaining)}
                       </dd>
                     </div>
                     <div className="flex items-baseline justify-between">
-                      <dt className="text-xs text-zinc-500">Est. interest</dt>
+                      <dt className="text-xs text-ink-3">Est. interest</dt>
                       <dd className="tabular-nums font-medium text-amber-800 dark:text-amber-200">
                         {fmtMoney(projections.half.interest)}
                       </dd>
                     </div>
                     <div className="flex items-baseline justify-between">
-                      <dt className="text-xs text-zinc-500">Est. next statement</dt>
-                      <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                      <dt className="text-xs text-ink-3">Est. next statement</dt>
+                      <dd className="tabular-nums font-semibold text-ink">
                         {fmtMoney(projections.half.nextStatement)}
                       </dd>
                     </div>
                   </dl>
                 </div>
-                <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-                  <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                <div className="rounded-lg border border-line p-4">
+                  <h3 className="text-sm font-medium text-ink">
                     Pay only the minimum
                   </h3>
                   <dl className="mt-3 grid gap-2 text-sm">
                     <div className="flex items-baseline justify-between">
-                      <dt className="text-xs text-zinc-500">Remaining after payment</dt>
+                      <dt className="text-xs text-ink-3">Remaining after payment</dt>
                       <dd className="tabular-nums font-medium">
                         {fmtMoney(projections.minimum.remaining)}
                       </dd>
                     </div>
                     <div className="flex items-baseline justify-between">
-                      <dt className="text-xs text-zinc-500">Est. interest</dt>
+                      <dt className="text-xs text-ink-3">Est. interest</dt>
                       <dd className="tabular-nums font-medium text-amber-800 dark:text-amber-200">
                         {fmtMoney(projections.minimum.interest)}
                       </dd>
                     </div>
                     <div className="flex items-baseline justify-between">
-                      <dt className="text-xs text-zinc-500">Est. next statement</dt>
-                      <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                      <dt className="text-xs text-ink-3">Est. next statement</dt>
+                      <dd className="tabular-nums font-semibold text-ink">
                         {fmtMoney(projections.minimum.nextStatement)}
                       </dd>
                     </div>
@@ -606,10 +608,10 @@ export default function CreditCardClient() {
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-medium text-ink">
               Payoff calculator
             </h2>
-            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-xs text-ink-2">
               Estimate only, based on your current balance ({fmtMoney(card.current_balance)}) and{" "}
               {card.interest_rate}%/month interest, assuming no new purchases.
             </p>
@@ -648,7 +650,7 @@ export default function CreditCardClient() {
                 {calcMode === "payment" ? (
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-zinc-600 dark:text-zinc-400">
+                      <span className="text-ink-2">
                         How much can you pay per month?
                       </span>
                       <input
@@ -663,9 +665,9 @@ export default function CreditCardClient() {
                         }}
                       />
                     </label>
-                    <div className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+                    <div className="rounded-lg border border-line p-4 text-sm">
                       {calcPaymentInput.trim() === "" ? (
-                        <p className="text-zinc-500">
+                        <p className="text-ink-3">
                           Enter a monthly payment to see how long it&apos;ll take.
                         </p>
                       ) : payoffByPayment == null ? (
@@ -680,21 +682,21 @@ export default function CreditCardClient() {
                       ) : (
                         <dl className="grid gap-2">
                           <div className="flex items-baseline justify-between">
-                            <dt className="text-xs text-zinc-500">Time to pay off</dt>
-                            <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                            <dt className="text-xs text-ink-3">Time to pay off</dt>
+                            <dd className="tabular-nums font-semibold text-ink">
                               {payoffByPayment.months}{" "}
                               {payoffByPayment.months === 1 ? "month" : "months"}
                             </dd>
                           </div>
                           <div className="flex items-baseline justify-between">
-                            <dt className="text-xs text-zinc-500">Total interest</dt>
+                            <dt className="text-xs text-ink-3">Total interest</dt>
                             <dd className="tabular-nums font-medium text-amber-800 dark:text-amber-200">
                               {fmtMoney(payoffByPayment.totalInterest)}
                             </dd>
                           </div>
                           <div className="flex items-baseline justify-between">
-                            <dt className="text-xs text-zinc-500">Total paid</dt>
-                            <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                            <dt className="text-xs text-ink-3">Total paid</dt>
+                            <dd className="tabular-nums font-semibold text-ink">
                               {fmtMoney(payoffByPayment.totalPaid)}
                             </dd>
                           </div>
@@ -705,7 +707,7 @@ export default function CreditCardClient() {
                 ) : (
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-zinc-600 dark:text-zinc-400">
+                      <span className="text-ink-2">
                         Pay it off in how many months?
                       </span>
                       <input
@@ -716,9 +718,9 @@ export default function CreditCardClient() {
                         onChange={(e) => setCalcMonthsInput(e.target.value)}
                       />
                     </label>
-                    <div className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+                    <div className="rounded-lg border border-line p-4 text-sm">
                       {calcMonthsInput.trim() === "" ? (
-                        <p className="text-zinc-500">
+                        <p className="text-ink-3">
                           Enter a number of months to see the required payment.
                         </p>
                       ) : payoffByMonths == null ? (
@@ -728,20 +730,20 @@ export default function CreditCardClient() {
                       ) : (
                         <dl className="grid gap-2">
                           <div className="flex items-baseline justify-between">
-                            <dt className="text-xs text-zinc-500">Required monthly payment</dt>
-                            <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                            <dt className="text-xs text-ink-3">Required monthly payment</dt>
+                            <dd className="tabular-nums font-semibold text-ink">
                               {fmtMoney(payoffByMonths.payment)}
                             </dd>
                           </div>
                           <div className="flex items-baseline justify-between">
-                            <dt className="text-xs text-zinc-500">Total interest</dt>
+                            <dt className="text-xs text-ink-3">Total interest</dt>
                             <dd className="tabular-nums font-medium text-amber-800 dark:text-amber-200">
                               {fmtMoney(payoffByMonths.totalInterest)}
                             </dd>
                           </div>
                           <div className="flex items-baseline justify-between">
-                            <dt className="text-xs text-zinc-500">Total paid</dt>
-                            <dd className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-50">
+                            <dt className="text-xs text-ink-3">Total paid</dt>
+                            <dd className="tabular-nums font-semibold text-ink">
                               {fmtMoney(payoffByMonths.totalPaid)}
                             </dd>
                           </div>
@@ -756,7 +758,7 @@ export default function CreditCardClient() {
 
           <section className={CARD_CLASSES}>
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+              <h2 className="text-lg font-medium text-ink">
                 Installments on this card
               </h2>
               <Link
@@ -775,13 +777,13 @@ export default function CreditCardClient() {
                 {installments.map((ins) => (
                   <li
                     key={ins.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                    className="flex items-center justify-between gap-2 rounded-lg border border-line p-3"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                      <p className="truncate text-sm font-medium text-ink">
                         {ins.name}
                       </p>
-                      <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                      <p className="mt-0.5 text-xs text-ink-2">
                         Installment {ins.installment_current}/{ins.installment_total}
                       </p>
                     </div>
@@ -795,7 +797,7 @@ export default function CreditCardClient() {
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">Payments</h2>
+            <h2 className="text-lg font-medium text-ink">Payments</h2>
             {payments.length === 0 ? (
               <p className={`mt-4 ${DASHED_EMPTY_CLASSES}`}>No payments recorded yet.</p>
             ) : (
@@ -803,14 +805,14 @@ export default function CreditCardClient() {
                 {payments.map((p) => (
                   <li
                     key={p.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                    className="flex items-center justify-between gap-2 rounded-lg border border-line p-3"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                      <p className="text-sm font-medium text-ink">
                         {fmtDate(p.payment_date)}
                       </p>
                       {p.note && (
-                        <p className="mt-0.5 truncate text-xs text-zinc-600 dark:text-zinc-400">
+                        <p className="mt-0.5 truncate text-xs text-ink-2">
                           {p.note}
                         </p>
                       )}
@@ -843,7 +845,7 @@ export default function CreditCardClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="credit-card-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             {card ? "Edit credit card" : "Add credit card"}
           </h2>
@@ -857,7 +859,7 @@ export default function CreditCardClient() {
         </div>
         <form onSubmit={submitCardForm} className="grid gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="text-zinc-600 dark:text-zinc-400">Name</span>
+            <span className="text-ink-2">Name</span>
             <input
               required
               type="text"
@@ -868,7 +870,7 @@ export default function CreditCardClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Credit limit</span>
+            <span className="text-ink-2">Credit limit</span>
             <input
               required
               type="text"
@@ -884,7 +886,7 @@ export default function CreditCardClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Last statement balance</span>
+            <span className="text-ink-2">Last statement balance</span>
             <input
               required
               type="text"
@@ -902,7 +904,7 @@ export default function CreditCardClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Minimum amount due</span>
+            <span className="text-ink-2">Minimum amount due</span>
             <input
               required
               type="text"
@@ -918,7 +920,7 @@ export default function CreditCardClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Interest rate (%/month)</span>
+            <span className="text-ink-2">Interest rate (%/month)</span>
             <input
               required
               type="text"
@@ -930,7 +932,7 @@ export default function CreditCardClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Statement date (optional)</span>
+            <span className="text-ink-2">Statement date (optional)</span>
             <input
               type="date"
               className={INPUT_CLASSES}
@@ -940,7 +942,7 @@ export default function CreditCardClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Due date (optional)</span>
+            <span className="text-ink-2">Due date (optional)</span>
             <input
               type="date"
               className={INPUT_CLASSES}
@@ -980,7 +982,7 @@ export default function CreditCardClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="credit-card-payment-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             Record payment
           </h2>
@@ -994,7 +996,7 @@ export default function CreditCardClient() {
         </div>
         <form onSubmit={submitPaymentForm} className="grid gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Amount</span>
+            <span className="text-ink-2">Amount</span>
             <input
               required
               type="text"
@@ -1010,7 +1012,7 @@ export default function CreditCardClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Date</span>
+            <span className="text-ink-2">Date</span>
             <input
               required
               type="date"
@@ -1021,7 +1023,7 @@ export default function CreditCardClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Note (optional)</span>
+            <span className="text-ink-2">Note (optional)</span>
             <input
               type="text"
               className={INPUT_CLASSES}
@@ -1061,7 +1063,7 @@ export default function CreditCardClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="credit-card-balance-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             Edit available credit
           </h2>
@@ -1073,14 +1075,14 @@ export default function CreditCardClient() {
             Close
           </button>
         </div>
-        <p className="mb-4 text-xs text-zinc-600 dark:text-zinc-400">
+        <p className="mb-4 text-xs text-ink-2">
           Use this to match what your bank actually shows, e.g. if you&apos;ve made purchases or
           other transactions this app hasn&apos;t recorded. This overwrites the current balance
           shown above without touching your statement details.
         </p>
         <form onSubmit={submitBalanceForm} className="grid gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Available credit</span>
+            <span className="text-ink-2">Available credit</span>
             <input
               required
               type="text"

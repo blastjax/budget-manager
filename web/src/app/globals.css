@@ -3,35 +3,309 @@
 /* Class-based dark mode (see ThemeProvider + ThemeInitScript). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ==========================================================================
+ * Design tokens — NextAdmin (demo.nextadmin.co) palette.
+ *
+ * The whole visual language lives here as semantic CSS variables. Components
+ * reference the Tailwind utilities generated from them in `@theme inline`
+ * below (`bg-surface`, `border-line`, `text-ink-2`, `text-brand`, …) rather
+ * than naming raw palette steps, so a retheme is a change to this block and
+ * nothing else.
+ *
+ * Neutrals are Tailwind `zinc` by construction — NextAdmin's greys are the
+ * zinc ramp — which is why the pre-existing `zinc-*` usage across pages lands
+ * on the right colors without a rewrite.
+ * ======================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Tells the browser which way to render native controls — date pickers,
+   * select popups, spinners — so they follow the theme instead of staying
+   * light on a dark page. */
+  color-scheme: light;
+
+  /* Surfaces — page floor sits *below* cards, so cards read as raised. */
+  --page: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #fafafa;
+  --surface-inset: #fcfcfd;
+
+  /* Lines */
+  --line: #e8e8e8;
+  --line-soft: #f4f4f5;
+  --line-strong: #d4d4d8;
+
+  /* Ink — four steps of hierarchy, brightest first. */
+  --ink: #18181b;
+  --ink-2: #52525b;
+  --ink-3: #71717a;
+  --ink-4: #a1a1aa;
+
+  /* Brand */
+  --brand: #5750f1;
+  --brand-hover: #3c35d8;
+  --brand-text: #5750f1;
+  --brand-soft: rgba(87, 80, 241, 0.08);
+  --brand-soft-hover: rgba(87, 80, 241, 0.14);
+  --brand-ring: rgba(87, 80, 241, 0.2);
+
+  /* Status */
+  --success: #16a34a;
+  --success-text: #15803d;
+  --success-soft: #f0fdf4;
+  --success-line: #bbf7d0;
+  --danger: #dc2626;
+  --danger-text: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-line: #fecaca;
+  --warning: #ca8a04;
+  --warning-text: #a16207;
+  --warning-soft: #fefce8;
+  --warning-line: #fef08a;
+  --info: #0284c7;
+  --info-text: #0369a1;
+  --info-soft: #f0f9ff;
+  --info-line: #bae6fd;
+
+  /* Chrome */
+  --shell: #ffffff;
+  --shell-line: #e8e8e8;
+  --nav-hover: rgba(0, 0, 0, 0.05);
+  --nav-active-bg: rgba(87, 80, 241, 0.08);
+  --nav-active-text: #5750f1;
+  --nav-icon: #71717a;
+
+  /* Controls */
+  --input-bg: #ffffff;
+  --input-line: #d4d4d8;
+  --placeholder: #a1a1aa;
+
+  /* Elevation — deliberately shallow; NextAdmin leans on borders, not shadow. */
+  --shadow-xs: 0 1px 2px 0 rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(16, 24, 40, 0.1);
+  --shadow-md:
+    0 4px 8px -2px rgba(16, 24, 40, 0.1), 0 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-lg:
+    0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03);
+  --shadow-pop: 0 32px 64px -12px rgba(16, 24, 40, 0.14);
+
+  /* Legacy aliases — some components still read these directly. */
+  --background: var(--page);
+  --foreground: var(--ink);
 }
 
 .dark {
-  --background: #000000;
-  --foreground: #ededed;
+  color-scheme: dark;
+
+  --page: #09090b;
+  --surface: #171718;
+  --surface-2: #27272a;
+  --surface-3: #18181b;
+  --surface-inset: #0f0f0f;
+
+  --line: #2b2c2e;
+  --line-soft: #1d1d1f;
+  --line-strong: #3f3f46;
+
+  --ink: rgba(255, 255, 255, 0.92);
+  --ink-2: #a1a1aa;
+  --ink-3: #8a8a93;
+  --ink-4: #71717a;
+
+  --brand: #5750f1;
+  --brand-hover: #6f69f4;
+  --brand-text: #a5b4fc;
+  --brand-soft: rgba(87, 80, 241, 0.16);
+  --brand-soft-hover: rgba(87, 80, 241, 0.24);
+  --brand-ring: rgba(87, 80, 241, 0.35);
+
+  --success: #22c55e;
+  --success-text: #4ade80;
+  --success-soft: rgba(34, 197, 94, 0.1);
+  --success-line: #14532d;
+  --danger: #ef4444;
+  --danger-text: #f87171;
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --danger-line: #7f1d1d;
+  --warning: #eab308;
+  --warning-text: #facc15;
+  --warning-soft: rgba(234, 179, 8, 0.1);
+  --warning-line: #713f12;
+  --info: #0ea5e9;
+  --info-text: #38bdf8;
+  --info-soft: rgba(14, 165, 233, 0.1);
+  --info-line: #0c4a6e;
+
+  --shell: #09090b;
+  --shell-line: #1d1d1f;
+  --nav-hover: rgba(255, 255, 255, 0.05);
+  --nav-active-bg: rgba(87, 80, 241, 0.18);
+  --nav-active-text: #a5b4fc;
+  --nav-icon: #a1a1aa;
+
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --input-line: #3f3f46;
+  --placeholder: #71717a;
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 16px -4px rgba(0, 0, 0, 0.55);
+  --shadow-pop: 0 32px 64px -12px rgba(0, 0, 0, 0.7);
+
+  --background: var(--page);
+  --foreground: var(--ink);
 }
 
-/* OLED-friendly dark: pull common “near-black” surfaces to true / near black. */
+/* --------------------------------------------------------------------------
+ * Palette overrides.
+ *
+ * `indigo` is re-anchored on the NextAdmin brand (#5750f1) so accent colors
+ * already spelled `indigo-600` across the app move with the theme. Dark-mode
+ * `zinc` is nudged onto NextAdmin's card / border pair (#171718 / #2b2c2e);
+ * the page floor keeps zinc-950's near-black (#09090b), so the OLED-friendly
+ * base survives while cards gain the separation the reference design has.
+ * ----------------------------------------------------------------------- */
+@theme {
+  --color-indigo-50: #eef2ff;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+  --color-indigo-500: #6f69f4;
+  --color-indigo-600: #5750f1;
+  --color-indigo-700: #3c35d8;
+  --color-indigo-800: #322cb4;
+  --color-indigo-900: #2b278f;
+  --color-indigo-950: #1c1957;
+}
+
 @layer theme {
   .dark {
-    --color-zinc-950: #000000;
-    --color-zinc-900: #050505;
-    --color-zinc-800: #121212;
-    --color-zinc-700: #1c1c1c;
+    --color-zinc-950: #09090b;
+    --color-zinc-900: #171718;
+    --color-zinc-800: #2b2c2e;
+    --color-zinc-700: #3f3f46;
   }
 }
 
 @theme inline {
+  /* Surfaces */
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-inset: var(--surface-inset);
+  --color-shell: var(--shell);
+
+  /* Lines */
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+  --color-shell-line: var(--shell-line);
+
+  /* Ink */
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+
+  /* Brand + status */
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-text: var(--brand-text);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-hover: var(--brand-soft-hover);
+  --color-success: var(--success);
+  --color-success-text: var(--success-text);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-danger: var(--danger);
+  --color-danger-text: var(--danger-text);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-warning: var(--warning);
+  --color-warning-text: var(--warning-text);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+  --color-info: var(--info);
+  --color-info-text: var(--info-text);
+  --color-info-soft: var(--info-soft);
+  --color-info-line: var(--info-line);
+
+  /* Nav */
+  --color-nav-hover: var(--nav-hover);
+  --color-nav-active-bg: var(--nav-active-bg);
+  --color-nav-active-text: var(--nav-active-text);
+  --color-nav-icon: var(--nav-icon);
+
+  /* Controls */
+  --color-input-bg: var(--input-bg);
+  --color-input-line: var(--input-line);
+
+  /* Legacy aliases */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-card: var(--shadow-xs);
+  --shadow-pop: var(--shadow-pop);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--page);
+  color: var(--ink);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::placeholder {
+  color: var(--placeholder);
+}
+
+/* Native checkboxes, radios and range thumbs pick up the brand without each
+ * one needing a hand-built replacement. */
+input,
+textarea,
+select {
+  accent-color: var(--brand);
+}
+
+::selection {
+  background: var(--brand-soft-hover);
+}
+
+/* Thin, self-effacing scrollbars — the reference design's chrome never
+ * competes with the data sitting next to it. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--line-strong);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ink-4);
+}
+
+/* One focus treatment for every interactive element: a 4px brand halo,
+ * matching NextAdmin's `focus:ring-4`. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
 }

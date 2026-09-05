@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
@@ -29,6 +30,7 @@ import {
   EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
   alertClasses,
@@ -423,12 +425,12 @@ function NumberBall({
 }) {
   const styles: Record<string, string> = {
     neutral:
-      "border-zinc-300 bg-white text-zinc-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100",
+      "border-line-strong bg-surface text-ink",
     result:
       "border-indigo-300 bg-indigo-50 text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-100",
     match:
       "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-500 dark:bg-emerald-600",
-    miss: "border-zinc-300 bg-zinc-50 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500",
+    miss: "border-line-strong bg-surface-2 text-ink-3",
   };
   const sizeClasses =
     size === "lg"
@@ -1261,7 +1263,7 @@ export default function LottoClient() {
       </span>
     );
     const jackpotDisplay = (detail.draw.jackpot_prize != null || detail.draw.winners > 0) && (
-      <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="mt-1.5 text-xs text-ink-3">
         {detail.draw.jackpot_prize != null && (
           <>Jackpot {fmtAmountOrDash(detail.draw.jackpot_prize)}</>
         )}
@@ -1278,7 +1280,7 @@ export default function LottoClient() {
         key={attempt.id}
         draggable
         title="Drag onto another attempt or ticket to group them"
-        className={`flex cursor-grab flex-col items-center gap-2 rounded-lg border border-zinc-200 bg-white p-4 text-center active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-900 ${
+        className={`flex cursor-grab flex-col items-center gap-2 rounded-lg border border-line bg-surface p-4 text-center active:cursor-grabbing ${
           attempt.hidden ? "opacity-50" : ""
         }`}
         onDragStart={(e) => {
@@ -1318,12 +1320,12 @@ export default function LottoClient() {
         {(hasResult || attempt.hidden) && (
           <div className="flex flex-wrap items-center justify-center gap-2">
             {hasResult && (
-              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              <span className="text-sm font-medium text-ink-3">
                 {matchCount}/6 matched
               </span>
             )}
             {attempt.hidden && (
-              <span className="rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+              <span className="rounded-full border border-line-strong px-1.5 py-0.5 text-[10px] font-medium text-ink-3">
                 Hidden
               </span>
             )}
@@ -1368,7 +1370,7 @@ export default function LottoClient() {
         {matchBreakdown.map(({ tier, count }) => (
           <span
             key={tier}
-            className={`rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 ${
+            className={`rounded-full border border-line bg-surface-2 px-2 py-1 text-xs font-medium text-ink-2 ${
               count === 0 ? "opacity-40" : ""
             }`}
           >
@@ -1381,7 +1383,7 @@ export default function LottoClient() {
       <section key={detail.draw.id} className={CARD_CLASSES}>
         <div
           className={`group -m-1 flex flex-wrap items-start justify-between gap-3 rounded-lg p-1 transition-colors duration-150 ${
-            hasAttempts ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60" : ""
+            hasAttempts ? "cursor-pointer hover:bg-surface-2 dark:hover:bg-zinc-800/60" : ""
           }`}
           role={hasAttempts ? "button" : undefined}
           tabIndex={hasAttempts ? 0 : undefined}
@@ -1399,7 +1401,7 @@ export default function LottoClient() {
         >
           <div className="min-w-0">
             <h2
-              className={`text-lg font-medium text-zinc-900 dark:text-zinc-50 ${
+              className={`text-lg font-medium text-ink ${
                 hasAttempts
                   ? "transition-colors duration-150 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
                   : ""
@@ -1407,7 +1409,7 @@ export default function LottoClient() {
             >
               {formatDate(detail.draw.draw_date)}
               {collapsed && (
-                <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                <span className="ml-2 text-sm font-normal text-ink-3">
                   ({totalAttempts} attempt
                   {totalAttempts === 1 ? "" : "s"}
                   {ticketCount > 0
@@ -1454,13 +1456,13 @@ export default function LottoClient() {
         </div>
 
         {!collapsed && hasAttempts && (
-        <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+        <div className="mt-4 border-t border-line pt-4">
           <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <h3 className="text-sm font-medium text-ink-2">
               Attempts
             </h3>
             {ticketCount > 0 && (
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="text-xs text-ink-3">
                 {ticketCount} ticket{ticketCount === 1 ? "" : "s"}
               </span>
             )}
@@ -1489,12 +1491,12 @@ export default function LottoClient() {
                 }}
                 onDrop={(e) => void onDropOnTicket(detail.draw.id, cluster.ticket, e)}
               >
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  <span className="font-semibold text-zinc-700 dark:text-zinc-200">
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-ink-3">
+                  <span className="font-semibold text-ink-2">
                     Ticket {cluster.ticket}
                   </span>
                   {hasResult && (
-                    <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                    <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-ink-2 dark:bg-zinc-700">
                       best {cluster.bestMatch}/6
                     </span>
                   )}
@@ -1502,7 +1504,7 @@ export default function LottoClient() {
                     {cluster.items.length} attempt{cluster.items.length === 1 ? "" : "s"}
                   </span>
                   {cluster.allHidden && (
-                    <span className="rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                    <span className="rounded-full border border-line-strong px-1.5 py-0.5 text-[10px] font-medium text-ink-3">
                       Hidden
                     </span>
                   )}
@@ -1560,7 +1562,7 @@ export default function LottoClient() {
               <div
                 className={
                   ticketClusters.length > 0
-                    ? "rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700"
+                    ? "rounded-lg border border-dashed border-line-strong p-3"
                     : ""
                 }
                 onDragOver={(e) => {
@@ -1570,7 +1572,7 @@ export default function LottoClient() {
                 onDrop={(e) => void onDropToUngroup(detail.draw.id, e)}
               >
                 {ticketClusters.length > 0 && (
-                  <div className="mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  <div className="mb-2 text-xs font-medium text-ink-3">
                     Ungrouped — drag onto a ticket (or another attempt) to group
                   </div>
                 )}
@@ -1607,27 +1609,27 @@ export default function LottoClient() {
         : "Edit attempt";
 
   return (
-    <div className="relative mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Lotto
-            </h1>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <header>
+        <PageHeader
+          title="Lotto"
+          description={
+            <>
               Enter each date&apos;s result, then log your attempts underneath it — matching
               numbers turn green.
-            </p>
-          </div>
-          <button
-            type="button"
-            className={`${ACTION_BUTTON_CLASSES} shrink-0 px-3 py-1.5 text-sm`}
-            aria-expanded={showDataTools}
-            onClick={() => setShowDataTools((v) => !v)}
-          >
-            Data tools <span aria-hidden>{showDataTools ? "▴" : "▾"}</span>
-          </button>
-        </div>
+            </>
+          }
+          actions={
+            <button
+              type="button"
+              className={ACTION_BUTTON_CLASSES}
+              aria-expanded={showDataTools}
+              onClick={() => setShowDataTools((v) => !v)}
+            >
+              Data tools <span aria-hidden>{showDataTools ? "▴" : "▾"}</span>
+            </button>
+          }
+        />
 
         {showDataTools && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -1695,8 +1697,8 @@ export default function LottoClient() {
        * empty "no coincidences" box on every visit is noise, not insight. */}
       {whatIfMatches.length > 0 && (
         <section className={CARD_CLASSES}>
-          <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">What if?</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <h2 className="text-lg font-medium text-ink">What if?</h2>
+          <p className="mt-1 text-sm text-ink-2">
             Numbers you&apos;ve played that exactly match a different draw&apos;s result
             somewhere else in the history — if only you&apos;d played them that day instead.
           </p>
@@ -1711,10 +1713,10 @@ export default function LottoClient() {
                     <NumberBall key={n} n={n} variant="match" />
                   ))}
                 </div>
-                <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                <p className="mt-1.5 text-xs text-ink-2">
                   Attempt from {formatDate(w.loggedDrawDate)} matches the historic draw
                   result from{" "}
-                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                  <span className="font-medium text-ink">
                     {formatDate(w.matchedDrawDate)}
                   </span>
                 </p>
@@ -1763,16 +1765,16 @@ export default function LottoClient() {
             <section key={group.year} className={CARD_CLASSES}>
               <button
                 type="button"
-                className="-m-1 flex w-full flex-wrap items-center justify-between gap-3 rounded-lg p-1 text-left transition-colors duration-150 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                className="-m-1 flex w-full flex-wrap items-center justify-between gap-3 rounded-lg p-1 text-left transition-colors duration-150 hover:bg-surface-2 dark:hover:bg-zinc-800/60"
                 aria-expanded={expanded}
                 onClick={() => toggleYearExpanded(group.year)}
               >
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                <h2 className="text-lg font-medium text-ink">
                   {group.year}
                 </h2>
                 <span
                   aria-hidden
-                  className={`text-zinc-400 transition-transform dark:text-zinc-500 ${
+                  className={`text-ink-4 transition-transform ${
                     expanded ? "rotate-90" : ""
                   }`}
                 >
@@ -1785,7 +1787,7 @@ export default function LottoClient() {
                   className={`flex flex-col gap-5 ${
                     isCurrentYear
                       ? "mt-4"
-                      : "mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800"
+                      : "mt-4 border-t border-line pt-4"
                   }`}
                 >
                   {restItems.map((detail) => renderDrawCard(detail))}
@@ -1798,7 +1800,7 @@ export default function LottoClient() {
 
       <Modal open={drawModal.open} onClose={closeDrawModal} ariaLabelledBy="lotto-draw-title">
         <div className="mb-4 flex items-start justify-between gap-2">
-          <h2 id="lotto-draw-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 id="lotto-draw-title" className="text-lg font-semibold text-ink">
             {drawModal.isEdit ? "Edit result" : "Add result"}
           </h2>
           <button
@@ -1816,7 +1818,7 @@ export default function LottoClient() {
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Draw date</span>
+            <span className="text-ink-2">Draw date</span>
             <input
               required
               type="text"
@@ -1825,11 +1827,11 @@ export default function LottoClient() {
               disabled={saving}
               onChange={(e) => setDrawModal((m) => ({ ...m, drawDate: e.target.value }))}
             />
-            <span className="text-xs text-zinc-500">{DRAW_DATE_HELP}</span>
+            <span className="text-xs text-ink-3">{DRAW_DATE_HELP}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Winning numbers <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Winning numbers <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <input
               type="text"
@@ -1838,15 +1840,15 @@ export default function LottoClient() {
               disabled={saving}
               onChange={(e) => setDrawModal((m) => ({ ...m, numbersText: e.target.value }))}
             />
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-ink-3">
               {NUMBERS_HELP} — leave blank if the draw hasn&apos;t happened yet; fill it in
               once the result is announced.
             </span>
           </label>
           <div className="flex flex-wrap gap-4">
             <label className="flex min-w-[10rem] flex-1 flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Jackpot prize <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Jackpot prize <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1858,8 +1860,8 @@ export default function LottoClient() {
               />
             </label>
             <label className="flex min-w-[8rem] flex-1 flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Winners <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Winners <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1889,7 +1891,7 @@ export default function LottoClient() {
 
       <Modal open={attemptsModal.open} onClose={closeAttemptsModal} ariaLabelledBy="lotto-attempts-title">
         <div className="mb-4 flex items-start justify-between gap-2">
-          <h2 id="lotto-attempts-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 id="lotto-attempts-title" className="text-lg font-semibold text-ink">
             {attemptsModalTitle}
           </h2>
           <button
@@ -1907,7 +1909,7 @@ export default function LottoClient() {
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Your numbers</span>
+            <span className="text-ink-2">Your numbers</span>
             <textarea
               required
               rows={attemptsModal.editingIds.length > 1 ? 6 : 3}
@@ -1919,14 +1921,14 @@ export default function LottoClient() {
                 setAttemptsModal((m) => ({ ...m, attemptsText: e.target.value }))
               }
             />
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-ink-3">
               One attempt per line, {NUMBERS_HELP} — add more lines for more attempts on the
               same ticket.
             </span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Ticket # <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Ticket # <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <input
               type="text"
@@ -1936,7 +1938,7 @@ export default function LottoClient() {
               disabled={saving}
               onChange={(e) => setAttemptsModal((m) => ({ ...m, ticketText: e.target.value }))}
             />
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-ink-3">
               Groups every line above onto the same physical ticket, so they cluster
               together — leave blank if they aren&apos;t part of a ticket.
             </span>
@@ -1959,7 +1961,7 @@ export default function LottoClient() {
 
       <Modal open={pasteModal.open} onClose={closePasteModal} ariaLabelledBy="lotto-paste-title">
         <div className="mb-4 flex items-start justify-between gap-2">
-          <h2 id="lotto-paste-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 id="lotto-paste-title" className="text-lg font-semibold text-ink">
             Paste attempts
           </h2>
           <button
@@ -1977,7 +1979,7 @@ export default function LottoClient() {
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Draw date</span>
+            <span className="text-ink-2">Draw date</span>
             <input
               required
               type="text"
@@ -1986,10 +1988,10 @@ export default function LottoClient() {
               disabled={saving}
               onChange={(e) => setPasteModal((m) => ({ ...m, drawDate: e.target.value }))}
             />
-            <span className="text-xs text-zinc-500">{DRAW_DATE_HELP}</span>
+            <span className="text-xs text-ink-3">{DRAW_DATE_HELP}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Attempts</span>
+            <span className="text-ink-2">Attempts</span>
             <textarea
               required
               rows={10}
@@ -2001,7 +2003,7 @@ export default function LottoClient() {
                 setPasteModal((m) => ({ ...m, attemptsText: e.target.value }))
               }
             />
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-ink-3">
               6 numbers per line (e.g. &quot;01 02 34 37 52 57&quot;) — a blank line starts a
               new ticket, so each group of lines becomes one ticket&apos;s attempts against
               the draw date above. A group&apos;s first line may optionally read
@@ -2027,7 +2029,7 @@ export default function LottoClient() {
 
       <Modal open={importModal.open} onClose={closeImportModal} ariaLabelledBy="lotto-import-title">
         <div className="mb-4 flex items-start justify-between gap-2">
-          <h2 id="lotto-import-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 id="lotto-import-title" className="text-lg font-semibold text-ink">
             Import historic results
           </h2>
           <button
@@ -2066,16 +2068,16 @@ export default function LottoClient() {
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Text file</span>
+            <span className="text-ink-2">Text file</span>
             <input
               required
               type="file"
               accept=".txt,text/plain"
               disabled={saving}
-              className="text-sm text-zinc-700 file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-white file:px-2 file:py-1 file:text-xs file:font-medium file:text-zinc-700 dark:text-zinc-300 dark:file:border-zinc-600 dark:file:bg-zinc-900 dark:file:text-zinc-200"
+              className="text-sm text-ink-2 file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-white file:px-2 file:py-1 file:text-xs file:font-medium file:text-zinc-700 dark:file:border-zinc-600 dark:file:bg-zinc-900 dark:file:text-zinc-200"
               onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
             />
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-ink-3">
               One draw per line: <code>| n1-n2-n3-n4-n5-n6 | m/d/yyyy | jackpot | winners |</code>.
               Each row is upserted by date, so re-uploading (e.g. to backfill jackpot/winners on
               draws already here) overwrites rather than duplicating.

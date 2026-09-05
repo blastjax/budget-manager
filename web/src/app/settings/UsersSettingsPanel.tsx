@@ -179,8 +179,8 @@ export function UsersSettingsPanel() {
 
   return (
     <section className={CARD_CLASSES}>
-      <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">Users</h2>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <h2 className="text-lg font-medium text-ink">Users</h2>
+      <p className="mt-1 text-sm text-ink-2">
         Add or manage named users and their passwords. Each user&apos;s
         username and password can log in to the app once they&apos;re added
         here — the first user you add turns login on.
@@ -194,13 +194,13 @@ export function UsersSettingsPanel() {
         ) : users.length === 0 ? (
           <div className={DASHED_EMPTY_CLASSES}>No users yet.</div>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-900 dark:border-zinc-800">
+          <ul className="divide-y divide-zinc-200 rounded-lg border border-line dark:divide-zinc-900">
             {users.map((user) => (
               <li key={user.id} className="p-4">
                 {editingId === user.id ? (
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                      <label className="text-xs font-medium text-ink-2">
                         Username
                       </label>
                       <input
@@ -214,7 +214,7 @@ export function UsersSettingsPanel() {
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                        <label className="text-xs font-medium text-ink-2">
                           New password (optional)
                         </label>
                         <input
@@ -228,7 +228,7 @@ export function UsersSettingsPanel() {
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                        <label className="text-xs font-medium text-ink-2">
                           Confirm new password
                         </label>
                         <input
@@ -264,10 +264,10 @@ export function UsersSettingsPanel() {
                 ) : (
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                      <p className="font-medium text-ink">
                         {user.username}
                       </p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      <p className="text-xs text-ink-3">
                         Added {new Date(user.created_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -295,17 +295,17 @@ export function UsersSettingsPanel() {
         )}
       </div>
 
-      <fieldset className="mt-8 rounded-lg border border-zinc-200 bg-zinc-50/80 px-4 py-4 dark:border-zinc-700 dark:bg-zinc-900/40">
-        <legend className="px-1 text-sm font-medium text-zinc-800 dark:text-zinc-100">
+      <fieldset className="mt-8 rounded-lg border border-line bg-zinc-50/80 px-4 py-4 dark:bg-zinc-900/40">
+        <legend className="px-1 text-sm font-medium text-ink">
           Verify a password
         </legend>
-        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+        <p className="mt-1 text-xs text-ink-2">
           Checks a username/password pair against what&apos;s stored. Doesn&apos;t sign
           anyone in.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="text-xs font-medium text-ink-2">
               Username
             </label>
             <input
@@ -320,7 +320,7 @@ export function UsersSettingsPanel() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="text-xs font-medium text-ink-2">
               Password
             </label>
             <input
@@ -358,13 +358,13 @@ export function UsersSettingsPanel() {
         </div>
       </fieldset>
 
-      <fieldset className="mt-8 rounded-lg border border-zinc-200 bg-zinc-50/80 px-4 py-4 dark:border-zinc-700 dark:bg-zinc-900/40">
-        <legend className="px-1 text-sm font-medium text-zinc-800 dark:text-zinc-100">
+      <fieldset className="mt-8 rounded-lg border border-line bg-zinc-50/80 px-4 py-4 dark:bg-zinc-900/40">
+        <legend className="px-1 text-sm font-medium text-ink">
           Add a user
         </legend>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="text-xs font-medium text-ink-2">
               Username
             </label>
             <input
@@ -376,7 +376,7 @@ export function UsersSettingsPanel() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="text-xs font-medium text-ink-2">
               Password
             </label>
             <input
@@ -388,7 +388,7 @@ export function UsersSettingsPanel() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="text-xs font-medium text-ink-2">
               Confirm password
             </label>
             <input

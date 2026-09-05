@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -34,6 +35,7 @@ import {
   DASHED_EMPTY_CLASSES,
   ERROR_ALERT_CLASSES,
   LOADING_TEXT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   SEGMENTED_BUTTON_ACTIVE_CLASSES,
   SEGMENTED_BUTTON_CLASSES,
   SEGMENTED_BUTTON_INACTIVE_CLASSES,
@@ -273,15 +275,15 @@ export default function CommissionClient() {
   }, [monthlyByYearChartData, calendarYearsAsc]);
 
   return (
-    <div className="box-border flex w-full min-w-0 flex-col gap-10 px-4 pb-28 pt-10 sm:px-6 lg:px-8">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Commission
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Track commission earned per month and forecast what&apos;s still to come.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Commission"
+        description={
+          <>
+            Track commission earned per month and forecast what&apos;s still to come.
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -301,10 +303,10 @@ export default function CommissionClient() {
           <section className={CARD_CLASSES}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                <h2 className="text-lg font-medium text-ink">
                   Commission trend &amp; forecast
                 </h2>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mt-1 text-sm text-ink-2">
                   Monthly commission totals from payslip history (solid), with a projected
                   continuation (dashed). Each forecasted month is trended from that same
                   calendar month in previous years — e.g. next July is projected from prior
@@ -322,7 +324,7 @@ export default function CommissionClient() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">Forecast</span>
+              <span className="text-sm text-ink-2">Forecast</span>
               <div className={SEGMENTED_WRAPPER_CLASSES}>
                 {HORIZON_OPTIONS.map((h) => (
                   <button
@@ -407,10 +409,10 @@ export default function CommissionClient() {
           <section className={CARD_CLASSES}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                <h2 className="text-lg font-medium text-ink">
                   Commission by month
                 </h2>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mt-1 text-sm text-ink-2">
                   The same twelve calendar months, one line per year, so seasonal patterns
                   within a year are easy to compare across years. Click a year below the
                   chart to hide or show it.
@@ -427,7 +429,7 @@ export default function CommissionClient() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">Chart type</span>
+              <span className="text-sm text-ink-2">Chart type</span>
               <div className={SEGMENTED_WRAPPER_CLASSES}>
                 {MONTHLY_CHART_TYPE_OPTIONS.map((t) => (
                   <button
@@ -541,10 +543,10 @@ export default function CommissionClient() {
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-medium text-ink">
               Forecast summary
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               Each month below is projected from its own same-month history across{" "}
               {forecast.forecastPoints[0]?.yearsOfHistory ?? 0} previous year
               {forecast.forecastPoints[0]?.yearsOfHistory === 1 ? "" : "s"} of data.
@@ -559,29 +561,29 @@ export default function CommissionClient() {
                   {forecast.nextMonthPredicted != null ? fmtMoney(forecast.nextMonthPredicted) : "–"}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <div className="rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   Predicted total ({horizon} mo)
                 </p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
+                <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
                   {fmtMoney(forecast.horizonTotal)}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <div className="rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   Same month last year
                 </p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
+                <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
                   {forecast.forecastPoints[0]?.sameMonthLastYear != null
                     ? fmtMoney(forecast.forecastPoints[0].sameMonthLastYear)
                     : "–"}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <div className="rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   All-time monthly average
                 </p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
+                <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
                   {forecast.allTimeAverage != null ? fmtMoney(forecast.allTimeAverage) : "–"}
                 </p>
               </div>
@@ -624,7 +626,7 @@ export default function CommissionClient() {
                               <strong
                                 key={i}
                                 className={`font-semibold ${
-                                  colorClass ?? "text-zinc-700 dark:text-zinc-300"
+                                  colorClass ?? "text-ink-2"
                                 }`}
                               >
                                 {seg.text}
@@ -648,10 +650,10 @@ export default function CommissionClient() {
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-medium text-ink">
               Historic commission entries
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               One commission total per month, most recent year first.
             </p>
             {calendarYears.length === 0 ? (
@@ -664,9 +666,9 @@ export default function CommissionClient() {
                   return (
                     <div
                       key={year}
-                      className="flex w-full min-w-0 flex-col rounded-lg border border-zinc-200 bg-zinc-50/40 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-900/30"
+                      className="flex w-full min-w-0 flex-col rounded-lg border border-line bg-zinc-50/40 p-4 sm:p-5 dark:bg-zinc-900/30"
                     >
-                      <h3 className="mb-4 flex items-center justify-between gap-2 border-b border-zinc-200 pb-3 text-base font-semibold text-zinc-800 dark:border-zinc-700 dark:text-zinc-100">
+                      <h3 className="mb-4 flex items-center justify-between gap-2 border-b border-line pb-3 text-base font-semibold text-ink">
                         <span>{year}</span>
                         <span className="text-base font-normal tabular-nums text-emerald-700 dark:text-emerald-300">
                           {fmtMoney(yearTotal)}
@@ -683,17 +685,17 @@ export default function CommissionClient() {
                               className={`flex min-h-[3.75rem] min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1.5 py-2 text-center ${
                                 hasValue
                                   ? "border-emerald-200 bg-emerald-50/80 dark:border-emerald-900 dark:bg-emerald-950/40"
-                                  : "border-dashed border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-900/40"
+                                  : "border-dashed border-line bg-zinc-50/50 dark:bg-zinc-900/40"
                               }`}
                             >
-                              <span className="min-w-0 truncate text-[11px] font-medium leading-tight text-zinc-700 dark:text-zinc-300">
+                              <span className="min-w-0 truncate text-[11px] font-medium leading-tight text-ink-2">
                                 {monthName} {year}
                               </span>
                               <span
                                 className={`min-w-0 truncate text-xs tabular-nums leading-tight ${
                                   hasValue
                                     ? "font-semibold text-emerald-800 dark:text-emerald-200"
-                                    : "text-zinc-400 dark:text-zinc-500"
+                                    : "text-ink-4"
                                 }`}
                               >
                                 {hasValue ? fmtMoney(value) : "–"}

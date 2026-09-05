@@ -1,10 +1,12 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useMemo, useState } from "react";
 import {
   ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
   INPUT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 import {
@@ -197,7 +199,7 @@ export default function MastermindClient() {
   }
 
   const sectionHeading =
-    "text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500";
+    "text-xs font-semibold uppercase tracking-wider text-ink-4";
 
   const banner = solved
     ? {
@@ -222,23 +224,23 @@ export default function MastermindClient() {
         : null;
 
   return (
-    <div className="box-border flex w-full min-w-0 flex-col gap-10 px-4 pb-28 pt-10 sm:px-6 lg:px-8">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Mastermind
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          A solving assistant for playing Mastermind as the codebreaker. Build the guess you
-          actually played, mark the feedback you actually got, and it narrows down the code and
-          suggests what to try next.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Mastermind"
+        description={
+          <>
+            A solving assistant for playing Mastermind as the codebreaker. Build the guess you
+            actually played, mark the feedback you actually got, and it narrows down the code and
+            suggests what to try next.
+          </>
+        }
+      />
 
       <div className="flex flex-col items-stretch gap-6 lg:flex-row lg:flex-wrap lg:items-start">
         <section className={`${CARD_CLASSES} w-full flex flex-col gap-5 lg:max-w-xs lg:shrink-0`}>
           <div className="flex flex-col gap-3">
             <h2 className={sectionHeading}>Setup</h2>
-            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <label className="flex flex-col gap-1 text-xs text-ink-2">
               Number of colours
               <select
                 value={numColors}
@@ -252,7 +254,7 @@ export default function MastermindClient() {
                 ))}
               </select>
             </label>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-ink-3">
               {CODE_LENGTH} pegs · {MAX_ATTEMPTS} attempts
             </p>
             <button type="button" className={ACTION_BUTTON_CLASSES} onClick={resetGame}>
@@ -260,25 +262,25 @@ export default function MastermindClient() {
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
             <h2 className={sectionHeading}>Suggested guess</h2>
             {suggestion ? (
               <div className="flex items-center gap-1.5">
                 {suggestion.map((v, i) => (
                   <span
                     key={i}
-                    className="h-7 w-7 shrink-0 rounded-full border border-zinc-300 dark:border-zinc-700"
+                    className="h-7 w-7 shrink-0 rounded-full border border-line-strong"
                     style={{ background: colorHex(v, colorMap) }}
                     title={colorName(v, colorMap)}
                   />
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs text-ink-3">
                 {gameOver ? "Game over." : "No guess to suggest — no code fits."}
               </p>
             )}
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-ink-3">
               {remaining.length} possible code{remaining.length === 1 ? "" : "s"} left
               {" · "}
               {MAX_ATTEMPTS - submittedCount} attempt{MAX_ATTEMPTS - submittedCount === 1 ? "" : "s"}{" "}
@@ -289,7 +291,7 @@ export default function MastermindClient() {
                 {remaining[0].map((v, i) => (
                   <span
                     key={i}
-                    className="h-6 w-6 shrink-0 rounded-full border border-zinc-300 dark:border-zinc-700"
+                    className="h-6 w-6 shrink-0 rounded-full border border-line-strong"
                     style={{ background: colorHex(v, colorMap) }}
                     title={colorName(v, colorMap)}
                   />
@@ -301,9 +303,9 @@ export default function MastermindClient() {
             )}
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex flex-col gap-2 border-t border-line pt-4">
             <h2 className={sectionHeading}>How to use it</h2>
-            <ul className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <ul className="flex flex-col gap-1 text-xs text-ink-2">
               <li>· Click a peg in the bottom row to target it, then click a colour in the legend below to fill it — the target moves on to the next peg each time.</li>
               <li>· Hit Submit once that&apos;s the guess you actually played.</li>
               <li>
@@ -334,8 +336,8 @@ export default function MastermindClient() {
               white fill vs. a black fill) stay legible against it — framed in
               a dark bezel so it reads as an intentional inset on AMOLED
               instead of an unstyled white rectangle floating on black. */}
-          <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-col-reverse gap-2 overflow-x-auto rounded-md bg-white p-3 ring-1 ring-black/10">
+          <div className="w-full max-w-md rounded-lg border border-line bg-surface-2 p-2">
+            <div className="flex flex-col-reverse gap-2 overflow-x-auto rounded-md bg-surface p-3 ring-1 ring-black/10">
               {Array.from({ length: MAX_ATTEMPTS }, (_, idx) => {
                 const isActive = idx === activeIdx && !gameOver;
                 const isSubmitted = idx < submittedCount;
@@ -355,7 +357,7 @@ export default function MastermindClient() {
                           : "border-transparent"
                     }`}
                   >
-                    <span className="w-5 shrink-0 text-right text-xs text-zinc-400">{idx + 1}</span>
+                    <span className="w-5 shrink-0 text-right text-xs text-ink-4">{idx + 1}</span>
 
                     <div className="flex items-center gap-1.5">
                       {guess.map((v, pos) => (
@@ -422,7 +424,7 @@ export default function MastermindClient() {
                   onClick={(e) => handleLegendClick(idx, e)}
                   title={`Click: place ${name} at peg ${pointer + 1} · double-click: change this pin's colour`}
                   aria-label={`Place ${name} at the targeted peg. Double-click to change this pin's colour.`}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-transparent p-1 transition-colors duration-150 hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-transparent p-1 transition-colors duration-150 hover:border-line-strong hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span
                     className="block h-full w-full rounded-full ring-1 ring-inset ring-black/10"
@@ -458,7 +460,7 @@ function GuessPeg({
   if (!interactive) {
     return (
       <span
-        className={`${base} ${empty ? "border-dashed border-zinc-300" : "border-zinc-300"}`}
+        className={`${base} ${empty ? "border-dashed border-line-strong" : "border-line-strong"}`}
         style={{ background: empty ? "transparent" : colorHex(value, colorMap) }}
         title={colorName(value, colorMap)}
       />
@@ -493,10 +495,10 @@ function FeedbackPeg({
   const isColorOnly = value === FB_COLOR_ONLY;
   const classes = `h-6 w-6 rounded-full border-2 transition-colors duration-150 ${
     isExact
-      ? "border-zinc-600 bg-white shadow-sm"
+      ? "border-zinc-600 bg-surface shadow-sm"
       : isColorOnly
         ? "border-zinc-600 bg-black shadow-sm"
-        : "border-dashed border-zinc-300 bg-transparent"
+        : "border-dashed border-line-strong bg-transparent"
   }`;
   const label = isExact ? "correct position and colour" : isColorOnly ? "correct colour, wrong position" : "no result set";
   if (!interactive) {

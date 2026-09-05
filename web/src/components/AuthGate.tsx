@@ -8,22 +8,31 @@ import {
   getSessionToken,
   setSessionToken,
 } from "@/lib/auth";
+import { Logo } from "@/components/Icons";
 import {
-  ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
   INPUT_CLASSES,
+  LABEL_CLASSES,
   PRIMARY_BUTTON_CLASSES,
+  SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 
 type Status = "checking" | "unreachable" | "unauthenticated" | "authenticated";
 
-const CARD_CLASS = `w-full max-w-xs ${CARD_CLASSES}`;
+const CARD_CLASS = `w-full max-w-sm ${CARD_CLASSES}`;
 
-const FIELD_CLASS = `mb-3 w-full ${INPUT_CLASSES}`;
+const FIELD_CLASS = `mb-4 w-full ${INPUT_CLASSES}`;
 
+/** Full-bleed, centered stage for the pre-shell screens (login, unreachable). */
 function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen min-h-[100dvh] w-full items-center justify-center bg-[var(--background)] px-4">
+    <div className="flex min-h-screen min-h-[100dvh] w-full flex-col items-center justify-center gap-6 bg-page px-4">
+      <div className="flex items-center gap-3">
+        <Logo className="size-10" />
+        <span className="text-lg font-semibold tracking-[-0.2px] text-ink">
+          Blastjax
+        </span>
+      </div>
       {children}
     </div>
   );
@@ -107,16 +116,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <Screen>
         <div className={CARD_CLASS}>
-          <h1 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          <h1 className="mb-1 text-lg font-semibold tracking-[-0.2px] text-ink">
             Can&apos;t reach the server
           </h1>
-          <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mb-5 text-sm text-ink-3">
             The API at {dataApiBase()} didn&apos;t respond.
           </p>
           <button
             type="button"
             onClick={checkStatus}
-            className={`w-full ${ACTION_BUTTON_CLASSES} text-center`}
+            className={`w-full ${SECONDARY_BUTTON_CLASSES}`}
           >
             Retry
           </button>
@@ -129,35 +138,43 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <Screen>
         <form onSubmit={handleSubmit} className={CARD_CLASS}>
-          <h1 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          <h1 className="mb-1 text-lg font-semibold tracking-[-0.2px] text-ink">
             Log in
           </h1>
-          <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mb-5 text-sm text-ink-3">
             Enter your username and password.
           </p>
+          <label className={LABEL_CLASSES} htmlFor="auth-username">
+            Username
+          </label>
           <input
+            id="auth-username"
             autoFocus
             autoComplete="username"
-            placeholder="Username"
+            placeholder="you"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className={FIELD_CLASS}
           />
+          <label className={LABEL_CLASSES} htmlFor="auth-password">
+            Password
+          </label>
           <input
+            id="auth-password"
             type="password"
             autoComplete="current-password"
-            placeholder="Password"
+            placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={FIELD_CLASS}
           />
           {error ? (
-            <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+            <p className="mb-3 text-sm text-danger-text">{error}</p>
           ) : null}
           <button
             type="submit"
             disabled={submitting || !username || !password}
-            className={`w-full ${PRIMARY_BUTTON_CLASSES} text-center`}
+            className={`w-full ${PRIMARY_BUTTON_CLASSES}`}
           >
             {submitting ? "Checking…" : "Log in"}
           </button>

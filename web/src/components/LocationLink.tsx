@@ -6,7 +6,7 @@
 export function LocationLink({ name, url }: { name: string | null; url: string | null }) {
   if (!name) return null;
   if (!url) {
-    return <span className="text-zinc-600 dark:text-zinc-400">{name}</span>;
+    return <span className="text-ink-2">{name}</span>;
   }
   return (
     <a

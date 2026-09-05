@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
@@ -26,6 +27,7 @@ import {
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
   SEGMENTED_BUTTON_ACTIVE_CLASSES,
@@ -193,16 +195,16 @@ export default function MonthlyExpensesClient() {
   );
 
   return (
-    <div className="relative mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Monthly Expenses
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          All monthly expenses, split by pay period half. Each one applies only to the month
-          you pick for it — the calendar page only shows it for that month.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Monthly Expenses"
+        description={
+          <>
+            All monthly expenses, split by pay period half. Each one applies only to the month
+            you pick for it — the calendar page only shows it for that month.
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -220,7 +222,7 @@ export default function MonthlyExpensesClient() {
               className={CARD_CLASSES}
             >
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                <h2 className="text-lg font-medium text-ink">
                   {HALF_LABEL[half]}
                 </h2>
                 <p className={`text-sm ${AMOUNT_NEGATIVE_CLASSES}`}>
@@ -244,14 +246,14 @@ export default function MonthlyExpensesClient() {
                           openEditModal(exp);
                         }
                       }}
-                      className="flex cursor-pointer items-start justify-between gap-2 rounded-lg border border-zinc-200 p-3 transition-colors duration-150 hover:ring-2 hover:ring-indigo-300/60 dark:border-zinc-800 dark:hover:ring-indigo-700/50"
+                      className="flex cursor-pointer items-start justify-between gap-2 rounded-lg border border-line p-3 transition-colors duration-150 hover:ring-2 hover:ring-indigo-300/60 dark:hover:ring-indigo-700/50"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        <p className="truncate text-sm font-medium text-ink">
                           {exp.name}
                         </p>
                         {exp.description && (
-                          <p className="mt-0.5 truncate text-xs text-zinc-600 dark:text-zinc-400">
+                          <p className="mt-0.5 truncate text-xs text-ink-2">
                             {exp.description}
                           </p>
                         )}
@@ -262,7 +264,7 @@ export default function MonthlyExpensesClient() {
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-sm font-semibold tabular-nums text-zinc-800 dark:text-zinc-100">
+                        <span className="text-sm font-semibold tabular-nums text-ink">
                           {fmtMoney(exp.amount)}
                         </span>
                         <button
@@ -289,13 +291,13 @@ export default function MonthlyExpensesClient() {
         open={modalOpen}
         onClose={closeModal}
         ariaLabelledBy="monthly-expense-title"
-        dialogClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-line bg-surface p-5 shadow-pop"
       >
         <div className="mb-4 flex items-start justify-between gap-2">
           <div>
             <h2
               id="monthly-expense-title"
-              className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+              className="text-lg font-semibold text-ink"
             >
               {editingId != null ? "Edit monthly expense" : "Add monthly expense"}
             </h2>
@@ -310,7 +312,7 @@ export default function MonthlyExpensesClient() {
         </div>
         <form onSubmit={submitForm} className="grid gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Name</span>
+            <span className="text-ink-2">Name</span>
             <input
               required
               type="text"
@@ -321,7 +323,7 @@ export default function MonthlyExpensesClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Description (optional)</span>
+            <span className="text-ink-2">Description (optional)</span>
             <input
               type="text"
               className={INPUT_CLASSES}
@@ -331,7 +333,7 @@ export default function MonthlyExpensesClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Amount</span>
+            <span className="text-ink-2">Amount</span>
             <input
               required
               type="text"
@@ -353,12 +355,12 @@ export default function MonthlyExpensesClient() {
               onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.checked }))}
               disabled={saving}
             />
-            <span className="text-zinc-600 dark:text-zinc-400">
+            <span className="text-ink-2">
               Recurring — always show in the calendar&apos;s deductions, every month
             </span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
+            <span className="text-ink-2">
               Month{form.is_recurring ? " (ignored while recurring)" : ""}
             </span>
             <input
@@ -371,13 +373,13 @@ export default function MonthlyExpensesClient() {
             />
           </label>
           <div className="flex flex-col items-center gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Half of the month</span>
+            <span className="text-ink-2">Half of the month</span>
             <div className={`${SEGMENTED_WRAPPER_CLASSES} w-full`}>
               {([1, 2] as const).map((half) => (
                 <button
                   key={half}
                   type="button"
-                  className={`flex-1 rounded-full px-4 py-3 text-base font-medium transition-colors duration-150 ${
+                  className={`flex-1 rounded-md px-4 py-2.5 text-base font-medium transition-colors duration-150 ${
                     form.period_half === half
                       ? SEGMENTED_BUTTON_ACTIVE_CLASSES
                       : SEGMENTED_BUTTON_INACTIVE_CLASSES

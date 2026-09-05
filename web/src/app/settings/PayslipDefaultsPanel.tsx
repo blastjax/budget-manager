@@ -88,11 +88,11 @@ export function PayslipDefaultsPanel() {
 
   return (
     <section className={CARD_CLASSES}>
-      <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+      <h2 className="text-lg font-medium text-ink">
         Payslip defaults
       </h2>
-      <fieldset className="mt-8 rounded-lg border border-zinc-200 bg-zinc-50/80 px-4 py-4 dark:border-zinc-700 dark:bg-zinc-900/40">
-        <legend className="px-1 text-sm font-medium text-zinc-800 dark:text-zinc-100">
+      <fieldset className="mt-8 rounded-lg border border-line bg-zinc-50/80 px-4 py-4 dark:bg-zinc-900/40">
+        <legend className="px-1 text-sm font-medium text-ink">
           Edit defaults for
         </legend>
         <div

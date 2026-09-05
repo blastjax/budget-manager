@@ -88,12 +88,12 @@ export function PayslipClientModal({
       open
       onClose={onCloseDialog}
       backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-5 backdrop-blur-sm sm:items-center sm:p-6"
-      dialogClassName="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-6 shadow-xl sm:p-8 lg:max-w-6xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+      dialogClassName="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-line bg-surface p-6 shadow-pop sm:p-8 lg:max-w-6xl"
     >
             {nav.screen === "slot" && (
               <>
                 <div className="mb-4 flex items-start justify-between gap-2">
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                  <h2 className="text-lg font-semibold text-ink">
                     {slotTitle(nav.year, nav.month, nav.half)}
                   </h2>
                   <button
@@ -114,7 +114,7 @@ export function PayslipClientModal({
                   return (
                     <>
                       {items.length === 0 ? (
-                        <p className="mb-4 text-sm text-zinc-800 dark:text-zinc-200">
+                        <p className="mb-4 text-sm text-ink">
                           No entries for this half.
                         </p>
                       ) : (
@@ -122,15 +122,15 @@ export function PayslipClientModal({
                           {items.map((r) => (
                             <li
                               key={r.id}
-                              className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/40"
+                              className="rounded-lg border border-line bg-zinc-50/80 p-3 dark:bg-zinc-900/40"
                             >
                               <div className="flex flex-wrap items-start justify-between gap-2">
                                 <div>
-                                  <p className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-50">
+                                  <p className="text-sm font-medium tabular-nums text-ink">
                                     Total {fmtNum(r.total)}
                                   </p>
                                   {r.notes && (
-                                    <p className="mt-1 line-clamp-2 text-xs text-zinc-600 dark:text-zinc-400">
+                                    <p className="mt-1 line-clamp-2 text-xs text-ink-2">
                                       {r.notes}
                                     </p>
                                   )}
@@ -202,7 +202,7 @@ export function PayslipClientModal({
                         row.id,
                       );
                       const btnCls =
-                        "flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-white text-sm font-medium text-zinc-700 transition-colors duration-150 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
+                        "flex h-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-sm font-medium text-ink-2 transition-colors duration-150 hover:bg-surface-2 disabled:pointer-events-none disabled:opacity-40";
                       return (
                         <>
                           <button
@@ -217,7 +217,7 @@ export function PayslipClientModal({
                           >
                             ‹
                           </button>
-                          <h2 className="min-w-0 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                          <h2 className="min-w-0 text-lg font-semibold text-ink">
                             Details
                           </h2>
                           <button
@@ -244,7 +244,7 @@ export function PayslipClientModal({
                     Close
                   </button>
                 </div>
-                <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mb-4 text-sm text-ink-2">
                   {fmtPayPeriod(
                     row.period_year,
                     row.period_month,
@@ -276,20 +276,20 @@ export function PayslipClientModal({
                   <div className="min-w-0">
                     <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                       <div>
-                        <dt className="text-xs text-zinc-500">Gross total</dt>
-                        <dd className="tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
+                        <dt className="text-xs text-ink-3">Gross total</dt>
+                        <dd className="tabular-nums font-medium text-ink">
                           {fmtNum(grossTotalFromRow(row))}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-zinc-500">Net total</dt>
-                        <dd className="tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
+                        <dt className="text-xs text-ink-3">Net total</dt>
+                        <dd className="tabular-nums font-medium text-ink">
                           {fmtNum(row.total)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-zinc-500">Basic salary</dt>
-                        <dd className="tabular-nums text-zinc-900 dark:text-zinc-100">
+                        <dt className="text-xs text-ink-3">Basic salary</dt>
+                        <dd className="tabular-nums text-ink">
                           {fmtNum(row.basic_salary)}
                         </dd>
                       </div>
@@ -305,16 +305,16 @@ export function PayslipClientModal({
                       .filter(([k]) => k !== "commission" || row.period_half === 2)
                       .map(([k, lab]) => (
                         <div key={k}>
-                          <dt className="text-xs text-zinc-500">{lab}</dt>
-                          <dd className="tabular-nums text-zinc-900 dark:text-zinc-100">
+                          <dt className="text-xs text-ink-3">{lab}</dt>
+                          <dd className="tabular-nums text-ink">
                             {fmtNum(row[k])}
                           </dd>
                         </div>
                       ))}
                       {row.period_month === 11 && row.period_half === 2 && (
                         <div>
-                          <dt className="text-xs text-zinc-500">13th Month</dt>
-                          <dd className="tabular-nums text-zinc-900 dark:text-zinc-100">
+                          <dt className="text-xs text-ink-3">13th Month</dt>
+                          <dd className="tabular-nums text-ink">
                             {fmtNum(row.thirteenth_month)}
                           </dd>
                         </div>
@@ -322,20 +322,20 @@ export function PayslipClientModal({
                     </dl>
                     {row.notes && (
                       <div className="mt-3">
-                        <dt className="text-xs text-zinc-500">Notes</dt>
-                        <dd className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">
+                        <dt className="text-xs text-ink-3">Notes</dt>
+                        <dd className="mt-1 whitespace-pre-wrap text-sm text-ink">
                           {row.notes}
                         </dd>
                       </div>
                     )}
                   </div>
-                  <aside className="flex min-w-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  <aside className="flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
                       Deductions
                     </p>
                     <dl className="flex flex-col gap-3 text-sm">
                       <div>
-                        <dt className="text-xs text-zinc-500">
+                        <dt className="text-xs text-ink-3">
                           Withholding tax
                         </dt>
                         <dd className="tabular-nums text-red-600 dark:text-red-400">
@@ -343,7 +343,7 @@ export function PayslipClientModal({
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-zinc-500">
+                        <dt className="text-xs text-ink-3">
                           SSS contribution
                         </dt>
                         <dd className="tabular-nums text-red-600 dark:text-red-400">
@@ -351,13 +351,13 @@ export function PayslipClientModal({
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-zinc-500">Philhealth</dt>
+                        <dt className="text-xs text-ink-3">Philhealth</dt>
                         <dd className="tabular-nums text-red-600 dark:text-red-400">
                           {fmtNum(row.philhealth)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-zinc-500">
+                        <dt className="text-xs text-ink-3">
                           Pag-ibig (Employee HDMF)
                         </dt>
                         <dd className="tabular-nums text-red-600 dark:text-red-400">
@@ -365,13 +365,13 @@ export function PayslipClientModal({
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-zinc-500">MP2</dt>
+                        <dt className="text-xs text-ink-3">MP2</dt>
                         <dd className="tabular-nums text-red-600 dark:text-red-400">
                           {fmtNum(row.mp2)}
                         </dd>
                       </div>
-                      <div className="mt-1 border-t border-zinc-200 pt-3 dark:border-zinc-600">
-                        <dt className="text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+                      <div className="mt-1 border-t border-line pt-3 dark:border-zinc-600">
+                        <dt className="text-xs font-semibold text-ink-2">
                           Deductions total
                         </dt>
                         <dd className="mt-0.5 text-sm font-semibold tabular-nums text-red-700 dark:text-red-300">
@@ -413,7 +413,7 @@ export function PayslipClientModal({
               <>
                 <div className="mb-4 flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h2 className="text-lg font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+                    <h2 className="text-lg font-semibold leading-snug text-ink">
                       {(() => {
                         const r = nav.row;
                         const y = r.period_year;
@@ -450,7 +450,7 @@ export function PayslipClientModal({
                         (h === 1 || h === 2);
                       if (scheduled) return null;
                       return (
-                        <p className="mt-1 text-sm font-normal text-zinc-600 dark:text-zinc-400">
+                        <p className="mt-1 text-sm font-normal text-ink-2">
                           {fmtPayPeriod(y, m, h)}
                         </p>
                       );
@@ -507,7 +507,7 @@ export function PayslipClientModal({
             {nav.screen === "add" && (
               <>
                 <div className="mb-4 flex items-start justify-between gap-2">
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                  <h2 className="text-lg font-semibold text-ink">
                     New · {slotTitle(nav.year, nav.month, nav.half)}
                   </h2>
                   <button
@@ -552,7 +552,7 @@ export function PayslipClientModal({
             {nav.screen === "manual" && (
               <>
                 <div className="mb-4 flex items-start justify-between gap-2">
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                  <h2 className="text-lg font-semibold text-ink">
                     Add payslip
                   </h2>
                   <button
@@ -704,9 +704,9 @@ function PayslipPdfPanel({
   };
 
   return (
-    <div className="mt-6 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+    <div className="mt-6 border-t border-line pt-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-ink-3">
           Payslip PDF
         </span>
         {hasPdf ? (
@@ -771,15 +771,15 @@ function PayslipPdfPanel({
       )}
       {hasPdf && blobUrl && (
         <div className={`mt-3${showing ? "" : " hidden"}`}>
-          <p className="mb-1.5 text-xs text-zinc-500 dark:text-zinc-500">
+          <p className="mb-1.5 text-xs text-ink-3">
             Preview
           </p>
-          <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <div className="overflow-hidden rounded-lg border border-line">
             <iframe
               key={blobUrl}
               src={blobUrl}
               title="Payslip PDF"
-              className="h-[75vh] w-full bg-white"
+              className="h-[75vh] w-full bg-surface"
             />
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import {
@@ -52,6 +53,7 @@ import {
   EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   ICON_BUTTON_CLASSES,
+  PAGE_CONTAINER_CLASSES,
 } from "@/lib/ui";
 import { PdfBulkUploadClient } from "./pdfs/PdfBulkUploadClient";
 
@@ -468,15 +470,15 @@ export default function PayslipClient() {
   const unsorted = index.unscheduled;
 
   return (
-    <div className="box-border flex w-full min-w-0 flex-col gap-12 px-4 pb-28 pt-10 sm:px-6 lg:px-8">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Payslip
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Browse payslips by year and month, split by pay period.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Payslip"
+        description={
+          <>
+            Browse payslips by year and month, split by pay period.
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -486,7 +488,7 @@ export default function PayslipClient() {
 
       <section className={CARD_CLASSES}>
         <div className="mb-8 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+          <h2 className="text-lg font-medium text-ink">
             Pay period calendar
           </h2>
           <div className="flex items-center gap-2">
@@ -512,7 +514,7 @@ export default function PayslipClient() {
                   ? "Hide gross amounts in calendar"
                   : "Show gross amounts in calendar"
               }
-              className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-zinc-300 dark:border-zinc-600`}
+              className={`${ICON_BUTTON_CLASSES} shrink-0 border-2 border-line-strong`}
             >
               {showGross ? <EyeIcon /> : <EyeOffIcon />}
             </button>
@@ -546,9 +548,9 @@ export default function PayslipClient() {
               {unsorted.map((r) => (
                 <li
                   key={r.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-200 bg-zinc-50/80 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900/50"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-zinc-50/80 px-3 py-2 text-sm dark:bg-zinc-900/50"
                 >
-                  <span className="tabular-nums text-zinc-800 dark:text-zinc-200">
+                  <span className="tabular-nums text-ink">
                     #{r.id} · Total {fmtNum(r.total)}
                   </span>
                   <div className="flex gap-2">
@@ -610,10 +612,10 @@ export default function PayslipClient() {
           open
           onClose={() => setPdfModalOpen(false)}
           backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-5 backdrop-blur-sm sm:items-center sm:p-6"
-          dialogClassName="max-h-[95vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-6 shadow-xl sm:p-8 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+          dialogClassName="max-h-[95vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-line bg-surface p-6 sm:p-8 shadow-pop"
         >
           <div className="mb-5 flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-semibold text-ink">
               Upload Payslip PDFs
             </h2>
             <button

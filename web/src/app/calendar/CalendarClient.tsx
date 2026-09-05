@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import {
   memo,
   useCallback,
@@ -46,6 +47,7 @@ import {
   ICON_BUTTON_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
@@ -356,8 +358,8 @@ const DayGridCell = memo(function DayGridCell({
           isToday
             ? "text-indigo-900 dark:text-indigo-100"
             : isPast
-              ? "text-zinc-400 dark:text-zinc-600"
-              : "text-zinc-800 dark:text-zinc-100"
+              ? "text-ink-4"
+              : "text-ink"
         }`}
       >
         {day}
@@ -368,8 +370,8 @@ const DayGridCell = memo(function DayGridCell({
           isToday
             ? "font-semibold text-indigo-700 dark:text-indigo-300"
             : isPast
-              ? "text-zinc-400 dark:text-zinc-600"
-              : "text-zinc-600 dark:text-zinc-400"
+              ? "text-ink-4"
+              : "text-ink-2"
         }`}
       >
         {dailyBudget != null ? (
@@ -1380,16 +1382,16 @@ export default function CalendarClient() {
   );
 
   return (
-    <div className="box-border flex w-full min-w-0 flex-col gap-10 px-4 pb-28 pt-10 sm:px-6 lg:px-8">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Calendar
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          {formatMonthYear(year, month)} — approximate daily budget from your last net pay, minus
-          fixed expenses, split across the semi-monthly pay periods.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Calendar"
+        description={
+          <>
+            {formatMonthYear(year, month)} — approximate daily budget from your last net pay, minus
+            fixed expenses, split across the semi-monthly pay periods.
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -1402,10 +1404,10 @@ export default function CalendarClient() {
       ) : (
         <>
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-medium text-ink">
               Net pay — {formatMonthYear(year, month)}
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               The payslip that funds each pay period of this month, minus any fixed and monthly
               expenses. Click a card to view its expenses.
             </p>
@@ -1438,7 +1440,7 @@ export default function CalendarClient() {
                       <p className="text-2xl font-bold tabular-nums text-emerald-800 dark:text-emerald-200">
                         {netAfter != null ? fmtMoney(netAfter) : "–"}
                       </p>
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-1 text-xs text-ink-3">
                         {payslip?.period_year != null && payslip?.period_month != null
                           ? `From ${formatMonthYear(payslip.period_year, payslip.period_month)}`
                           : "No payslip recorded yet"}
@@ -1472,67 +1474,67 @@ export default function CalendarClient() {
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-medium text-ink">
               Remaining budget
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               What&apos;s left across each pay period&apos;s still-active days (today onward).
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <div className="rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   {formatDayRangeLabel(periodInfo.p1Start, periodInfo.p1End)}
                 </p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
+                <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
                   {remainingFirstHalf != null ? fmtMoney(remainingFirstHalf) : "–"}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">remaining</p>
+                <p className="mt-1 text-xs text-ink-3">remaining</p>
               </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <div className="rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   {formatDayRangeLabel(periodInfo.p2Start, periodInfo.p2End)}
                 </p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
+                <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
                   {remainingSecondHalf != null ? fmtMoney(remainingSecondHalf) : "–"}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">remaining</p>
+                <p className="mt-1 text-xs text-ink-3">remaining</p>
               </div>
             </div>
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-medium text-ink">
               Semi-monthly daily budget
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               Last net pay minus fixed expenses, divided evenly across each pay period&apos;s
               days.
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <div className="rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   {formatDayRangeLabel(periodInfo.p1Start, periodInfo.p1End)} ({periodInfo.firstHalfDays}{" "}
                   days)
                 </p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
+                <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
                   {firstHalfBudget != null ? fmtMoney(firstHalfBudget) : "–"}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">per day</p>
+                <p className="mt-1 text-xs text-ink-3">per day</p>
               </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <div className="rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   {formatDayRangeLabel(periodInfo.p2Start, periodInfo.p2End)} ({periodInfo.secondHalfDays}{" "}
                   days)
                 </p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
+                <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
                   {secondHalfBudget != null ? fmtMoney(secondHalfBudget) : "–"}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">per day</p>
+                <p className="mt-1 text-xs text-ink-3">per day</p>
               </div>
             </div>
           </section>
 
-          <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
+          <section className="flex min-w-0 flex-1 flex-col rounded-lg border border-line bg-surface p-4 sm:p-6">
             <div className="flex flex-col items-center gap-3 sm:relative sm:flex-row sm:justify-center">
               <div className="flex items-center justify-center gap-3">
                 <button
@@ -1543,7 +1545,7 @@ export default function CalendarClient() {
                 >
                   ‹
                 </button>
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                <h2 className="text-lg font-medium text-ink">
                   {formatMonthYear(year, month)}
                 </h2>
                 <button
@@ -1576,7 +1578,7 @@ export default function CalendarClient() {
                 </button>
               </div>
             </div>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               Past days are greyed out; today is highlighted. Click a day to log what you spent —
               the rest is spread across that pay period&apos;s other active days (today or
               later), never a day that&apos;s already past — or drag a day onto any other day in
@@ -1587,7 +1589,7 @@ export default function CalendarClient() {
               {WEEKDAY_LABELS.map((label) => (
                 <div
                   key={label}
-                  className="px-1 pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                  className="px-1 pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-3"
                 >
                   {label}
                 </div>
@@ -1623,20 +1625,20 @@ export default function CalendarClient() {
         open={expenseModalHalf != null}
         onClose={closeExpenseModal}
         ariaLabelledBy="fixed-expense-title"
-        dialogClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-pop"
       >
-        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2
               id="fixed-expense-title"
-              className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+              className="truncate text-lg font-semibold text-ink"
             >
               Expenses —{" "}
               {expenseModalHalf === 1
                 ? formatDayRangeLabel(periodInfo.p1Start, periodInfo.p1End)
                 : formatDayRangeLabel(periodInfo.p2Start, periodInfo.p2End)}
             </h2>
-            <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="mt-0.5 text-xs text-ink-2">
               Fixed and monthly expenses subtracted from this period&apos;s net pay and its
               calendar daily budget.
             </p>
@@ -1651,15 +1653,15 @@ export default function CalendarClient() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto p-4">
-          <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-zinc-200 p-3 text-sm sm:grid-cols-4 dark:border-zinc-800">
+          <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-line p-3 text-sm sm:grid-cols-4">
             <div>
-              <p className="text-[11px] uppercase text-zinc-500 dark:text-zinc-400">Net pay</p>
-              <p className="mt-1 font-semibold tabular-nums text-zinc-800 dark:text-zinc-100">
+              <p className="text-[11px] uppercase text-ink-3">Net pay</p>
+              <p className="mt-1 font-semibold tabular-nums text-ink">
                 {modalNetPay != null ? fmtMoney(modalNetPay) : "–"}
               </p>
             </div>
             <div>
-              <p className="text-[11px] uppercase text-zinc-500 dark:text-zinc-400">
+              <p className="text-[11px] uppercase text-ink-3">
                 Fixed expenses
               </p>
               <p className="mt-1 font-semibold tabular-nums text-red-600 dark:text-red-400">
@@ -1667,7 +1669,7 @@ export default function CalendarClient() {
               </p>
             </div>
             <div>
-              <p className="text-[11px] uppercase text-zinc-500 dark:text-zinc-400">
+              <p className="text-[11px] uppercase text-ink-3">
                 Monthly expenses
               </p>
               <p className="mt-1 font-semibold tabular-nums text-red-600 dark:text-red-400">
@@ -1675,7 +1677,7 @@ export default function CalendarClient() {
               </p>
             </div>
             <div>
-              <p className="text-[11px] uppercase text-zinc-500 dark:text-zinc-400">Left</p>
+              <p className="text-[11px] uppercase text-ink-3">Left</p>
               <p className="mt-1 font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
                 {modalNetAfter != null ? fmtMoney(modalNetAfter) : "–"}
               </p>
@@ -1684,10 +1686,10 @@ export default function CalendarClient() {
 
           <form
             onSubmit={submitExpense}
-            className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-zinc-200 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end dark:border-zinc-800"
+            className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-line p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
           >
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">Amount</span>
+              <span className="text-ink-2">Amount</span>
               <input
                 required
                 type="text"
@@ -1703,7 +1705,7 @@ export default function CalendarClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">Description</span>
+              <span className="text-ink-2">Description</span>
               <input
                 type="text"
                 className={INPUT_CLASSES}
@@ -1724,13 +1726,13 @@ export default function CalendarClient() {
           )}
 
           {modalExpenses.length === 0 ? (
-            <p className="text-sm text-zinc-800 dark:text-zinc-200">
+            <p className="text-sm text-ink">
               No fixed expenses yet for this period.
             </p>
           ) : (
             <table className="w-full table-fixed text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
+                <tr className="border-b border-line text-xs uppercase text-ink-3">
                   <th className="w-1/2 pb-2 pr-2">Description</th>
                   <th className="w-1/4 pb-2 pr-2 text-right">Amount</th>
                   <th className="w-1/4 pb-2 text-right">Actions</th>
@@ -1738,8 +1740,8 @@ export default function CalendarClient() {
               </thead>
               <tbody>
                 {modalExpenses.map((exp) => (
-                  <tr key={exp.id} className="border-b border-zinc-100 dark:border-zinc-800">
-                    <td className="py-2 pr-2 text-zinc-800 dark:text-zinc-200">
+                  <tr key={exp.id} className="border-b border-line-soft">
+                    <td className="py-2 pr-2 text-ink">
                       <span className="block truncate">{exp.description || "—"}</span>
                     </td>
                     <td className="py-2 pr-2 text-right tabular-nums font-medium">
@@ -1761,7 +1763,7 @@ export default function CalendarClient() {
           )}
 
           <div className="mt-6 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <h3 className="text-sm font-semibold text-ink">
               Monthly expenses
             </h3>
             <Link
@@ -1773,13 +1775,13 @@ export default function CalendarClient() {
           </div>
 
           {modalMonthlyExpenses.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-800 dark:text-zinc-200">
+            <p className="mt-2 text-sm text-ink">
               No monthly expenses yet for this period.
             </p>
           ) : (
             <table className="mt-2 w-full table-fixed text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
+                <tr className="border-b border-line text-xs uppercase text-ink-3">
                   <th className="w-1/3 pb-2 pr-2">Name</th>
                   <th className="w-1/4 pb-2 pr-2">Description</th>
                   <th className="w-1/5 pb-2 pr-2 text-right">Amount</th>
@@ -1788,11 +1790,11 @@ export default function CalendarClient() {
               </thead>
               <tbody>
                 {modalMonthlyExpenses.map((exp) => (
-                  <tr key={exp.id} className="border-b border-zinc-100 dark:border-zinc-800">
-                    <td className="py-2 pr-2 text-zinc-800 dark:text-zinc-200">
+                  <tr key={exp.id} className="border-b border-line-soft">
+                    <td className="py-2 pr-2 text-ink">
                       <span className="block truncate">{exp.name}</span>
                     </td>
-                    <td className="py-2 pr-2 text-zinc-800 dark:text-zinc-200">
+                    <td className="py-2 pr-2 text-ink">
                       <span className="block truncate">{exp.description || "—"}</span>
                     </td>
                     <td className="py-2 pr-2 text-right tabular-nums font-medium">
@@ -1819,23 +1821,23 @@ export default function CalendarClient() {
         open={transfer != null}
         onClose={closeTransferModal}
         ariaLabelledBy="transfer-title"
-        dialogClassName="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="w-full max-w-sm rounded-xl border border-line bg-surface p-5 shadow-pop"
       >
         {transfer && (
           <>
             <h2
               id="transfer-title"
-              className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+              className="text-lg font-semibold text-ink"
             >
               Move budget
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               From day {transfer.fromDay} ({fmtMoney(transfer.fromAmount)}) to day{" "}
               {transfer.toDay} ({fmtMoney(transfer.toAmount)}).
             </p>
             <form onSubmit={submitTransfer} className="mt-4 flex flex-col gap-3">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-zinc-600 dark:text-zinc-400">
+                <span className="text-ink-2">
                   Amount spent on day {transfer.fromDay} today
                 </span>
                 <input
@@ -1851,12 +1853,12 @@ export default function CalendarClient() {
                   }}
                   disabled={savingTransfer}
                 />
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                <span className="text-xs text-ink-3">
                   Fills in the amount to move below: {fmtMoney(transfer.fromAmount)} budget − spent.
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-zinc-600 dark:text-zinc-400">
+                <span className="text-ink-2">
                   Amount to move (max {fmtMoney(transfer.fromAmount)})
                 </span>
                 <div className="flex gap-2">
@@ -1914,21 +1916,21 @@ export default function CalendarClient() {
         open={spendDay != null}
         onClose={closeSpendModal}
         ariaLabelledBy="spend-title"
-        dialogClassName="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="w-full max-w-sm rounded-xl border border-line bg-surface p-5 shadow-pop"
       >
         {spendDay && spendDay.dailyBudget != null && (
           <>
-            <h2 id="spend-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            <h2 id="spend-title" className="text-lg font-semibold text-ink">
               Log spend — day {spendDay.day}
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               Budget for this day is {fmtMoney(spendDay.dailyBudget)}. Whatever isn&apos;t spent
               (or any overspend) is spread evenly across this pay period&apos;s other active days
               — today or later, never a day that&apos;s already past.
             </p>
             <form onSubmit={submitSpend} className="mt-4 flex flex-col gap-3">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-zinc-600 dark:text-zinc-400">
+                <span className="text-ink-2">
                   Amount spent (e.g. 100-10 or 100+10)
                 </span>
                 <input
@@ -1973,17 +1975,17 @@ export default function CalendarClient() {
         open={payDateModalHalf != null}
         onClose={closePayDateModal}
         ariaLabelledBy="pay-date-title"
-        dialogClassName="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="w-full max-w-sm rounded-xl border border-line bg-surface p-5 shadow-pop"
       >
         {payDateModalHalf != null && (
           <>
-            <h2 id="pay-date-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            <h2 id="pay-date-title" className="text-lg font-semibold text-ink">
               Adjust pay date —{" "}
               {payDateModalHalf === 1
                 ? formatDayRangeLabel(periodInfo.p1Start, periodInfo.p1End)
                 : formatDayRangeLabel(periodInfo.p2Start, periodInfo.p2End)}
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               If this paycheck actually lands earlier than the{" "}
               {payDateModalHalf === 1 ? "1st" : "16th"}, set the real date here. The covered budget
               period stretches to match, and the neighboring period shortens to keep the calendar
@@ -1991,7 +1993,7 @@ export default function CalendarClient() {
             </p>
             <form onSubmit={submitPayDate} className="mt-4 flex flex-col gap-3">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-zinc-600 dark:text-zinc-400">Actual pay date</span>
+                <span className="text-ink-2">Actual pay date</span>
                 <input
                   required
                   type="date"
@@ -2004,8 +2006,8 @@ export default function CalendarClient() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-zinc-600 dark:text-zinc-400">
-                  End date <span className="text-zinc-400 dark:text-zinc-500">(optional)</span>
+                <span className="text-ink-2">
+                  End date <span className="text-ink-4">(optional)</span>
                 </span>
                 <div className="flex gap-2">
                   <input
@@ -2020,7 +2022,7 @@ export default function CalendarClient() {
                   {payDateEndForm && (
                     <button
                       type="button"
-                      className="text-xs font-medium text-zinc-500 hover:underline dark:text-zinc-400"
+                      className="text-xs font-medium text-ink-3 hover:underline"
                       onClick={() => setPayDateEndForm("")}
                       disabled={savingPayDate}
                     >
@@ -2028,7 +2030,7 @@ export default function CalendarClient() {
                     </button>
                   )}
                 </div>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                <span className="text-xs text-ink-3">
                   Shortens this period to end here and pushes the next period&apos;s start to the
                   following day, so the calendar stays contiguous.
                 </span>
@@ -2041,7 +2043,7 @@ export default function CalendarClient() {
               <div className="mt-1 flex items-center justify-between gap-2">
                 <button
                   type="button"
-                  className="text-xs font-medium text-zinc-500 hover:underline dark:text-zinc-400"
+                  className="text-xs font-medium text-ink-3 hover:underline"
                   onClick={() => void resetPayDate()}
                   disabled={savingPayDate}
                 >

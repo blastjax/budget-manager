@@ -8,7 +8,7 @@ import type { YearSlots } from "./payslipAggregates";
 
 /** Match the year-stats Total card: white-ish for net, muted zinc for gross. */
 const NET_TEXT_CLASSES = "text-slate-950 dark:text-slate-50";
-const GROSS_TEXT_CLASSES = "text-zinc-500 dark:text-zinc-400";
+const GROSS_TEXT_CLASSES = "text-ink-3";
 
 function YearPayslipBlockInner({
   year,
@@ -26,8 +26,8 @@ function YearPayslipBlockInner({
   const yearSum = yearSlots.netSum;
   const yearGross = showGross ? yearSlots.grossSum : null;
   return (
-    <div className="flex w-full min-w-0 flex-col rounded-lg border border-zinc-200 bg-zinc-50/40 p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/30">
-      <h3 className="mb-4 flex min-w-0 items-start justify-between gap-2 border-b border-zinc-200 pb-3 text-base font-semibold text-zinc-800 dark:border-zinc-700 dark:text-zinc-100">
+    <div className="flex w-full min-w-0 flex-col rounded-lg border border-line bg-zinc-50/40 p-4 sm:p-5 dark:bg-zinc-900/30">
+      <h3 className="mb-4 flex min-w-0 items-start justify-between gap-2 border-b border-line pb-3 text-base font-semibold text-ink">
         <span className="shrink-0 whitespace-nowrap">{year}</span>
         {(yearSum != null || yearGross != null) && (
           <span className="flex min-w-0 flex-col items-end">
@@ -68,10 +68,10 @@ function YearPayslipBlockInner({
           return (
             <div
               key={month}
-              className="flex min-w-0 flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-900/90"
+              className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface p-2.5 dark:bg-zinc-900/90"
             >
-            <div className="flex min-w-0 items-start justify-between gap-1.5 border-b border-zinc-100 pb-1.5 dark:border-zinc-800">
-              <span className="shrink-0 whitespace-nowrap text-xs font-semibold leading-tight text-zinc-800 dark:text-zinc-200">
+            <div className="flex min-w-0 items-start justify-between gap-1.5 border-b border-line-soft pb-1.5">
+              <span className="shrink-0 whitespace-nowrap text-xs font-semibold leading-tight text-ink">
                 {monthLabel}
               </span>
               {(monthSum != null || monthGross != null || showGross) && (
@@ -153,7 +153,7 @@ function YearPayslipBlockInner({
                       className={`flex min-h-[2.5rem] w-full min-w-0 items-center justify-end rounded-md border px-1 py-2 text-right tabular-nums leading-tight transition-colors duration-150 break-all sm:px-1.5 sm:leading-none ${
                         hasRows
                           ? "border-indigo-200 bg-indigo-50/90 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60"
-                          : "border-dashed border-zinc-200 bg-zinc-50/50 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-500 dark:hover:bg-zinc-800/60"
+                          : "border-dashed border-line bg-zinc-50/50 text-ink-3 hover:border-line-strong hover:bg-surface-2 dark:bg-zinc-900/40"
                       }`}
                     >
                       <span className="flex w-full min-w-0 flex-col items-end gap-0 px-0.5">

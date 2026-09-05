@@ -54,7 +54,7 @@ export function CalendarMonth({
         >
           ‹
         </button>
-        <div className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+        <div className="text-base font-semibold text-ink">
           {MONTH_NAMES_FULL[month - 1]} {year}
         </div>
         <button
@@ -71,7 +71,7 @@ export function CalendarMonth({
         {WEEKDAY_LABELS.map((w, i) => (
           <div
             key={i}
-            className="pb-1 text-center text-xs font-medium text-zinc-400 dark:text-zinc-500"
+            className="pb-1 text-center text-xs font-medium text-ink-4"
           >
             {w}
           </div>
@@ -105,7 +105,7 @@ export function CalendarMonth({
                     ? "bg-indigo-600 font-semibold text-white"
                     : state === "today"
                       ? "font-semibold text-indigo-600 ring-1 ring-inset ring-indigo-400 dark:text-indigo-400"
-                      : "text-zinc-700 hover:bg-zinc-200/60 dark:text-zinc-300 dark:hover:bg-zinc-700/60",
+                      : "text-ink-2 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60",
                 ].join(" ")}
               >
                 {day}

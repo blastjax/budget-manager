@@ -519,7 +519,7 @@ export default function MamboClient() {
         ? "text-red-600"
         : state === "done"
           ? "text-emerald-600"
-          : "text-zinc-500"
+          : "text-ink-3"
     }`;
 
   /** Edge labels, rendered on both sides of each axis so a line's number is
@@ -578,27 +578,27 @@ export default function MamboClient() {
     : "flex w-full min-w-0 flex-col items-center gap-4 lg:flex-1";
 
   const sectionHeading =
-    "text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500";
+    "text-xs font-semibold uppercase tracking-wider text-ink-4";
 
   return (
     <div className={rootClasses}>
       <header
         className={`flex items-start justify-between gap-4 ${
-          fullscreen ? "shrink-0" : "border-b border-zinc-200 pb-6 dark:border-zinc-800"
+          fullscreen ? "shrink-0" : "border-b border-line pb-6"
         }`}
       >
         <div>
           <h1
             className={
               fullscreen
-                ? "text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
-                : "text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
+                ? "text-lg font-semibold tracking-tight text-ink"
+                : "text-2xl font-semibold tracking-tight text-ink"
             }
           >
             Mambo
           </h1>
           {!fullscreen && (
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               Fill the grid with circles and squares — balanced lines, never three in a row,
               and every = and ✕ respected.
             </p>
@@ -618,7 +618,7 @@ export default function MamboClient() {
           <div className="flex flex-col gap-3">
             <h2 className={sectionHeading}>Puzzle</h2>
             <div className="flex gap-2">
-              <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <label className="flex flex-col gap-1 text-xs text-ink-2">
                 Rows
                 <select
                   value={rows}
@@ -632,7 +632,7 @@ export default function MamboClient() {
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <label className="flex flex-col gap-1 text-xs text-ink-2">
                 Cols
                 <select
                   value={cols}
@@ -646,7 +646,7 @@ export default function MamboClient() {
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <label className="flex flex-col gap-1 text-xs text-ink-2">
                 Level
                 <select
                   value={difficulty}
@@ -673,7 +673,7 @@ export default function MamboClient() {
               New blank board
             </button>
             {generateStatus && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{generateStatus}</p>
+              <p className="text-xs text-ink-3">{generateStatus}</p>
             )}
             {generateError && (
               <p className="text-xs font-medium text-red-600 dark:text-red-400">
@@ -682,7 +682,7 @@ export default function MamboClient() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
             <h2 className={sectionHeading}>Board</h2>
             <div className="flex gap-2">
               <button type="button" className={ACTION_BUTTON_CLASSES} onClick={resetBoard}>
@@ -692,11 +692,11 @@ export default function MamboClient() {
                 Clear signs
               </button>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-ink-3">
               Click a cell to cycle empty → circle → square, and click a gap between cells to
               cycle its sign (none → = → ✕). Right-click a cell to go back.
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-ink-3">
               {filled} / {rows * cols} filled
               {conflicts.messages.length > 0 && (
                 <span className="font-medium text-red-600 dark:text-red-400">
@@ -713,7 +713,7 @@ export default function MamboClient() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
             <h2 className={sectionHeading}>Solve</h2>
             <div className="flex gap-2">
               <button
@@ -742,14 +742,14 @@ export default function MamboClient() {
               {busy === "solve" ? "Solving…" : "✅ Reveal solution"}
             </button>
             {solveStatus && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{solveStatus}</p>
+              <p className="text-xs text-ink-3">{solveStatus}</p>
             )}
             {solveError && (
               <p className="text-xs font-medium text-red-600 dark:text-red-400">⚠ {solveError}</p>
             )}
 
             {steps && (
-              <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <div className="flex flex-col gap-2 border-t border-line pt-3">
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -776,7 +776,7 @@ export default function MamboClient() {
                     {playing ? "⏸ Pause" : "▶ Play"}
                   </button>
                 </div>
-                <label className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <label className="flex items-center gap-2 text-xs text-ink-3">
                   Speed
                   <input
                     type="range"
@@ -787,7 +787,7 @@ export default function MamboClient() {
                     className="flex-1"
                   />
                 </label>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs text-ink-3">
                   Step {stepIndex} / {steps.length}
                 </p>
                 {nextStep ? (
@@ -804,7 +804,7 @@ export default function MamboClient() {
                   </p>
                 )}
                 {lastStep && (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs text-ink-3">
                     Just placed: r{lastStep.r + 1}c{lastStep.c + 1} ={" "}
                     {SYMBOL_LABELS[lastStep.value]} ({techniqueLabel(lastStep.technique)})
                   </p>
@@ -813,7 +813,7 @@ export default function MamboClient() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
             <h2 className={sectionHeading}>Puzzle code</h2>
             <div className="flex gap-2">
               <input
@@ -828,7 +828,7 @@ export default function MamboClient() {
               </button>
             </div>
             {copyFeedback && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{copyFeedback}</p>
+              <p className="text-xs text-ink-3">{copyFeedback}</p>
             )}
             <div className="flex gap-2">
               <input
@@ -847,14 +847,14 @@ export default function MamboClient() {
           </div>
 
           {!fullscreen && (
-            <div className="flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+            <div className="flex flex-col gap-2 border-t border-line pt-4">
               <h2 className={sectionHeading}>Rules</h2>
-              <ul className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <ul className="flex flex-col gap-1 text-xs text-ink-2">
                 <li>· Never three of the same symbol in a row or column.</li>
                 <li>· Every row and column holds as many circles as squares.</li>
                 <li>· = between two cells means they match; ✕ means they differ.</li>
               </ul>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+              <p className="mt-1 text-xs text-ink-3">
                 Two neighbours the same? Both outer cells take the other symbol. A gap between
                 two matching symbols? It takes the other one. A line out of circles? The rest
                 are squares.
@@ -875,8 +875,8 @@ export default function MamboClient() {
               light-mode colours — but it sits inside a dark-aware bezel so it
               reads as an intentional inset on AMOLED instead of an unstyled
               white rectangle floating on black. */}
-          <div className="max-w-full rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex max-w-full flex-col items-start overflow-x-auto rounded-md bg-white p-3 ring-1 ring-black/10">
+          <div className="max-w-full rounded-lg border border-line bg-surface-2 p-2">
+            <div className="flex max-w-full flex-col items-start overflow-x-auto rounded-md bg-surface p-3 ring-1 ring-black/10">
               {colLabels}
               <div className="flex">
                 {rowLabels}
@@ -909,8 +909,8 @@ export default function MamboClient() {
                           style={{ gridRow: 2 * r + 1, gridColumn: 2 * c + 1 }}
                           className={`flex items-center justify-center rounded-md border transition-colors duration-150 ${
                             isClue
-                              ? "border-zinc-400 bg-zinc-100"
-                              : "border-zinc-300 bg-white hover:bg-zinc-50"
+                              ? "border-zinc-400 bg-surface-2"
+                              : "border-line-strong bg-surface hover:bg-surface-2"
                           } ${
                             bad ? "!border-red-500 bg-red-50 ring-2 ring-inset ring-red-500" : ""
                           } ${
@@ -960,7 +960,7 @@ export default function MamboClient() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-600 dark:text-zinc-400">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-ink-2">
             <span className="flex items-center gap-1.5">
               <span
                 className="inline-block h-3.5 w-3.5 rounded-full"
@@ -1007,7 +1007,7 @@ function SignSlot({
       ? "font-bold text-red-600"
       : sign === SIGN_NONE
         ? "text-zinc-300"
-        : "font-bold text-zinc-900"
+        : "font-bold text-ink"
   }`;
 
   return (

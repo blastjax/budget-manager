@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Payslip & installments",
-  description: "Payslip calendar and loan schedules",
+  title: "Blastjax",
+  description: "Payslip calendar, loan schedules, health and travel",
 };
 
 export const viewport: Viewport = {
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans text-base leading-normal antialiased max-sm:text-[16px] max-sm:leading-[1.6] sm:leading-normal`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-page font-sans text-base leading-normal text-ink antialiased max-sm:text-[16px] max-sm:leading-[1.6] sm:leading-normal`}
       >
         <ThemeInitScript />
         <ThemeProvider>

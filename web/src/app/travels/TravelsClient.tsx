@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import { DatePickerField } from "@/components/DatePickerField";
 import { DateRangePickerField } from "@/components/DateRangePickerField";
@@ -17,6 +18,7 @@ import {
   EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
@@ -111,7 +113,7 @@ function ItemRow({
   saving: boolean;
 }) {
   return (
-    <li className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+    <li className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-line bg-surface p-3">
       <div className="min-w-0 flex-1 text-sm">{children}</div>
       <div className="flex shrink-0 items-center gap-2">
         <button type="button" disabled={saving} className={EDIT_BUTTON_CLASSES} onClick={onEdit}>
@@ -840,34 +842,34 @@ export default function TravelsClient() {
     return (
       <div
         key={trip.id}
-        className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-900/40"
+        className="rounded-lg border border-line bg-zinc-50/60 p-4 dark:bg-zinc-900/40"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <button
             type="button"
-            className="-m-1 flex min-w-0 flex-1 items-start gap-2 rounded-lg p-1 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+            className="-m-1 flex min-w-0 flex-1 items-start gap-2 rounded-lg p-1 text-left transition-colors hover:bg-surface-2"
             aria-expanded={!collapsed}
             onClick={() => toggleTripCollapsed(trip.id)}
           >
             <span
               aria-hidden
-              className={`mt-0.5 shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
+              className={`mt-0.5 shrink-0 text-ink-4 transition-transform ${
                 collapsed ? "" : "rotate-90"
               }`}
             >
               ›
             </span>
             <span className="min-w-0">
-              <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+              <h4 className="text-base font-semibold text-ink">
                 {trip.title}
                 {collapsed && itemCount > 0 && (
-                  <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                  <span className="ml-2 text-sm font-normal text-ink-3">
                     ({itemCount} item{itemCount === 1 ? "" : "s"})
                   </span>
                 )}
               </h4>
               {trip.notes && !collapsed && (
-                <p className="mt-1 whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mt-1 whitespace-pre-line text-sm text-ink-2">
                   {trip.notes}
                 </p>
               )}
@@ -896,8 +898,8 @@ export default function TravelsClient() {
         {!collapsed && (
           <>
         {/* Calendar */}
-        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <h5 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">Calendar</h5>
+        <div className="mt-4 rounded-lg border border-line bg-surface p-4">
+          <h5 className="mb-3 text-sm font-medium text-ink-2">Calendar</h5>
           <TripCalendar
             trip={trip}
             flights={flights}
@@ -921,9 +923,9 @@ export default function TravelsClient() {
         </div>
 
         {/* Flights */}
-        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mt-4 rounded-lg border border-line bg-surface p-4">
           <div className="flex items-center justify-between gap-2">
-            <h5 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Flights</h5>
+            <h5 className="text-sm font-medium text-ink-2">Flights</h5>
             <button
               type="button"
               disabled={saving}
@@ -934,7 +936,7 @@ export default function TravelsClient() {
             </button>
           </div>
           {flights.length === 0 ? (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">No flights logged.</p>
+            <p className="mt-2 text-xs text-ink-3">No flights logged.</p>
           ) : (
             <ul className="mt-2 flex flex-col gap-2">
               {flights.map((f) => {
@@ -948,22 +950,22 @@ export default function TravelsClient() {
                     onEdit={() => openEditFlight(trip.id, f)}
                     onDelete={() => void onDeleteFlight(trip.id, f.id)}
                   >
-                    <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    <div className="font-medium text-ink">
                       {f.flight_number}
                       {f.flight_date && (
-                        <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+                        <span className="ml-2 font-normal text-ink-3">
                           {formatDate(f.flight_date)}
                         </span>
                       )}
                     </div>
                     {timeRange && (
-                      <div className="mt-0.5 text-zinc-600 dark:text-zinc-400">{timeRange}</div>
+                      <div className="mt-0.5 text-ink-2">{timeRange}</div>
                     )}
                     {(f.from_location || f.to_location) && (
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                         <LocationLink name={f.from_location} url={fromUrl} />
                         {f.from_location && f.to_location && (
-                          <span className="text-zinc-400" aria-hidden>
+                          <span className="text-ink-4" aria-hidden>
                             →
                           </span>
                         )}
@@ -971,7 +973,7 @@ export default function TravelsClient() {
                       </div>
                     )}
                     {f.notes && (
-                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-0.5 whitespace-pre-line text-ink-3">
                         {f.notes}
                       </div>
                     )}
@@ -983,9 +985,9 @@ export default function TravelsClient() {
         </div>
 
         {/* Transport (bus/train) */}
-        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mt-4 rounded-lg border border-line bg-surface p-4">
           <div className="flex items-center justify-between gap-2">
-            <h5 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <h5 className="text-sm font-medium text-ink-2">
               Bus / Train
             </h5>
             <button
@@ -998,7 +1000,7 @@ export default function TravelsClient() {
             </button>
           </div>
           {transport.length === 0 ? (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="mt-2 text-xs text-ink-3">
               No bus/train legs logged.
             </p>
           ) : (
@@ -1014,22 +1016,22 @@ export default function TravelsClient() {
                     onEdit={() => openEditTransport(trip.id, t)}
                     onDelete={() => void onDeleteTransport(trip.id, t.id)}
                   >
-                    <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    <div className="font-medium text-ink">
                       {transportLabel(t)}
                       {t.travel_date && (
-                        <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+                        <span className="ml-2 font-normal text-ink-3">
                           {formatDate(t.travel_date)}
                         </span>
                       )}
                     </div>
                     {timeRange && (
-                      <div className="mt-0.5 text-zinc-600 dark:text-zinc-400">{timeRange}</div>
+                      <div className="mt-0.5 text-ink-2">{timeRange}</div>
                     )}
                     {(t.from_location || t.to_location) && (
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                         <LocationLink name={t.from_location} url={fromUrl} />
                         {t.from_location && t.to_location && (
-                          <span className="text-zinc-400" aria-hidden>
+                          <span className="text-ink-4" aria-hidden>
                             →
                           </span>
                         )}
@@ -1037,7 +1039,7 @@ export default function TravelsClient() {
                       </div>
                     )}
                     {t.notes && (
-                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-0.5 whitespace-pre-line text-ink-3">
                         {t.notes}
                       </div>
                     )}
@@ -1049,9 +1051,9 @@ export default function TravelsClient() {
         </div>
 
         {/* Itinerary */}
-        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mt-4 rounded-lg border border-line bg-surface p-4">
           <div className="flex items-center justify-between gap-2">
-            <h5 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Itinerary</h5>
+            <h5 className="text-sm font-medium text-ink-2">Itinerary</h5>
             <button
               type="button"
               disabled={saving}
@@ -1062,7 +1064,7 @@ export default function TravelsClient() {
             </button>
           </div>
           {itinerary.length === 0 ? (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="mt-2 text-xs text-ink-3">
               No itinerary items yet.
             </p>
           ) : (
@@ -1078,24 +1080,24 @@ export default function TravelsClient() {
                     onEdit={() => openEditItinerary(trip.id, item)}
                     onDelete={() => void onDeleteItinerary(trip.id, item.id)}
                   >
-                    <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    <div className="font-medium text-ink">
                       {spansDays
                         ? `${formatDate(item.item_date)} – ${formatDate(item.item_end_date)}`
                         : formatDate(item.item_date)}
                       {timeRange && (
-                        <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+                        <span className="ml-2 font-normal text-ink-3">
                           {timeRange}
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 text-zinc-700 dark:text-zinc-300">{item.activity}</div>
+                    <div className="mt-0.5 text-ink-2">{item.activity}</div>
                     {item.location_name && (
                       <div className="mt-0.5">
                         <LocationLink name={item.location_name} url={url} />
                       </div>
                     )}
                     {item.notes && (
-                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-0.5 whitespace-pre-line text-ink-3">
                         {item.notes}
                       </div>
                     )}
@@ -1107,9 +1109,9 @@ export default function TravelsClient() {
         </div>
 
         {/* Accommodations */}
-        <div className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mt-4 rounded-lg border border-line bg-surface p-4">
           <div className="flex items-center justify-between gap-2">
-            <h5 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <h5 className="text-sm font-medium text-ink-2">
               Accommodations
             </h5>
             <button
@@ -1122,7 +1124,7 @@ export default function TravelsClient() {
             </button>
           </div>
           {accommodations.length === 0 ? (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">No stays logged.</p>
+            <p className="mt-2 text-xs text-ink-3">No stays logged.</p>
           ) : (
             <ul className="mt-2 flex flex-col gap-2">
               {accommodations.map((a) => {
@@ -1134,14 +1136,14 @@ export default function TravelsClient() {
                     onEdit={() => openEditAccommodation(trip.id, a)}
                     onDelete={() => void onDeleteAccommodation(trip.id, a.id)}
                   >
-                    <div className="font-medium text-zinc-900 dark:text-zinc-50">{a.name}</div>
-                    <div className="mt-0.5 text-zinc-600 dark:text-zinc-400">
+                    <div className="font-medium text-ink">{a.name}</div>
+                    <div className="mt-0.5 text-ink-2">
                       {formatDate(a.checkin_date)}
                       {a.checkin_time && ` · ${formatTimeLabel(a.checkin_time)}`}
                       {" – "}
                       {formatDate(a.checkout_date)}
                       {a.checkout_time && ` · ${formatTimeLabel(a.checkout_time)}`}
-                      <span className="ml-2 rounded-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                      <span className="ml-2 rounded-full border border-line-strong px-1.5 py-0.5 text-[11px] font-medium text-ink-3">
                         {a.nights} night{a.nights === 1 ? "" : "s"} · {a.days} day
                         {a.days === 1 ? "" : "s"}
                       </span>
@@ -1152,17 +1154,17 @@ export default function TravelsClient() {
                       </div>
                     )}
                     {a.booking_confirmation && (
-                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-0.5 whitespace-pre-line text-ink-3">
                         Confirmation: {a.booking_confirmation}
                       </div>
                     )}
                     {a.instructions && (
-                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-0.5 whitespace-pre-line text-ink-3">
                         {a.instructions}
                       </div>
                     )}
                     {a.notes && (
-                      <div className="mt-0.5 whitespace-pre-line text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-0.5 whitespace-pre-line text-ink-3">
                         {a.notes}
                       </div>
                     )}
@@ -1190,16 +1192,16 @@ export default function TravelsClient() {
   );
 
   return (
-    <div className="relative mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Travels
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Trips filed by the year and month you took them, each with its flights, bus/train
-          legs, day-by-day itinerary, and accommodations. Location links open in Google Maps.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Travels"
+        description={
+          <>
+            Trips filed by the year and month you took them, each with its flights, bus/train
+            legs, day-by-day itinerary, and accommodations. Location links open in Google Maps.
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -1220,19 +1222,19 @@ export default function TravelsClient() {
             <section key={yearKey} className={CARD_CLASSES}>
               <button
                 type="button"
-                className="-m-1 flex w-full flex-wrap items-center justify-between gap-3 rounded-lg p-1 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                className="-m-1 flex w-full flex-wrap items-center justify-between gap-3 rounded-lg p-1 text-left transition-colors hover:bg-surface-2 dark:hover:bg-zinc-800/60"
                 aria-expanded={expanded}
                 onClick={() => toggleYear(yearKey)}
               >
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                <h2 className="text-lg font-medium text-ink">
                   {yg.year}
-                  <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                  <span className="ml-2 text-sm font-normal text-ink-3">
                     ({tripCount} trip{tripCount === 1 ? "" : "s"})
                   </span>
                 </h2>
                 <span
                   aria-hidden
-                  className={`text-zinc-400 transition-transform dark:text-zinc-500 ${
+                  className={`text-ink-4 transition-transform ${
                     expanded ? "rotate-90" : ""
                   }`}
                 >
@@ -1243,7 +1245,7 @@ export default function TravelsClient() {
                 <div className="mt-4 flex flex-col gap-6">
                   {yg.months.map((mg) => (
                     <div key={mg.month}>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-3">
                         {MONTH_NAMES_FULL[mg.month - 1] ?? mg.month}
                       </h3>
                       <div className="mt-3 flex flex-col gap-4">
@@ -1263,7 +1265,7 @@ export default function TravelsClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="travel-trip-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             {tripModal.editId != null ? "Edit trip" : "Add trip"}
           </h2>
@@ -1282,7 +1284,7 @@ export default function TravelsClient() {
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Title</span>
+            <span className="text-ink-2">Title</span>
             <input
               required
               type="text"
@@ -1295,7 +1297,7 @@ export default function TravelsClient() {
           </label>
           <div className="grid grid-cols-3 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">Year</span>
+              <span className="text-ink-2">Year</span>
               <input
                 required
                 type="number"
@@ -1306,7 +1308,7 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">Start month</span>
+              <span className="text-ink-2">Start month</span>
               <select
                 className={INPUT_CLASSES}
                 value={tripModal.entryMonth}
@@ -1331,7 +1333,7 @@ export default function TravelsClient() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">End month</span>
+              <span className="text-ink-2">End month</span>
               <select
                 className={INPUT_CLASSES}
                 value={tripModal.entryMonthEnd}
@@ -1350,13 +1352,13 @@ export default function TravelsClient() {
               </select>
             </label>
           </div>
-          <p className="-mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="-mt-2 text-xs text-ink-3">
             A trip usually files under one month — pick a later end month only if it spans
             several.
           </p>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Notes <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Notes <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <textarea
               rows={2}
@@ -1387,7 +1389,7 @@ export default function TravelsClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="travel-flight-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             {flightModal.editId != null ? "Edit flight" : "Add flight"}
           </h2>
@@ -1407,7 +1409,7 @@ export default function TravelsClient() {
           )}
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">Flight number</span>
+              <span className="text-ink-2">Flight number</span>
               <input
                 required
                 type="text"
@@ -1421,8 +1423,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Date <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Date <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <DatePickerField
                 value={flightModal.flightDate}
@@ -1433,8 +1435,8 @@ export default function TravelsClient() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Departure time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Departure time (24h) <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <TimeField
                 value={flightModal.departureTime}
@@ -1443,8 +1445,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Arrival time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Arrival time (24h) <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <TimeField
                 value={flightModal.arrivalTime}
@@ -1455,8 +1457,8 @@ export default function TravelsClient() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                From <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                From <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1470,8 +1472,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                From maps link <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                From maps link <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="url"
@@ -1485,8 +1487,8 @@ export default function TravelsClient() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                To <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                To <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1498,8 +1500,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                To maps link <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                To maps link <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="url"
@@ -1512,8 +1514,8 @@ export default function TravelsClient() {
             </label>
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Notes <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Notes <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <textarea
               rows={2}
@@ -1548,7 +1550,7 @@ export default function TravelsClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="travel-transport-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             {transportModal.editId != null ? "Edit bus/train leg" : "Add bus/train leg"}
           </h2>
@@ -1564,7 +1566,7 @@ export default function TravelsClient() {
           )}
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">Mode</span>
+              <span className="text-ink-2">Mode</span>
               <select
                 className={INPUT_CLASSES}
                 value={transportModal.mode}
@@ -1578,8 +1580,8 @@ export default function TravelsClient() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Number <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Number <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1592,8 +1594,8 @@ export default function TravelsClient() {
             </label>
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Date <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Date <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <DatePickerField
               value={transportModal.travelDate}
@@ -1603,8 +1605,8 @@ export default function TravelsClient() {
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Departure time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Departure time (24h) <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <TimeField
                 value={transportModal.departureTime}
@@ -1613,8 +1615,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Arrival time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Arrival time (24h) <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <TimeField
                 value={transportModal.arrivalTime}
@@ -1625,8 +1627,8 @@ export default function TravelsClient() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                From <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                From <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1640,8 +1642,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                From maps link <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                From maps link <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="url"
@@ -1657,8 +1659,8 @@ export default function TravelsClient() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                To <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                To <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1670,8 +1672,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                To maps link <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                To maps link <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="url"
@@ -1684,8 +1686,8 @@ export default function TravelsClient() {
             </label>
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Notes <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Notes <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <textarea
               rows={2}
@@ -1720,7 +1722,7 @@ export default function TravelsClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="travel-itinerary-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             {itineraryModal.editId != null ? "Edit itinerary item" : "Add itinerary item"}
           </h2>
@@ -1740,7 +1742,7 @@ export default function TravelsClient() {
           )}
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">Date</span>
+              <span className="text-ink-2">Date</span>
               <DatePickerField
                 value={itineraryModal.itemDate}
                 disabled={saving}
@@ -1756,8 +1758,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                End date <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                End date <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <DatePickerField
                 value={itineraryModal.itemEndDate}
@@ -1767,14 +1769,14 @@ export default function TravelsClient() {
               />
             </label>
           </div>
-          <p className="-mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="-mt-2 text-xs text-ink-3">
             Only needed when the item spans past its start date — an overnight train, a
             multi-day trek.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Start time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Start time (24h) <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <TimeField
                 value={itineraryModal.startTime}
@@ -1783,8 +1785,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                End time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                End time (24h) <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <TimeField
                 value={itineraryModal.endTime}
@@ -1794,7 +1796,7 @@ export default function TravelsClient() {
             </label>
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Activity</span>
+            <span className="text-ink-2">Activity</span>
             <input
               required
               type="text"
@@ -1807,8 +1809,8 @@ export default function TravelsClient() {
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Location <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Location <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1821,8 +1823,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Maps link <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Maps link <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="url"
@@ -1837,8 +1839,8 @@ export default function TravelsClient() {
             </label>
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Notes <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Notes <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <textarea
               rows={2}
@@ -1873,7 +1875,7 @@ export default function TravelsClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="travel-accommodation-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             {accommodationModal.editId != null ? "Edit stay" : "Add stay"}
           </h2>
@@ -1892,7 +1894,7 @@ export default function TravelsClient() {
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Name</span>
+            <span className="text-ink-2">Name</span>
             <input
               required
               type="text"
@@ -1904,7 +1906,7 @@ export default function TravelsClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Check-in / check-out dates</span>
+            <span className="text-ink-2">Check-in / check-out dates</span>
             <DateRangePickerField
               startValue={accommodationModal.checkinDate}
               endValue={accommodationModal.checkoutDate}
@@ -1916,15 +1918,15 @@ export default function TravelsClient() {
             />
           </label>
           {accommodationPreview && (
-            <p className="-mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="-mt-2 text-xs text-ink-3">
               {accommodationPreview.nights} night{accommodationPreview.nights === 1 ? "" : "s"} ·{" "}
               {accommodationPreview.days} day{accommodationPreview.days === 1 ? "" : "s"}
             </p>
           )}
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Check-in time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Check-in time (24h) <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <TimeField
                 value={accommodationModal.checkinTime}
@@ -1933,8 +1935,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Check-out time (24h) <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Check-out time (24h) <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <TimeField
                 value={accommodationModal.checkoutTime}
@@ -1945,8 +1947,8 @@ export default function TravelsClient() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Location <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Location <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="text"
@@ -1959,8 +1961,8 @@ export default function TravelsClient() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                Maps link <span className="font-normal text-zinc-400">(optional)</span>
+              <span className="text-ink-2">
+                Maps link <span className="font-normal text-ink-4">(optional)</span>
               </span>
               <input
                 type="url"
@@ -1975,8 +1977,8 @@ export default function TravelsClient() {
             </label>
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Booking confirmation <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Booking confirmation <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <input
               type="text"
@@ -1989,8 +1991,8 @@ export default function TravelsClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Instructions <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Instructions <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <textarea
               rows={2}
@@ -2004,8 +2006,8 @@ export default function TravelsClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Notes <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="text-ink-2">
+              Notes <span className="font-normal text-ink-4">(optional)</span>
             </span>
             <textarea
               rows={2}

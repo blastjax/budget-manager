@@ -44,7 +44,7 @@ const STACKED_LAYOUT_MAX_WIDTH = 1024;
 const STACKED_RESERVE_W = 80;
 
 const LABEL_CLASSES =
-  "flex items-center justify-center overflow-hidden text-[10px] font-medium text-zinc-500 dark:text-zinc-400";
+  "flex items-center justify-center overflow-hidden text-[10px] font-medium text-ink-3";
 
 type Mode = "paint" | "seed";
 type Solving = "solve" | "findBest" | "free" | null;
@@ -636,21 +636,21 @@ export default function MosaicClient() {
     <div className={rootClasses}>
       <header
         className={`flex items-start justify-between gap-4 ${
-          fullscreen ? "shrink-0" : "border-b border-zinc-200 pb-6 dark:border-zinc-800"
+          fullscreen ? "shrink-0" : "border-b border-line pb-6"
         }`}
       >
         <div>
           <h1
             className={
               fullscreen
-                ? "text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
-                : "text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
+                ? "text-lg font-semibold tracking-tight text-ink"
+                : "text-2xl font-semibold tracking-tight text-ink"
             }
           >
             Mosaic
           </h1>
           {!fullscreen && (
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               Flood-fill puzzle editor &amp; step-by-step optimal solver.
             </p>
           )}
@@ -667,11 +667,11 @@ export default function MosaicClient() {
       <div className={layoutClasses}>
         <section className={panelClasses}>
           <div className="flex flex-col gap-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-4">
               Board
             </h2>
             <div className="flex gap-2">
-              <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <label className="flex flex-col gap-1 text-xs text-ink-2">
                 Rows
                 <input
                   type="number"
@@ -682,7 +682,7 @@ export default function MosaicClient() {
                   className={`${INPUT_CLASSES} w-16 px-2 py-1.5`}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <label className="flex flex-col gap-1 text-xs text-ink-2">
                 Cols
                 <input
                   type="number"
@@ -693,7 +693,7 @@ export default function MosaicClient() {
                   className={`${INPUT_CLASSES} w-16 px-2 py-1.5`}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              <label className="flex flex-col gap-1 text-xs text-ink-2">
                 Colors
                 <input
                   type="number"
@@ -713,8 +713,8 @@ export default function MosaicClient() {
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-4">
               Edit
             </h2>
             <div className="flex gap-2">
@@ -736,7 +736,7 @@ export default function MosaicClient() {
             <button type="button" className={ACTION_BUTTON_CLASSES} onClick={resetPuzzle}>
               ↺ Reset
             </button>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{modeLabel}</p>
+            <p className="text-xs text-ink-3">{modeLabel}</p>
             {!painted && (
               <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
                 🖌 {blankCount} tile{blankCount === 1 ? "" : "s"} left to paint before you can
@@ -745,11 +745,11 @@ export default function MosaicClient() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-4">
               Puzzle code
             </h2>
-            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <label className="flex flex-col gap-1 text-xs text-ink-2">
               Target min. moves
               <input
                 type="number"
@@ -769,7 +769,7 @@ export default function MosaicClient() {
               {generating ? "🎯 Generating…" : "🎯 Generate puzzle"}
             </button>
             {generateStatus && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{generateStatus}</p>
+              <p className="text-xs text-ink-3">{generateStatus}</p>
             )}
             {generateError && (
               <p className="text-xs font-medium text-red-600 dark:text-red-400">
@@ -795,7 +795,7 @@ export default function MosaicClient() {
               </button>
             </div>
             {copyFeedback && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{copyFeedback}</p>
+              <p className="text-xs text-ink-3">{copyFeedback}</p>
             )}
 
             <div className="flex gap-2">
@@ -814,8 +814,8 @@ export default function MosaicClient() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-4">
               Solve
             </h2>
             <button
@@ -844,7 +844,7 @@ export default function MosaicClient() {
               {solving === "solve" ? "Solving…" : "Solve from marked start"}
             </button>
             {solveStatusText && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{solveStatusText}</p>
+              <p className="text-xs text-ink-3">{solveStatusText}</p>
             )}
             {nextMoveHint && (
               <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
@@ -869,7 +869,7 @@ export default function MosaicClient() {
             )}
 
             {solution && (
-              <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <div className="flex flex-col gap-2 border-t border-line pt-3">
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -891,7 +891,7 @@ export default function MosaicClient() {
                     {playing ? "⏸ Pause" : "▶ Play"}
                   </button>
                 </div>
-                <label className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <label className="flex items-center gap-2 text-xs text-ink-3">
                   Speed
                   <input
                     type="range"
@@ -902,7 +902,7 @@ export default function MosaicClient() {
                     className="flex-1"
                   />
                 </label>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{stepLabelText}</p>
+                <p className="text-xs text-ink-3">{stepLabelText}</p>
               </div>
             )}
           </div>
@@ -947,8 +947,8 @@ export default function MosaicClient() {
                         key={`${r}-${c}`}
                         onMouseDown={() => onCellInteract(r, c, true)}
                         onMouseEnter={() => onCellInteract(r, c, false)}
-                        className={`relative cursor-pointer border border-zinc-300 ${
-                          v === BLANK ? "bg-white" : ""
+                        className={`relative cursor-pointer border border-line-strong ${
+                          v === BLANK ? "bg-surface" : ""
                         }`}
                         style={{
                           ...(v === BLANK ? undefined : { background: colors[v] }),
@@ -983,7 +983,7 @@ export default function MosaicClient() {
                 type="button"
                 title="Erase"
                 onClick={() => onPaletteClick(BLANK)}
-                className={`flex h-12 w-12 items-center justify-center rounded-md border-2 border-dashed border-zinc-300 bg-white text-lg text-zinc-500 shadow transition-transform duration-150 hover:-translate-y-0.5 dark:border-zinc-600 dark:bg-zinc-900 dark:shadow-none ${
+                className={`flex h-12 w-12 items-center justify-center rounded-md border-2 border-dashed border-line-strong bg-surface text-lg text-ink-3 shadow transition-transform duration-150 hover:-translate-y-0.5 dark:shadow-none ${
                   paintColor === BLANK ? "ring-2 ring-zinc-900 dark:ring-zinc-100" : ""
                 }`}
               >

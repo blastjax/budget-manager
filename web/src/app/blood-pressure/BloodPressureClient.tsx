@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -36,6 +37,7 @@ import {
   EDIT_BUTTON_CLASSES,
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
@@ -303,15 +305,15 @@ export default function BloodPressureClient() {
   };
 
   return (
-    <div className="relative mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Blood Pressure
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Track readings over time and spot trends before they become a problem.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Blood Pressure"
+        description={
+          <>
+            Track readings over time and spot trends before they become a problem.
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -322,26 +324,26 @@ export default function BloodPressureClient() {
       {!loading && (
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <div className={CARD_CLASSES}>
-            <p className="text-xs font-medium uppercase text-zinc-500">Readings</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+            <p className="text-xs font-medium uppercase text-ink-3">Readings</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">
               {fmtNum(summary.count)}
             </p>
           </div>
           <div className={CARD_CLASSES}>
-            <p className="text-xs font-medium uppercase text-zinc-500">Avg sys / dia</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+            <p className="text-xs font-medium uppercase text-ink-3">Avg sys / dia</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">
               {fmtNum(summary.avgSys)}/{fmtNum(summary.avgDia)}
             </p>
           </div>
           <div className={CARD_CLASSES}>
-            <p className="text-xs font-medium uppercase text-zinc-500">Avg pulse</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+            <p className="text-xs font-medium uppercase text-ink-3">Avg pulse</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">
               {fmtNum(summary.avgPulse)}
             </p>
           </div>
           <div className={CARD_CLASSES}>
-            <p className="text-xs font-medium uppercase text-zinc-500">Avg SpO2</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+            <p className="text-xs font-medium uppercase text-ink-3">Avg SpO2</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">
               {Number.isFinite(summary.avgSpo2) ? `${fmtNum(summary.avgSpo2)}%` : "—"}
             </p>
           </div>
@@ -362,10 +364,10 @@ export default function BloodPressureClient() {
       <section className={CARD_CLASSES}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-medium text-ink">
               Trend
             </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-ink-2">
               Systolic, diastolic, pulse, SpO2, temperature, and weight over time (oldest to newest).
             </p>
           </div>
@@ -442,7 +444,7 @@ export default function BloodPressureClient() {
       </section>
 
       <section>
-        <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+        <h2 className="text-lg font-medium text-ink">
           Records
         </h2>
         <ul className="mt-4 flex flex-col gap-2">
@@ -455,50 +457,50 @@ export default function BloodPressureClient() {
                   className={`flex flex-wrap items-center justify-between gap-3 ${CARD_CLASSES}`}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                    <p className="text-sm font-semibold tabular-nums text-ink">
                       {r.systolic != null && r.diastolic != null && (
                         <>
                           {r.systolic}/{r.diastolic}{" "}
-                          <span className="text-xs font-normal text-zinc-500">mmHg</span>
+                          <span className="text-xs font-normal text-ink-3">mmHg</span>
                         </>
                       )}
                       {r.pulse != null && (
-                        <span className="ml-3 text-zinc-700 dark:text-zinc-300">
+                        <span className="ml-3 text-ink-2">
                           {r.pulse}{" "}
-                          <span className="text-xs font-normal text-zinc-500">bpm</span>
+                          <span className="text-xs font-normal text-ink-3">bpm</span>
                         </span>
                       )}
                       {r.spo2 != null && (
-                        <span className="ml-3 text-zinc-700 dark:text-zinc-300">
+                        <span className="ml-3 text-ink-2">
                           {r.spo2}
-                          <span className="text-xs font-normal text-zinc-500">
+                          <span className="text-xs font-normal text-ink-3">
                             % SpO2
                           </span>
                         </span>
                       )}
                       {r.temperature != null && (
-                        <span className="ml-3 text-zinc-700 dark:text-zinc-300">
+                        <span className="ml-3 text-ink-2">
                           {r.temperature}
-                          <span className="text-xs font-normal text-zinc-500">
+                          <span className="text-xs font-normal text-ink-3">
                             °C
                           </span>
                         </span>
                       )}
                       {r.weight != null && (
-                        <span className="ml-3 text-zinc-700 dark:text-zinc-300">
+                        <span className="ml-3 text-ink-2">
                           {r.weight}
-                          <span className="text-xs font-normal text-zinc-500">
+                          <span className="text-xs font-normal text-ink-3">
                             {" "}kg
                           </span>
                         </span>
                       )}
                     </p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="mt-0.5 text-xs text-ink-3">
                       {fmtDateTime(r.created_at)}
                       {r.notes ? (
                         <>
                           {" · "}
-                          <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                          <span className="text-sm font-bold text-ink-2">
                             {r.notes}
                           </span>
                         </>
@@ -553,7 +555,7 @@ export default function BloodPressureClient() {
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="bp-add-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             {editingId != null ? "Edit reading" : "Add reading"}
           </h2>
@@ -567,7 +569,7 @@ export default function BloodPressureClient() {
         </div>
         <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Systolic (mmHg)</span>
+            <span className="text-ink-2">Systolic (mmHg)</span>
             <input
               type="number"
               min={1}
@@ -579,7 +581,7 @@ export default function BloodPressureClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Diastolic (mmHg)</span>
+            <span className="text-ink-2">Diastolic (mmHg)</span>
             <input
               type="number"
               min={1}
@@ -591,7 +593,7 @@ export default function BloodPressureClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Pulse (per min)</span>
+            <span className="text-ink-2">Pulse (per min)</span>
             <input
               type="number"
               min={1}
@@ -602,11 +604,11 @@ export default function BloodPressureClient() {
               disabled={saving}
             />
           </label>
-          <p className="text-xs text-zinc-500 sm:col-span-2">
+          <p className="text-xs text-ink-3 sm:col-span-2">
             Systolic, diastolic, and pulse must be filled in together, or all left blank.
           </p>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">SpO2 (%)</span>
+            <span className="text-ink-2">SpO2 (%)</span>
             <input
               type="number"
               min={1}
@@ -618,7 +620,7 @@ export default function BloodPressureClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Temperature (°C)</span>
+            <span className="text-ink-2">Temperature (°C)</span>
             <input
               type="number"
               min={26}
@@ -631,7 +633,7 @@ export default function BloodPressureClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Weight (kg)</span>
+            <span className="text-ink-2">Weight (kg)</span>
             <input
               type="number"
               min={0.1}
@@ -643,7 +645,7 @@ export default function BloodPressureClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Notes</span>
+            <span className="text-ink-2">Notes</span>
             <input
               type="text"
               className={INPUT_CLASSES}

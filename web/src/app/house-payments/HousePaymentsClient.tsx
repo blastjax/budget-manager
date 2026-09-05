@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
@@ -32,6 +33,7 @@ import {
   ERROR_ALERT_CLASSES,
   INPUT_CLASSES,
   LOADING_TEXT_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
   SECONDARY_BUTTON_CLASSES,
   TABLE_CELL_CLASSES,
@@ -275,15 +277,15 @@ export default function HousePaymentsClient() {
   }, [detail]);
 
   return (
-    <div className="relative mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          House Payments
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Track payments made toward a house, with the date each payment was made.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="House Payments"
+        description={
+          <>
+            Track payments made toward a house, with the date each payment was made.
+          </>
+        }
+      />
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">
@@ -314,12 +316,12 @@ export default function HousePaymentsClient() {
         open={planModalOpen}
         onClose={closePlanModal}
         ariaLabelledBy="house-plan-title"
-        dialogClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-line bg-surface p-5 shadow-pop"
       >
         <div className="mb-4 flex items-start justify-between gap-2">
           <h2
             id="house-plan-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold text-ink"
           >
             {editingPlanId != null ? "Edit house payment" : "Add house payment"}
           </h2>
@@ -333,7 +335,7 @@ export default function HousePaymentsClient() {
         </div>
         <form onSubmit={submitPlan} className="grid gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Name</span>
+            <span className="text-ink-2">Name</span>
             <input
               required
               className={INPUT_CLASSES}
@@ -345,7 +347,7 @@ export default function HousePaymentsClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
+            <span className="text-ink-2">
               Notes (optional)
             </span>
             <textarea
@@ -379,7 +381,7 @@ export default function HousePaymentsClient() {
       </Modal>
 
       <section>
-        <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">Plans</h2>
+        <h2 className="text-lg font-medium text-ink">Plans</h2>
         <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {!loading &&
             rows.map((r) => (
@@ -394,14 +396,14 @@ export default function HousePaymentsClient() {
                     void openEntries(r.id);
                   }
                 }}
-                className="min-w-0 cursor-pointer rounded-lg border border-zinc-200 bg-white p-3 transition-colors duration-150 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:ring-indigo-700/50"
+                className="min-w-0 cursor-pointer rounded-lg border border-line bg-surface p-3 transition-colors duration-150 hover:ring-2 hover:ring-indigo-300/60 sm:p-4 dark:hover:ring-indigo-700/50"
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                   <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-zinc-900 sm:text-base dark:text-zinc-50">
+                    <h3 className="truncate text-sm font-semibold text-ink sm:text-base">
                       {r.name}
                     </h3>
-                    <p className="mt-1 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
+                    <p className="mt-1 text-xs text-ink-2 sm:text-sm">
                       {r.entry_count} payment{r.entry_count === 1 ? "" : "s"}
                       {r.last_paid_on && (
                         <>
@@ -440,19 +442,19 @@ export default function HousePaymentsClient() {
                 </div>
                 <dl className="mt-3 grid gap-2 text-xs sm:mt-4 sm:gap-3 sm:text-sm sm:grid-cols-2">
                   <div>
-                    <dt className="text-xs text-zinc-500">Total paid</dt>
+                    <dt className="text-xs text-ink-3">Total paid</dt>
                     <dd className={AMOUNT_POSITIVE_CLASSES}>
                       {fmtMoney(r.total_paid)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-zinc-500">Last payment</dt>
+                    <dt className="text-xs text-ink-3">Last payment</dt>
                     <dd className="tabular-nums">{fmtDate(r.last_paid_on)}</dd>
                   </div>
                   {r.notes && (
                     <div className="sm:col-span-2">
-                      <dt className="text-xs text-zinc-500">Notes</dt>
-                      <dd className="whitespace-pre-line text-zinc-700 dark:text-zinc-300">
+                      <dt className="text-xs text-ink-3">Notes</dt>
+                      <dd className="whitespace-pre-line text-ink-2">
                         {r.notes}
                       </dd>
                     </div>
@@ -473,18 +475,18 @@ export default function HousePaymentsClient() {
         onClose={closeEntriesModal}
         ariaLabelledBy="house-entries-title"
         backdropClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-        dialogClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+        dialogClassName="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-pop"
       >
-            <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+            <div className="flex shrink-0 items-start justify-between gap-2 border-b border-line px-4 py-3">
               <div className="min-w-0">
                 <h2
                   id="house-entries-title"
-                  className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+                  className="truncate text-lg font-semibold text-ink"
                 >
                   {detail?.house_payment.name ?? "Payments"}
                 </h2>
                 {detail && (
-                  <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                  <p className="mt-0.5 text-xs text-ink-2">
                     {detail.entries.length} payment
                     {detail.entries.length === 1 ? "" : "s"} · total{" "}
                     <span className="font-mono tabular-nums">
@@ -510,10 +512,10 @@ export default function HousePaymentsClient() {
                 <>
                   <form
                     onSubmit={submitEntry}
-                    className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-zinc-200 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end dark:border-zinc-800"
+                    className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-line p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
                   >
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-zinc-600 dark:text-zinc-400">
+                      <span className="text-ink-2">
                         Date paid
                       </span>
                       <input
@@ -528,7 +530,7 @@ export default function HousePaymentsClient() {
                       />
                     </label>
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-zinc-600 dark:text-zinc-400">Amount</span>
+                      <span className="text-ink-2">Amount</span>
                       <input
                         required
                         type="text"
@@ -571,7 +573,7 @@ export default function HousePaymentsClient() {
                   </form>
 
                   {detail.entries.length === 0 ? (
-                    <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                    <p className="text-sm text-ink">
                       No payments yet. Add the first one above.
                     </p>
                   ) : (

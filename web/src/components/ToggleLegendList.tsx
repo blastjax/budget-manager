@@ -37,8 +37,8 @@ export function ToggleLegendList({
             <span
               className={
                 item.hidden
-                  ? "text-zinc-500 line-through dark:text-zinc-500"
-                  : "text-zinc-700 dark:text-zinc-300"
+                  ? "text-ink-3 line-through"
+                  : "text-ink-2"
               }
             >
               {item.label}

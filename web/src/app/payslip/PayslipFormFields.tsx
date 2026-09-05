@@ -30,7 +30,7 @@ export function PayslipFormFields({
   const deductionFields = (
     <>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">Withholding tax</span>
+        <span className="text-ink-2">Withholding tax</span>
         <input
           type="text"
           inputMode="decimal"
@@ -44,7 +44,7 @@ export function PayslipFormFields({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">SSS contribution</span>
+        <span className="text-ink-2">SSS contribution</span>
         <input
           type="text"
           inputMode="decimal"
@@ -58,7 +58,7 @@ export function PayslipFormFields({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">Philhealth</span>
+        <span className="text-ink-2">Philhealth</span>
         <input
           type="text"
           inputMode="decimal"
@@ -72,7 +72,7 @@ export function PayslipFormFields({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">
+        <span className="text-ink-2">
           Pag-ibig (Employee HDMF)
         </span>
         <input
@@ -88,7 +88,7 @@ export function PayslipFormFields({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">MP2</span>
+        <span className="text-ink-2">MP2</span>
         <input
           type="text"
           inputMode="decimal"
@@ -108,7 +108,7 @@ export function PayslipFormFields({
     <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,17.5rem)] lg:items-start lg:gap-8">
       <div className="grid min-w-0 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">Period year</span>
+          <span className="text-ink-2">Period year</span>
           <input
             type="text"
             inputMode="numeric"
@@ -121,7 +121,7 @@ export function PayslipFormFields({
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">Month</span>
+          <span className="text-ink-2">Month</span>
           <select
             className={INPUT_CLASSES}
             value={form.period_month}
@@ -139,7 +139,7 @@ export function PayslipFormFields({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">Half of month</span>
+          <span className="text-ink-2">Half of month</span>
           <select
             className={INPUT_CLASSES}
             value={
@@ -174,7 +174,7 @@ export function PayslipFormFields({
           ] as const
         ).map(([key, label]) => (
           <label key={key} className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">{label}</span>
+            <span className="text-ink-2">{label}</span>
             <input
               type="text"
               inputMode="decimal"
@@ -190,7 +190,7 @@ export function PayslipFormFields({
         ))}
         {form.period_month === "11" && form.period_half === "2" && (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">13th Month</span>
+            <span className="text-ink-2">13th Month</span>
             <input
               type="text"
               inputMode="decimal"
@@ -205,7 +205,7 @@ export function PayslipFormFields({
           </label>
         )}
         <label className="flex flex-col gap-1 text-sm sm:col-span-2 lg:col-span-3">
-          <span className="text-zinc-600 dark:text-zinc-400">Notes</span>
+          <span className="text-ink-2">Notes</span>
           <textarea
             className={`min-h-[4rem] ${INPUT_CLASSES}`}
             value={form.notes}
@@ -216,8 +216,8 @@ export function PayslipFormFields({
           />
         </label>
       </div>
-      <aside className="flex min-w-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-zinc-50/90 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+      <aside className="flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-zinc-50/90 p-4 dark:bg-zinc-900/50">
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
           Deductions
         </p>
         <div className="flex flex-col gap-4">{deductionFields}</div>

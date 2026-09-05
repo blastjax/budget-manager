@@ -84,7 +84,7 @@ export function DatePickerField({
         aria-expanded={open}
         className={`${INPUT_CLASSES} w-full text-left disabled:opacity-50 ${value ? "pr-8" : ""}`}
       >
-        {value ? formatDate(value) : <span className="text-zinc-400">{placeholder}</span>}
+        {value ? formatDate(value) : <span className="text-ink-4">{placeholder}</span>}
       </button>
       {value && !disabled && (
         <button
@@ -94,7 +94,7 @@ export function DatePickerField({
             e.stopPropagation();
             onChange("");
           }}
-          className="absolute inset-y-0 right-2 flex items-center text-zinc-400 transition-colors duration-150 hover:text-zinc-700 dark:hover:text-zinc-200"
+          className="absolute inset-y-0 right-2 flex items-center text-ink-4 transition-colors duration-150 hover:text-ink-2"
         >
           ×
         </button>
@@ -103,7 +103,7 @@ export function DatePickerField({
         <div
           ref={popoverRef}
           style={{ position: "fixed", top: position.top, left: position.left, width: POPOVER_WIDTH }}
-          className="z-50 rounded-lg border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+          className="z-50 rounded-xl border border-line bg-surface p-4 shadow-pop"
         >
           <CalendarMonth
             year={viewYear}

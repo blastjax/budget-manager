@@ -39,12 +39,12 @@ export function ChartColorsSettingsPanel() {
 
   return (
     <section className={CARD_CLASSES}>
-      <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+      <h2 className="text-lg font-medium text-ink">
         Chart colors
       </h2>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+        <span className="text-sm text-ink-2">
           Editing palette for
         </span>
         <div className={SEGMENTED_WRAPPER_CLASSES} role="tablist" aria-label="Palette theme">
@@ -90,15 +90,15 @@ export function ChartColorsSettingsPanel() {
         {CHART_SERIES_COLOR_KEYS.map((k) => (
           <label
             key={k}
-            className="flex min-w-0 items-center justify-between gap-4 rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900/40"
+            className="flex min-w-0 items-center justify-between gap-4 rounded-lg border border-line bg-zinc-50/80 px-3 py-2.5 dark:bg-zinc-900/40"
           >
-            <span className="text-sm text-zinc-700 dark:text-zinc-200">
+            <span className="text-sm text-ink-2">
               {CHART_SERIES_LABEL[k]}
             </span>
             <input
               type="color"
               aria-label={`Color for ${CHART_SERIES_LABEL[k]} (${paletteEditorTheme})`}
-              className="h-9 w-14 cursor-pointer rounded-md border border-zinc-300 bg-transparent p-0.5 dark:border-zinc-700"
+              className="h-9 w-14 cursor-pointer rounded-md border border-line-strong bg-transparent p-0.5"
               value={normalizeHexForColorInput(
                 chartPalette[paletteEditorTheme][k],
               )}

@@ -1,9 +1,11 @@
 "use client";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
+  PAGE_CONTAINER_CLASSES,
   PRIMARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 import {
@@ -22,7 +24,7 @@ import {
 import { CardTile, SetSymbol } from "./shapes";
 
 const EMPTY_BUILDER: Card = { symbol: 0, color: 0, texture: 0, count: 0 };
-const sectionHeading = "text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500";
+const sectionHeading = "text-xs font-semibold uppercase tracking-wider text-ink-4";
 
 /** Tone-classed banner box, matching ui.ts's `ERROR_ALERT_CLASSES` pattern
  * (border + tinted background + tinted text, no shadow) for the tones it
@@ -98,14 +100,16 @@ export default function SetsClient() {
         : { tone: "warn" as const, text: "No valid Sets on the board — deal more cards or add another." };
 
   return (
-    <div className="box-border flex w-full min-w-0 flex-col gap-10 px-4 pb-28 pt-10 sm:px-6 lg:px-8">
-      <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Sets</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          A solving assistant for Sets. Add the cards you see on the table and every valid Set among
-          them is found automatically, or select two cards to see the exact card that completes one.
-        </p>
-      </header>
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <PageHeader
+        title="Sets"
+        description={
+          <>
+            A solving assistant for Sets. Add the cards you see on the table and every valid Set among
+            them is found automatically, or select two cards to see the exact card that completes one.
+          </>
+        }
+      />
 
       <div className="flex flex-col items-stretch gap-6 lg:flex-row lg:flex-wrap lg:items-start">
         <section className={`${CARD_CLASSES} w-full flex flex-col gap-6 lg:max-w-md lg:shrink-0`}>
@@ -157,7 +161,7 @@ export default function SetsClient() {
             {addError && <p className="text-xs text-red-600 dark:text-red-400">{addError}</p>}
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex flex-col gap-2 border-t border-line pt-4">
             <h2 className={sectionHeading}>Board</h2>
             <div className="flex flex-wrap gap-2">
               <button type="button" className={ACTION_BUTTON_CLASSES} onClick={() => dealNew(DEFAULT_BOARD_SIZE)}>
@@ -167,12 +171,12 @@ export default function SetsClient() {
                 Clear board
               </button>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{board.length} card{board.length === 1 ? "" : "s"} on the board</p>
+            <p className="text-xs text-ink-3">{board.length} card{board.length === 1 ? "" : "s"} on the board</p>
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex flex-col gap-2 border-t border-line pt-4">
             <h2 className={sectionHeading}>How to use it</h2>
-            <ul className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <ul className="flex flex-col gap-1 text-xs text-ink-2">
               <li>· Every card has 4 features — Symbol, Color, Texture, Count — each with 3 variants.</li>
               <li>· Three cards form a Set when each feature, on its own, is all the same or all different across them.</li>
               <li>· Add the cards you see on the table (or deal a random spread) and every valid Set is listed below automatically.</li>
@@ -193,7 +197,7 @@ export default function SetsClient() {
 
           <div className="flex flex-wrap gap-3">
             {board.length === 0 && (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm text-ink-3">
                 No cards yet — add one on the left, or deal a random spread.
               </p>
             )}
@@ -207,7 +211,7 @@ export default function SetsClient() {
                   onClick={() => removeCard(idx)}
                   aria-label={`Remove card ${idx + 1}`}
                   title="Remove"
-                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 bg-white text-[10px] leading-none text-zinc-600 shadow transition-colors duration-150 hover:bg-red-50 hover:text-red-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:shadow-none dark:ring-1 dark:ring-white/10"
+                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-line-strong bg-surface text-[10px] leading-none text-ink-2 shadow transition-colors duration-150 hover:bg-red-50 hover:text-red-600 dark:bg-zinc-800 dark:shadow-none dark:ring-1 dark:ring-white/10"
                 >
                   ×
                 </button>
@@ -223,7 +227,7 @@ export default function SetsClient() {
                 </h2>
                 <button
                   type="button"
-                  className="text-xs text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  className="text-xs text-ink-3 underline hover:text-ink-2"
                   onClick={() => setSelectedIndices([])}
                 >
                   Clear selection
@@ -231,7 +235,7 @@ export default function SetsClient() {
               </div>
 
               {selectedCards.length === 1 && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs text-ink-3">
                   Select a second card to see what completes a Set, or a third to check your own pick.
                 </p>
               )}
@@ -239,7 +243,7 @@ export default function SetsClient() {
               {selectedCards.length === 2 && pairThird && (
                 <div className="flex items-center gap-4">
                   <CardTile card={pairThird} size="sm" />
-                  <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                  <p className="text-sm text-ink-2">
                     {pairThirdBoardIndex !== -1 ? (
                       <>
                         This card is already on the board (card {pairThirdBoardIndex + 1}) — select it too for a
@@ -281,7 +285,7 @@ export default function SetsClient() {
                     onClick={() => setSelectedIndices([i, j, k])}
                     className="flex w-fit items-center gap-3 rounded-lg border border-transparent p-1 transition-colors duration-150 hover:border-indigo-200 hover:bg-indigo-50/60 dark:hover:border-indigo-900 dark:hover:bg-indigo-950/30"
                   >
-                    <span className="w-10 shrink-0 text-xs text-zinc-400">Set {setIdx + 1}</span>
+                    <span className="w-10 shrink-0 text-xs text-ink-4">Set {setIdx + 1}</span>
                     <CardTile card={board[i]} size="sm" />
                     <CardTile card={board[j]} size="sm" />
                     <CardTile card={board[k]} size="sm" />
@@ -298,7 +302,7 @@ export default function SetsClient() {
 
 function FeaturePicker({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+    <div className="flex flex-col gap-1 text-xs text-ink-2">
       {label}
       <div className="flex gap-2">{children}</div>
     </div>
@@ -323,10 +327,10 @@ function OptionTile({
       aria-label={label}
       aria-pressed={selected}
       title={label}
-      className={`flex flex-1 items-center justify-center rounded-lg border-2 bg-white px-3 py-3 shadow-sm transition-colors duration-150 dark:bg-zinc-900 dark:shadow-none ${
+      className={`flex flex-1 items-center justify-center rounded-lg border-2 bg-surface px-3 py-3 shadow-sm transition-colors duration-150 dark:shadow-none ${
         selected
           ? "border-indigo-500 ring-2 ring-indigo-400"
-          : "border-zinc-200 hover:border-indigo-300 dark:border-zinc-700 dark:ring-1 dark:ring-white/10"
+          : "border-line hover:border-indigo-300 dark:ring-1 dark:ring-white/10"
       }`}
     >
       {children}
@@ -341,7 +345,7 @@ function FeatureRow({ label, relation }: { label: string; relation: Relation }) 
       ? "text-red-600 dark:text-red-400"
       : "text-emerald-700 dark:text-emerald-400";
   return (
-    <p className="text-sm text-zinc-700 dark:text-zinc-300">
+    <p className="text-sm text-ink-2">
       {label}: <span className={`font-semibold ${tone}`}>{text}</span>
     </p>
   );

@@ -32,7 +32,7 @@ export function InstallmentFieldGrid({
   return (
     <>
       <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-        <span className="text-zinc-600 dark:text-zinc-400">Name</span>
+        <span className="text-ink-2">Name</span>
         <input
           required
           className={INPUT_CLASSES}
@@ -42,7 +42,7 @@ export function InstallmentFieldGrid({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">
+        <span className="text-ink-2">
           Installment # (next to pay)
         </span>
         <input
@@ -58,7 +58,7 @@ export function InstallmentFieldGrid({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">
+        <span className="text-ink-2">
           Total installments (n)
         </span>
         <input
@@ -76,7 +76,7 @@ export function InstallmentFieldGrid({
       {!hideAmounts && (
         <>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Principal</span>
+            <span className="text-ink-2">Principal</span>
             <input
               required
               type="text"
@@ -94,7 +94,7 @@ export function InstallmentFieldGrid({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
+            <span className="text-ink-2">
               Interest (optional)
             </span>
             <input
@@ -113,7 +113,7 @@ export function InstallmentFieldGrid({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
+            <span className="text-ink-2">
               Total (per payment, optional)
             </span>
             <input
@@ -134,7 +134,7 @@ export function InstallmentFieldGrid({
         </>
       )}
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">Start (mm-yyyy)</span>
+        <span className="text-ink-2">Start (mm-yyyy)</span>
         <input
           required
           type="month"
@@ -147,7 +147,7 @@ export function InstallmentFieldGrid({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-600 dark:text-zinc-400">
+        <span className="text-ink-2">
           Finish (mm-yyyy, optional)
         </span>
         <input
@@ -162,7 +162,7 @@ export function InstallmentFieldGrid({
       </label>
       {!hideAmounts && (
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">
+          <span className="text-ink-2">
             Remaining (optional)
           </span>
           <input
@@ -183,7 +183,7 @@ export function InstallmentFieldGrid({
       )}
       {!hideAmounts && (
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">
+          <span className="text-ink-2">
             Original total (optional)
           </span>
           <input
