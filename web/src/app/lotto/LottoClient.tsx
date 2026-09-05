@@ -413,9 +413,13 @@ function parseAttemptsLines(text: string): number[][] {
 function NumberBall({
   n,
   variant = "neutral",
+  size = "md",
 }: {
   n: number;
   variant?: "neutral" | "result" | "match" | "miss";
+  /** "lg" is 3x the "md" ball — 200% bigger — used where an attempt's
+   * numbers are the whole point of the row and get the spotlight. */
+  size?: "md" | "lg";
 }) {
   const styles: Record<string, string> = {
     neutral:
@@ -426,9 +430,13 @@ function NumberBall({
       "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-500 dark:bg-emerald-600",
     miss: "border-zinc-300 bg-zinc-50 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500",
   };
+  const sizeClasses =
+    size === "lg"
+      ? "h-[84px] w-[84px] text-[28px] sm:h-[108px] sm:w-[108px] sm:text-[36px]"
+      : "h-7 w-7 text-xs sm:h-9 sm:w-9 sm:text-sm";
   return (
     <span
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums sm:h-9 sm:w-9 sm:text-sm ${styles[variant]}`}
+      className={`flex ${sizeClasses} shrink-0 items-center justify-center rounded-full border font-semibold tabular-nums ${styles[variant]}`}
     >
       {String(n).padStart(2, "0")}
     </span>
@@ -1203,7 +1211,7 @@ export default function LottoClient() {
         key={attempt.id}
         draggable
         title="Drag onto another attempt or ticket to group them"
-        className={`flex cursor-grab flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-900 ${
+        className={`flex cursor-grab flex-col items-center gap-2 rounded-lg border border-zinc-200 bg-white p-4 text-center active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-900 ${
           attempt.hidden ? "opacity-50" : ""
         }`}
         onDragStart={(e) => {
@@ -1224,35 +1232,42 @@ export default function LottoClient() {
           void onDropOnAttempt(detail.draw.id, attempt, e);
         }}
       >
-        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+        {/* The numbers are the whole point of the row, so they sit centered
+         * and 200% bigger than everywhere else numbers appear — everything
+         * else (match status, actions) stacks centered underneath. */}
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           {attempt.numbers.map((n) => (
             <NumberBall
               key={n}
               n={n}
+              size="lg"
               variant={hasResult ? (drawSet.has(n) ? "match" : "miss") : "neutral"}
             />
           ))}
-          <span className="ml-1 whitespace-nowrap text-xs font-medium text-zinc-500 sm:ml-2 dark:text-zinc-400">
-            {hasResult ? (
-              <>
-                <span className="sm:hidden">{matchCount}/6</span>
-                <span className="hidden sm:inline">{matchCount}/6 matched</span>
-              </>
-            ) : (
-              "Awaiting result"
-            )}
-          </span>
-          {attempt.hidden && (
-            <span className="ml-1 rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
-              Hidden
-            </span>
-          )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* A ticketed attempt is edited/deleted as part of its ticket
-           * (see the ticket cluster's own Edit/Delete) — only an ungrouped
-           * attempt gets its own, since there's no ticket to fold it into. */}
-          {attempt.ticket == null && (
+        {/* No result yet means nothing to report here — the draw card
+         * itself already says "Result not in yet" once, so this row
+         * doesn't repeat "Awaiting result" on every single attempt. */}
+        {(hasResult || attempt.hidden) && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {hasResult && (
+              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                {matchCount}/6 matched
+              </span>
+            )}
+            {attempt.hidden && (
+              <span className="rounded-full border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                Hidden
+              </span>
+            )}
+          </div>
+        )}
+        {/* A ticketed attempt is edited, hidden, and deleted as part of its
+         * ticket (see the ticket cluster's own Edit/Hide/Delete) — only an
+         * ungrouped attempt gets its own actions, since there's no ticket
+         * to fold them into. */}
+        {attempt.ticket == null && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <button
               type="button"
               disabled={saving}
@@ -1261,16 +1276,14 @@ export default function LottoClient() {
             >
               Edit
             </button>
-          )}
-          <button
-            type="button"
-            disabled={saving}
-            className={DETAIL_BUTTON_CLASSES}
-            onClick={() => void onToggleAttemptHidden(detail.draw.id, attempt)}
-          >
-            {attempt.hidden ? "Unhide" : "Hide"}
-          </button>
-          {attempt.ticket == null && (
+            <button
+              type="button"
+              disabled={saving}
+              className={DETAIL_BUTTON_CLASSES}
+              onClick={() => void onToggleAttemptHidden(detail.draw.id, attempt)}
+            >
+              {attempt.hidden ? "Unhide" : "Hide"}
+            </button>
             <button
               type="button"
               disabled={saving}
@@ -1279,8 +1292,8 @@ export default function LottoClient() {
             >
               Delete
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </li>
     );
     const matchBreakdownDisplay = matchBreakdown.length > 0 && (
