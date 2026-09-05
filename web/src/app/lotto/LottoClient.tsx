@@ -154,11 +154,12 @@ function findWhatIfMatches(draws: LottoDrawDetail[]): WhatIfMatch[] {
   return matches.sort((a, b) => b.matchedDrawDate.localeCompare(a.matchedDrawDate));
 }
 
-/** One draw as a row in the same pipe-delimited shape "Import historic
- * results" reads back — `| n1-n2-n3-n4-n5-n6 | m/d/yyyy | jackpot | winners |`
- * — so an export round-trips through that importer unchanged. Draws with no
- * result yet have no numbers to put in the row, so they're left out. */
-function drawToExportLine(detail: LottoDrawDetail): string | null {
+/** One draw's raw fields for a historic-results export row — still
+ * unpadded, since padding needs every row's widths known first. Draws with
+ * no result yet have no numbers to put in a row, so they're left out. */
+type ExportFields = { numbers: string; date: string; jackpot: string; winners: string };
+
+function drawToExportFields(detail: LottoDrawDetail): ExportFields | null {
   if (detail.draw.numbers.length !== 6) return null;
   const numbers = detail.draw.numbers.map((n) => String(n).padStart(2, "0")).join("-");
   const [y, m, d] = detail.draw.draw_date.split("-").map(Number);
@@ -167,16 +168,35 @@ function drawToExportLine(detail: LottoDrawDetail): string | null {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `| ${numbers} | ${date} | ${jackpot} | ${detail.draw.winners} |`;
+  return { numbers, date, jackpot, winners: String(detail.draw.winners) };
 }
 
 /** `draws` newest-first -> oldest-first for the export, matching how a
- * historic results file naturally reads top to bottom. */
+ * historic results file naturally reads top to bottom. Every column is
+ * padded to its widest value so the `|` separators line up down the file —
+ * purely cosmetic, since "Import historic results" already tolerates
+ * arbitrary whitespace around each field. */
 function buildLottoExportText(draws: LottoDrawDetail[]): string {
-  return [...draws]
+  const rows = [...draws]
     .reverse()
-    .map(drawToExportLine)
-    .filter((line): line is string => line != null)
+    .map(drawToExportFields)
+    .filter((fields): fields is ExportFields => fields != null);
+  if (rows.length === 0) return "";
+
+  const width = (key: keyof ExportFields) => Math.max(...rows.map((r) => r[key].length));
+  const widths = {
+    numbers: width("numbers"),
+    date: width("date"),
+    jackpot: width("jackpot"),
+    winners: width("winners"),
+  };
+
+  return rows
+    .map(
+      (r) =>
+        `| ${r.numbers.padEnd(widths.numbers)} | ${r.date.padEnd(widths.date)} | ` +
+        `${r.jackpot.padStart(widths.jackpot)} | ${r.winners.padStart(widths.winners)} |`,
+    )
     .join("\n");
 }
 
@@ -831,7 +851,7 @@ export default function LottoClient() {
   /** Downloads every draw that has a result as a pipe-delimited .txt file —
    * the same shape "Import historic results" reads, so this doubles as a
    * backup that can be re-imported later. Draws with no result yet aren't
-   * included (see `drawToExportLine`). */
+   * included (see `drawToExportFields`). */
   const onExportHistoric = () => {
     const text = buildLottoExportText(draws);
     const blob = new Blob([text + (text ? "\n" : "")], { type: "text/plain" });
