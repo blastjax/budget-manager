@@ -1568,7 +1568,7 @@ export default function LottoClient() {
         : "Edit attempt";
 
   return (
-    <div className="relative mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
+    <div className="relative mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-8 px-4 pb-28 py-8 sm:px-6">
       <header className="border-b border-zinc-200 pb-6 dark:border-zinc-800">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
