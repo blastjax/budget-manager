@@ -14,7 +14,16 @@ _client: Any = None  # redis.Redis[str] | None
 
 
 def _default_ttl() -> int:
-    return int(os.environ.get("REDIS_CACHE_TTL", "300"))
+    """Fallback expiry for a cached response.
+
+    Correctness does not rest on this: every write busts its namespace through
+    the middleware in ``app/factory.py``, so a cached entry is dropped the
+    moment the data behind it changes. The TTL is only a backstop for an entry
+    nothing ever invalidates — which makes a short one pure cost, five minutes
+    of freshness nobody needed in exchange for sending every screen back to
+    Neon a dozen times an hour.
+    """
+    return int(os.environ.get("REDIS_CACHE_TTL", "86400"))
 
 
 def _resolved_url() -> str:

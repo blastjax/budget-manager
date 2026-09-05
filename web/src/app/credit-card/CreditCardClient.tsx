@@ -3,7 +3,6 @@
 import { PageHeader } from "@/components/PageHeader";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import {
   adjustCreditCardBalance,
@@ -25,6 +24,7 @@ import {
 import { formatDate } from "@/lib/dateFormat";
 import { fmtAmountOrDash } from "@/lib/formatNumber";
 import {
+  ADD_BUTTON_CLASSES,
   CARD_CLASSES,
   CLOSE_BUTTON_CLASSES,
   DASHED_EMPTY_CLASSES,
@@ -395,7 +395,6 @@ export default function CreditCardClient() {
   }, [card, calcMonthsInput]);
 
   const installmentDues = card ? Math.max(card.monthly_dues - card.minimum_due, 0) : 0;
-  const anyModalOpen = cardModalOpen || paymentModalOpen || balanceModalOpen;
 
   return (
     <div className={PAGE_CONTAINER_CLASSES}>
@@ -797,7 +796,16 @@ export default function CreditCardClient() {
           </section>
 
           <section className={CARD_CLASSES}>
-            <h2 className="text-lg font-medium text-ink">Payments</h2>
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-lg font-medium text-ink">Payments</h2>
+              <button
+                type="button"
+                className={ADD_BUTTON_CLASSES}
+                onClick={openPaymentModal}
+              >
+                + Record payment
+              </button>
+            </div>
             {payments.length === 0 ? (
               <p className={`mt-4 ${DASHED_EMPTY_CLASSES}`}>No payments recorded yet.</p>
             ) : (
@@ -1119,12 +1127,6 @@ export default function CreditCardClient() {
           </div>
         </form>
       </Modal>
-
-      <FloatingAddButton
-        hidden={anyModalOpen || !card}
-        onClick={openPaymentModal}
-        ariaLabel="Record payment"
-      />
     </div>
   );
 }

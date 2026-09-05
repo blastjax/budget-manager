@@ -53,9 +53,19 @@ services:
       # here instead of starting an API that cannot reach its database.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set to the Neon Postgres URL}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      REDIS_CACHE_TTL: ${REDIS_CACHE_TTL:-300}
+      # A day, not the five minutes this used to be: every write busts its own
+      # cache namespace through the middleware in app/factory.py, so the TTL
+      # only ever expires an entry nothing invalidated. A short one just sent
+      # each screen back to Neon for data that had not changed.
+      REDIS_CACHE_TTL: ${REDIS_CACHE_TTL:-86400}
       BUDGET_CORS_ORIGINS: ${BUDGET_CORS_ORIGINS:-}
       BUDGET_SESSION_TTL_SECONDS: ${BUDGET_SESSION_TTL_SECONDS:-43200}
+      # Connections kept in the pool between requests, and how long one may sit
+      # idle before it is probed on checkout. See the round-trips note at the
+      # top of backend/db.py.
+      BUDGET_DB_POOL_KEEP: ${BUDGET_DB_POOL_KEEP:-6}
+      BUDGET_DB_POOL_MAX: ${BUDGET_DB_POOL_MAX:-10}
+      BUDGET_DB_PROBE_AFTER_SECONDS: ${BUDGET_DB_PROBE_AFTER_SECONDS:-20}
     volumes:
       - ./data:/app/data
     depends_on:

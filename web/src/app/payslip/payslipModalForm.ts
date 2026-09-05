@@ -1,5 +1,4 @@
 import { getPayslipDefaults, savePayslipDefaults } from "@/lib/api";
-import { parseFormNumber } from "@/lib/parseFormNumber";
 
 export type FormState = {
   period_year: string;
@@ -43,14 +42,6 @@ export function emptyForm(): FormState {
     philhealth: "",
     pag_ibig: "",
   };
-}
-
-function parseOptYear(s: string): number | null {
-  const n = parseFormNumber(s);
-  if (n == null) return null;
-  const y = Math.trunc(n);
-  if (y < 1900 || y > 2200) return null;
-  return y;
 }
 
 export function tryParseFormStateJson(raw: string): FormState | null {
@@ -293,38 +284,6 @@ export async function savePayslipDefaultsBundle(
   return saved;
 }
 
-export function payPeriodFromToday(): Pick<
-  FormState,
-  "period_year" | "period_month" | "period_half"
-> {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
-  const half: "1" | "2" = day >= 1 && day <= 15 ? "1" : "2";
-  return {
-    period_year: String(year),
-    period_month: String(month),
-    period_half: half,
-  };
-}
-
-export function payPeriodFromDefaultsIfComplete(
-  d: FormState,
-): Pick<FormState, "period_year" | "period_month" | "period_half"> | null {
-  const y = parseOptYear(d.period_year);
-  if (y == null) return null;
-  const mRaw = parseFormNumber(d.period_month);
-  const month = mRaw != null ? Math.trunc(mRaw) : null;
-  if (month == null || month < 1 || month > 12) return null;
-  if (d.period_half !== "1" && d.period_half !== "2") return null;
-  return {
-    period_year: String(y),
-    period_month: String(month),
-    period_half: d.period_half,
-  };
-}
-
 export function initialAddPayslipForm(
   year: number,
   month: number,
@@ -339,33 +298,6 @@ export function initialAddPayslipForm(
   return {
     ...emptyForm(),
     ...defaultsForHalf,
-    ...period,
-  };
-}
-
-export function initialManualPayslipForm(
-  bundle: PayslipDefaultsBundle,
-): FormState {
-  const today = payPeriodFromToday();
-  const halfNum: 1 | 2 = bundle.settingsHalf === "second" ? 2 : 1;
-  const defaults = halfNum === 1 ? bundle.formFirst : bundle.formSecond;
-  const halfStr: "1" | "2" = halfNum === 2 ? "2" : "1";
-  const fromDefaults = payPeriodFromDefaultsIfComplete(defaults);
-  const period =
-    fromDefaults != null
-      ? {
-          period_year: fromDefaults.period_year,
-          period_month: fromDefaults.period_month,
-          period_half: halfStr,
-        }
-      : {
-          period_year: today.period_year,
-          period_month: today.period_month,
-          period_half: halfStr,
-        };
-  return {
-    ...emptyForm(),
-    ...defaults,
     ...period,
   };
 }

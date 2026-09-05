@@ -22,12 +22,20 @@ import time
 from typing import Any
 
 import cache
+from db import any_app_users
 
 _SESSION_PREFIX = "auth_session"
 _FAIL_PREFIX = "auth_fail"
+_USERS_EXIST_KEY = "auth_state:users_exist"
 
 _MAX_FAILED_ATTEMPTS = 8
 _FAIL_WINDOW_SECONDS = 15 * 60
+
+# How long the process-local answer to "is login configured?" is trusted.
+# Short on purpose: it exists to collapse one page load's burst of requests
+# into a single lookup, not to be the cache. Redis is the cache.
+_USERS_EXIST_LOCAL_TTL = 5.0
+_USERS_EXIST_REDIS_TTL = 3600
 
 
 class _ExpiringStore:
@@ -92,6 +100,47 @@ def _store_get(key: str) -> Any | None:
 def _store_delete(key: str) -> None:
     cache.delete(key)
     _fallback.delete(key)
+
+
+_users_exist_local: tuple[float, bool] | None = None
+
+
+def login_required() -> bool:
+    """Whether any user has been added, i.e. whether login is switched on.
+
+    ``require_session`` needs this on *every* protected request, and the
+    underlying ``any_app_users()`` is a query to Neon — one round trip that
+    every endpoint paid before it did any of its own work, and that a
+    Redis-cached response paid for nothing at all. It is also about the most
+    cacheable fact in the app: it changes only when the first user is added or
+    the last one removed, both of which go through ``/api/users`` and call
+    ``forget_login_required()`` via the write middleware.
+
+    Two layers, because they answer different problems. Redis keeps Neon out
+    of the picture across requests and restarts; the process-local memo keeps
+    even the Redis hop out of a single page load's fan-out. The local memo's
+    TTL is what bounds staleness if a second worker ever changes the flag, so
+    it stays small.
+    """
+    global _users_exist_local
+    now = time.monotonic()
+    if _users_exist_local is not None and _users_exist_local[0] > now:
+        return _users_exist_local[1]
+
+    hit = cache.get(_USERS_EXIST_KEY)
+    if hit is None:
+        hit = any_app_users()
+        cache.set(_USERS_EXIST_KEY, hit, ttl=_USERS_EXIST_REDIS_TTL)
+    value = bool(hit)
+    _users_exist_local = (now + _USERS_EXIST_LOCAL_TTL, value)
+    return value
+
+
+def forget_login_required() -> None:
+    """Drop both layers of the ``login_required()`` cache after a user write."""
+    global _users_exist_local
+    _users_exist_local = None
+    cache.delete(_USERS_EXIST_KEY)
 
 
 def _session_ttl_seconds() -> int:

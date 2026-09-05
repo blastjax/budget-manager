@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request
 
-from app.security import session_is_valid
-from db import any_app_users, database_url
+from app.security import login_required, session_is_valid
+from db import database_url
 
 
 def require_db() -> None:
@@ -29,7 +29,7 @@ def require_session(request: Request) -> None:
     until at least one user has been added (Settings → Users), so login is
     opt-in the same way OTP used to be.
     """
-    if not any_app_users():
+    if not login_required():
         return
     header = request.headers.get("authorization") or ""
     token = header[7:] if header.lower().startswith("bearer ") else ""

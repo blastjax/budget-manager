@@ -21,11 +21,10 @@ from db import (
     adjust_credit_card_balance,
     delete_credit_card,
     delete_credit_card_payment,
+    fetch_credit_card_bundle,
     get_credit_card,
     insert_credit_card,
     insert_credit_card_payment,
-    list_credit_card_payments,
-    list_installments,
     update_credit_card,
 )
 
@@ -75,19 +74,19 @@ def credit_card_get() -> dict[str, Any]:
     hit = cache.get(key)
     if hit is not None:
         return hit
-    card = get_credit_card()
+    bundle = fetch_credit_card_bundle()
+    card = bundle["card"]
     if not card:
         result = {"card": None, "installments": [], "payments": []}
         cache.set(key, result)
         return result
-    installments = list_installments(limit=2000, credit_card_id=card["id"])
-    payments = list_credit_card_payments(card["id"])
+    installments = bundle["installments"]
     serialized_card = _serialize_card(card)
     serialized_card["monthly_dues"] = _monthly_dues(card, installments)
     result = {
         "card": serialized_card,
         "installments": [serialize_installment_row(r) for r in installments],
-        "payments": [_serialize_payment(p) for p in payments],
+        "payments": [_serialize_payment(p) for p in bundle["payments"]],
     }
     cache.set(key, result)
     return result

@@ -2,7 +2,6 @@
 
 import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import {
   createMonthlyExpense,
@@ -52,11 +51,11 @@ type ExpenseForm = {
   month: string;
   is_recurring: boolean;
 };
-const emptyForm = (defaultMonth: string): ExpenseForm => ({
+const emptyForm = (defaultMonth: string, half: PeriodHalf = 1): ExpenseForm => ({
   name: "",
   description: "",
   amount: "",
-  period_half: 1,
+  period_half: half,
   month: defaultMonth,
   is_recurring: false,
 });
@@ -108,12 +107,15 @@ export default function MonthlyExpensesClient() {
     [byHalf],
   );
 
-  const openModal = useCallback(() => {
-    setFormError(null);
-    setEditingId(null);
-    setForm(emptyForm(currentMonthKey));
-    setModalOpen(true);
-  }, [currentMonthKey]);
+  const openModal = useCallback(
+    (half: PeriodHalf = 1) => {
+      setFormError(null);
+      setEditingId(null);
+      setForm(emptyForm(currentMonthKey, half));
+      setModalOpen(true);
+    },
+    [currentMonthKey],
+  );
 
   const openEditModal = useCallback((exp: MonthlyExpenseRow) => {
     setFormError(null);
@@ -231,7 +233,14 @@ export default function MonthlyExpensesClient() {
               </div>
 
               {byHalf[half].length === 0 ? (
-                <p className={`mt-4 ${DASHED_EMPTY_CLASSES}`}>No monthly expenses yet.</p>
+                <button
+                  type="button"
+                  onClick={() => openModal(half)}
+                  className={`mt-4 flex w-full flex-col items-center gap-1 ${DASHED_EMPTY_CLASSES} transition-colors duration-150 hover:border-brand hover:text-brand`}
+                >
+                  <span>No monthly expenses yet.</span>
+                  <span className="font-medium">+ Add monthly expense</span>
+                </button>
               ) : (
                 <ul className="mt-4 flex flex-col gap-2">
                   {byHalf[half].map((exp) => (
@@ -281,6 +290,15 @@ export default function MonthlyExpensesClient() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {byHalf[half].length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => openModal(half)}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong px-4 py-2.5 text-sm font-medium text-ink-3 transition-colors duration-150 hover:border-brand hover:text-brand"
+                >
+                  + Add monthly expense
+                </button>
               )}
             </section>
           ))}
@@ -414,8 +432,6 @@ export default function MonthlyExpensesClient() {
           </div>
         </form>
       </Modal>
-
-      <FloatingAddButton hidden={modalOpen} onClick={openModal} ariaLabel="Add monthly expense" />
     </div>
   );
 }

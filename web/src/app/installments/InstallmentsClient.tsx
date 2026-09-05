@@ -8,7 +8,6 @@ import {
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import {
   createInstallment,
@@ -1022,6 +1021,22 @@ export default function InstallmentsClient() {
           Plans
         </h2>
         <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+          {!loading && (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setLineDrafts({});
+                  setAddModalOpen(true);
+                }}
+                className="flex min-h-[8rem] w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-line-strong p-3 text-center text-sm text-ink-3 transition-colors duration-150 hover:border-brand hover:text-brand sm:p-4"
+              >
+                <span className="text-lg font-medium">+</span>
+                <span className="font-medium">Add installment</span>
+              </button>
+            </li>
+          )}
           {!loading &&
             activeRows.map((r) => {
               const canPay =
@@ -1649,16 +1664,6 @@ export default function InstallmentsClient() {
           )}
         </div>
       </Modal>
-
-      <FloatingAddButton
-        hidden={addModalOpen || scheduleModalId != null || paymentsModalOpen}
-        onClick={() => {
-          setForm(emptyForm);
-          setLineDrafts({});
-          setAddModalOpen(true);
-        }}
-        ariaLabel="Add installment"
-      />
     </div>
   );
 }

@@ -38,12 +38,38 @@ gives one representation everywhere.
 The schema itself is owned by ``backend/scripts/migrate_sqlite_to_postgres.py``,
 not by this module -- ``init_schema()`` only verifies that the expected tables
 are present, so there is no second copy of the DDL to drift out of sync.
+
+Round trips
+-----------
+Neon is remote -- measured from the dev machine, one round trip to the
+ap-southeast-1 endpoint costs 35-80 ms depending on the network -- so what
+dominates a request is not how much work Postgres does but how many times we
+wait for it. A read used to cost *six* round trips, only one of which was the
+query::
+
+    SELECT 1 / ROLLBACK liveness probe   3   (BEGIN, SELECT 1, ROLLBACK)
+    the query itself                     2   (BEGIN, SELECT ...)
+    COMMIT                               1
+
+Two changes below cut that to one:
+
+  - connections are checked out in **autocommit** mode, and
+    ``_TranslatingCursor`` flips autocommit off only when it sees the first
+    *write* statement of a block. A read therefore issues no BEGIN and no
+    COMMIT; a write still gets a real transaction covering every write in the
+    block, so multi-statement writes stay atomic.
+  - the liveness probe is **idle-gated**. It exists because Neon suspends an
+    idle compute and drops its connections, which is only a risk once a
+    connection has actually sat idle -- so it runs only when the connection
+    has not been used for ``BUDGET_DB_PROBE_AFTER_SECONDS``, and when it does
+    run it is a bare ``SELECT 1`` in autocommit: one round trip, not three.
 """
 
 from __future__ import annotations
 
 import os
 import threading
+import time as _time
 from contextlib import contextmanager
 from datetime import date, datetime, time
 from decimal import Decimal
@@ -52,6 +78,7 @@ from pathlib import Path
 from typing import Any
 
 import psycopg2
+import psycopg2.extensions
 from psycopg2 import pool as _pg_pool
 
 from dotenv import load_dotenv
@@ -105,12 +132,51 @@ _POOL: Any = None
 _POOL_LOCK = threading.Lock()
 
 
+def _probe_after_seconds() -> float:
+    """How long a pooled connection may sit idle before it is probed on checkout.
+
+    Neon's pooler and its scale-to-zero both drop connections, but only after
+    a spell of inactivity — well over a minute in practice. Anything below
+    that is a safe window in which to trust a connection without spending a
+    round trip on ``SELECT 1``, which is what makes a burst of requests (one
+    page load fanning out to half a dozen endpoints) probe at most once.
+    """
+    return float(os.environ.get("BUDGET_DB_PROBE_AFTER_SECONDS", "20"))
+
+
+class _TrackedConnection(psycopg2.extensions.connection):
+    """A connection that remembers when it was last known to be alive.
+
+    ``get_connection`` reads ``last_used`` to decide whether the liveness
+    probe is worth a round trip. A freshly opened connection starts out
+    stamped, since it cannot be stale.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.last_used = _time.monotonic()
+
+
 def _pool() -> Any:
     """Lazily build the shared connection pool.
 
     Sync FastAPI endpoints run in a worker threadpool, so this has to be the
     thread-safe pool. TCP keepalives are on because Neon sits behind a network
     that will quietly drop an idle connection.
+
+    psycopg2 overloads ``minconn`` to mean two different things: how many
+    connections to open *eagerly* in the constructor, and how many a returned
+    connection may find already pooled before ``putconn`` closes it outright
+    rather than keeping it. At the old value of 1 the second meaning was the
+    expensive one — a page load fanning out to six endpoints opened six
+    connections and then threw five away, so the next page paid five fresh
+    TLS handshakes (~750 ms each against Neon).
+
+    Raising ``minconn`` outright would fix retention but move the cost to
+    startup, opening every connection sequentially before the app serves
+    anything. So the two are separated here: build with one connection, then
+    raise ``minconn`` to the retention target. ``_putconn`` reads it per call,
+    which is the only place it matters once construction is done.
     """
     global _POOL
     if _POOL is None:
@@ -119,10 +185,13 @@ def _pool() -> Any:
                 url = database_url()
                 if not url:
                     raise RuntimeError("DATABASE_URL is not set to a Postgres URL")
-                _POOL = _pg_pool.ThreadedConnectionPool(
-                    minconn=int(os.environ.get("BUDGET_DB_POOL_MIN", "1")),
-                    maxconn=int(os.environ.get("BUDGET_DB_POOL_MAX", "10")),
+                keep = int(os.environ.get("BUDGET_DB_POOL_KEEP", "6"))
+                maxconn = int(os.environ.get("BUDGET_DB_POOL_MAX", "10"))
+                pool = _pg_pool.ThreadedConnectionPool(
+                    minconn=1,
+                    maxconn=maxconn,
                     dsn=url,
+                    connection_factory=_TrackedConnection,
                     connect_timeout=10,
                     application_name="blastjax-api",
                     # Pin the session to UTC once, at connect time, instead of
@@ -135,6 +204,8 @@ def _pool() -> Any:
                     keepalives_interval=10,
                     keepalives_count=5,
                 )
+                pool.minconn = max(1, min(keep, maxconn))
+                _POOL = pool
     return _POOL
 
 
@@ -154,53 +225,80 @@ def _usable(conn: Any) -> bool:
     """Cheap liveness probe for a connection taken from the pool.
 
     Neon suspends an idle compute and closes its connections, and this app is
-    idle for long stretches, so a pooled connection is genuinely likely to be
-    dead on arrival. psycopg2 would not notice until the first real statement
-    failed mid-request, so spend one round-trip to find out up front.
+    idle for long stretches, so a pooled connection that has sat around is
+    genuinely likely to be dead on arrival. psycopg2 would not notice until the
+    first real statement failed mid-request, so spend one round trip to find
+    out up front.
+
+    One round trip, not three: the probe runs in autocommit, so there is no
+    BEGIN in front of the ``SELECT 1`` and no ROLLBACK behind it. Callers must
+    only invoke this on a connection that is already in autocommit mode, which
+    is how ``get_connection`` hands them out.
     """
     if conn.closed:
         return False
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT 1")
-        conn.rollback()
         return True
     except psycopg2.Error:
         return False
+
+
+def _checkout(pool: Any) -> Any:
+    """One live connection from ``pool``, in autocommit mode.
+
+    Probes only a connection that has been idle past ``_probe_after_seconds``
+    — see the round-trips note in the module docstring for why that matters.
+    """
+    deadline = _time.monotonic() - _probe_after_seconds()
+    for _ in range(3):
+        conn = pool.getconn()
+        # Reset before probing: the probe itself relies on autocommit, and a
+        # connection returned by a failed write may still be mid-transaction.
+        if not conn.closed and conn.autocommit is False:
+            conn.rollback()
+            conn.autocommit = True
+        if getattr(conn, "last_used", 0.0) > deadline and not conn.closed:
+            return conn
+        if _usable(conn):
+            return conn
+        # Dead connection: drop it rather than return it to the pool, so the
+        # next getconn() builds a fresh one instead of handing this same
+        # corpse back around the loop.
+        pool.putconn(conn, close=True)
+    raise psycopg2.OperationalError(
+        "could not obtain a live database connection from the pool"
+    )
 
 
 @contextmanager
 def get_connection():
     """Check out one pooled connection for the duration of the block.
 
-    Commits on success; rolls back on any exception so a failed multi-statement
-    write (e.g. insert + recompute) never leaves a partial change committed.
+    The connection arrives in autocommit mode, so a block that only reads
+    spends exactly one round trip per query. ``_TranslatingCursor`` turns
+    autocommit off the moment it sees a write statement, which opens a real
+    transaction; this commits it on success and rolls it back on any
+    exception, so a failed multi-statement write (e.g. insert + recompute)
+    never leaves a partial change committed.
     """
     pool = _pool()
-    conn = None
+    conn = _checkout(pool)
     try:
-        for _ in range(3):
-            candidate = pool.getconn()
-            if _usable(candidate):
-                conn = candidate
-                break
-            # Dead connection: drop it rather than return it to the pool, so
-            # the next getconn() builds a fresh one instead of handing this
-            # same corpse back around the loop.
-            pool.putconn(candidate, close=True)
-        if conn is None:
-            raise psycopg2.OperationalError(
-                "could not obtain a live database connection from the pool"
-            )
         try:
             yield conn
-            conn.commit()
+            if not conn.autocommit:
+                conn.commit()
         except Exception:
-            conn.rollback()
+            if not conn.closed and not conn.autocommit:
+                conn.rollback()
             raise
     finally:
-        if conn is not None:
-            pool.putconn(conn)
+        if not conn.closed:
+            conn.autocommit = True
+            conn.last_used = _time.monotonic()
+        pool.putconn(conn)
 
 
 def check_connection() -> bool:
@@ -276,20 +374,62 @@ def _translate_sql(sql: str, has_params: bool) -> str:
     return "".join(out)
 
 
+@lru_cache(maxsize=1024)
+def _is_write(sql: str) -> bool:
+    """Whether ``sql`` needs a transaction around it.
+
+    Only a leading ``SELECT`` is treated as read-only, and deliberately so:
+    misreading a write as a read would drop it out of its transaction, while
+    misreading a read as a write costs nothing but two round trips. ``SELECT
+    ... FOR UPDATE`` is the one read that does need a transaction, so it is
+    matched as a write too.
+    """
+    head = sql.lstrip()
+    while head.startswith("--") or head.startswith("/*"):
+        if head.startswith("--"):
+            _, _, head = head.partition("\n")
+        else:
+            _, _, head = head.partition("*/")
+        head = head.lstrip()
+    # The whole word, not a prefix of one: an identifier that merely starts
+    # with "select" is not a SELECT, and calling it one would quietly run a
+    # write outside its transaction.
+    rest = head[6:]
+    if head[:6].upper() != "SELECT" or (rest[:1].isalnum() or rest[:1] == "_"):
+        return True
+    upper = sql.upper()
+    return "FOR UPDATE" in upper or "FOR SHARE" in upper
+
+
 class _TranslatingCursor:
-    """psycopg2 cursor that accepts the SQLite-dialect SQL used below."""
+    """psycopg2 cursor that accepts the SQLite-dialect SQL used below.
+
+    Also the gate that decides when a block needs a transaction: connections
+    are checked out in autocommit (one round trip per read), and the first
+    write statement seen here turns autocommit off so psycopg2 opens a real
+    transaction that ``get_connection`` then commits or rolls back. Every
+    later statement in the same block joins that transaction, so a
+    multi-statement write is still all-or-nothing.
+    """
 
     __slots__ = ("_cur",)
 
     def __init__(self, cur: Any) -> None:
         self._cur = cur
 
+    def _begin_if_write(self, sql: str) -> None:
+        conn = self._cur.connection
+        if conn.autocommit and _is_write(sql):
+            conn.autocommit = False
+
     def execute(self, sql: str, params: Any = None) -> Any:
+        self._begin_if_write(sql)
         if params is None:
             return self._cur.execute(_translate_sql(sql, False))
         return self._cur.execute(_translate_sql(sql, True), tuple(params))
 
     def executemany(self, sql: str, seq: Any) -> Any:
+        self._begin_if_write(sql)
         rows = [tuple(p) for p in seq]
         return self._cur.executemany(_translate_sql(sql, True), rows)
 
@@ -643,48 +783,45 @@ def delete_payslip_pdf(payslip_id: int) -> bool:
             return cur.rowcount > 0
 
 
+_INSTALLMENT_SELECT = """
+    SELECT i.id, i.name, i.installment_current, i.installment_total,
+           i.principal, i.interest, i.payment_total, i.start_date, i.finish_date,
+           i.remaining, i.original_total, i.credit_card_id, i.created_at,
+           COALESCE(il.payment_total, i.payment_total) AS due_payment
+    FROM installment i
+    LEFT JOIN installment_line il
+        ON il.installment_id = i.id AND il.seq = i.installment_current
+"""
+
+
+def _installment_rows(
+    cur: Any, limit: int, credit_card_id: int | None = None
+) -> list[dict[str, Any]]:
+    """Installment headers on an existing cursor, so a caller that already
+    holds a connection (see ``fetch_credit_card_bundle``) doesn't check out a
+    second one just to run this. Clamps ``limit`` for every caller."""
+    limit = max(1, min(limit, 2000))
+    where = "" if credit_card_id is None else "WHERE i.credit_card_id = ?"
+    params = (limit,) if credit_card_id is None else (credit_card_id, limit)
+    cur.execute(
+        f"""
+        {_INSTALLMENT_SELECT}
+        {where}
+        ORDER BY i.finish_date ASC, i.name ASC
+        LIMIT ?
+        """,
+        params,
+    )
+    cols = [d[0] for d in cur.description]
+    return [_zip_row(cols, r) for r in cur.fetchall()]
+
+
 def list_installments(
     limit: int = 500, credit_card_id: int | None = None
 ) -> list[dict[str, Any]]:
-    limit = max(1, min(limit, 2000))
     with get_connection() as conn:
         with db_cursor(conn) as cur:
-            if credit_card_id is None:
-                cur.execute(
-                    """
-                    SELECT i.id, i.name, i.installment_current, i.installment_total,
-                           i.principal, i.interest, i.payment_total, i.start_date, i.finish_date,
-                           i.remaining, i.original_total, i.credit_card_id, i.created_at,
-                           COALESCE(il.payment_total, i.payment_total) AS due_payment
-                    FROM installment i
-                    LEFT JOIN installment_line il
-                        ON il.installment_id = i.id AND il.seq = i.installment_current
-                    ORDER BY i.finish_date ASC, i.name ASC
-                    LIMIT ?
-                    """,
-                    (limit,),
-                )
-            else:
-                cur.execute(
-                    """
-                    SELECT i.id, i.name, i.installment_current, i.installment_total,
-                           i.principal, i.interest, i.payment_total, i.start_date, i.finish_date,
-                           i.remaining, i.original_total, i.credit_card_id, i.created_at,
-                           COALESCE(il.payment_total, i.payment_total) AS due_payment
-                    FROM installment i
-                    LEFT JOIN installment_line il
-                        ON il.installment_id = i.id AND il.seq = i.installment_current
-                    WHERE i.credit_card_id = ?
-                    ORDER BY i.finish_date ASC, i.name ASC
-                    LIMIT ?
-                    """,
-                    (credit_card_id, limit),
-                )
-            cols = [d[0] for d in cur.description]
-            out: list[dict[str, Any]] = []
-            for r in cur.fetchall():
-                out.append(_zip_row(cols, r))
-            return out
+            return _installment_rows(cur, limit, credit_card_id)
 
 
 def list_installments_with_lines(limit: int = 500) -> list[dict[str, Any]]:
@@ -693,25 +830,9 @@ def list_installments_with_lines(limit: int = 500) -> list[dict[str, Any]]:
     all lines) and grouped in Python. Lets the UI build a payments-by-month view
     in a single request instead of one ``GET /{id}`` detail call per plan.
     """
-    limit = max(1, min(limit, 2000))
     with get_connection() as conn:
         with db_cursor(conn) as cur:
-            cur.execute(
-                """
-                SELECT i.id, i.name, i.installment_current, i.installment_total,
-                       i.principal, i.interest, i.payment_total, i.start_date, i.finish_date,
-                       i.remaining, i.original_total, i.credit_card_id, i.created_at,
-                       COALESCE(il.payment_total, i.payment_total) AS due_payment
-                FROM installment i
-                LEFT JOIN installment_line il
-                    ON il.installment_id = i.id AND il.seq = i.installment_current
-                ORDER BY i.finish_date ASC, i.name ASC
-                LIMIT ?
-                """,
-                (limit,),
-            )
-            cols = [d[0] for d in cur.description]
-            headers = [_zip_row(cols, r) for r in cur.fetchall()]
+            headers = _installment_rows(cur, limit)
             if not headers:
                 return []
             ids = [h["id"] for h in headers]
@@ -739,19 +860,7 @@ def list_installments_with_lines(limit: int = 500) -> list[dict[str, Any]]:
 
 def _installment_row_dict(cur: Any, installment_id: int) -> dict[str, Any] | None:
     """Read one installment header row including the joined ``due_payment`` field."""
-    cur.execute(
-        """
-        SELECT i.id, i.name, i.installment_current, i.installment_total,
-               i.principal, i.interest, i.payment_total, i.start_date, i.finish_date,
-               i.remaining, i.original_total, i.credit_card_id, i.created_at,
-               COALESCE(il.payment_total, i.payment_total) AS due_payment
-        FROM installment i
-        LEFT JOIN installment_line il
-            ON il.installment_id = i.id AND il.seq = i.installment_current
-        WHERE i.id = ?
-        """,
-        (installment_id,),
-    )
+    cur.execute(f"{_INSTALLMENT_SELECT} WHERE i.id = ?", (installment_id,))
     row = cur.fetchone()
     if not row:
         return None
@@ -1620,15 +1729,40 @@ _CREDIT_CARD_COLS = (
 )
 
 
+def _credit_card_row(cur: Any) -> dict[str, Any] | None:
+    cur.execute(f"SELECT {_CREDIT_CARD_COLS} FROM credit_card ORDER BY id LIMIT 1")
+    row = cur.fetchone()
+    return _row_to_dict(cur, row) if row else None
+
+
 def get_credit_card() -> dict[str, Any] | None:
     """The single credit card record, if one has been set up."""
     with get_connection() as conn:
         with db_cursor(conn) as cur:
-            cur.execute(
-                f"SELECT {_CREDIT_CARD_COLS} FROM credit_card ORDER BY id LIMIT 1"
-            )
-            row = cur.fetchone()
-            return _row_to_dict(cur, row) if row else None
+            return _credit_card_row(cur)
+
+
+def fetch_credit_card_bundle(
+    installment_limit: int = 2000,
+) -> dict[str, Any]:
+    """Everything ``GET /api/credit-card`` renders, over one connection.
+
+    The endpoint needs three things — the card, the installments carried on
+    it, and its payments — and used to call three separate ``list_*``/``get_*``
+    helpers, each checking out its own connection and paying its own round
+    trips to Neon for a page that renders them together. They are three
+    queries on one connection here instead.
+    """
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            card = _credit_card_row(cur)
+            if card is None:
+                return {"card": None, "installments": [], "payments": []}
+            return {
+                "card": card,
+                "installments": _installment_rows(cur, installment_limit, card["id"]),
+                "payments": _credit_card_payment_rows(cur, card["id"]),
+            }
 
 
 def insert_credit_card(
@@ -1741,18 +1875,22 @@ def delete_credit_card(card_id: int) -> bool:
 _CREDIT_CARD_PAYMENT_COLS = "id, credit_card_id, amount, payment_date, note, created_at"
 
 
+def _credit_card_payment_rows(cur: Any, credit_card_id: int) -> list[dict[str, Any]]:
+    cur.execute(
+        f"""
+        SELECT {_CREDIT_CARD_PAYMENT_COLS} FROM credit_card_payment
+        WHERE credit_card_id = ?
+        ORDER BY payment_date DESC, id DESC
+        """,
+        (credit_card_id,),
+    )
+    return [_row_to_dict(cur, r) for r in cur.fetchall()]
+
+
 def list_credit_card_payments(credit_card_id: int) -> list[dict[str, Any]]:
     with get_connection() as conn:
         with db_cursor(conn) as cur:
-            cur.execute(
-                f"""
-                SELECT {_CREDIT_CARD_PAYMENT_COLS} FROM credit_card_payment
-                WHERE credit_card_id = ?
-                ORDER BY payment_date DESC, id DESC
-                """,
-                (credit_card_id,),
-            )
-            return [_row_to_dict(cur, r) for r in cur.fetchall()]
+            return _credit_card_payment_rows(cur, credit_card_id)
 
 
 def insert_credit_card_payment(
@@ -2043,15 +2181,21 @@ def list_lotto_draws(limit: int = 200) -> list[dict[str, Any]]:
             ]
 
 
-def list_lotto_draw_numbers() -> list[dict[str, Any]]:
-    """Every draw with an announced result, oldest first — just the date and
-    winning numbers, no attempts. Used by the pattern-analysis endpoint,
-    which only cares about the sequence of winning numbers itself."""
+def list_lotto_draw_results() -> list[dict[str, Any]]:
+    """Every draw with an announced result, oldest first — date, winning
+    numbers, jackpot and winner count, and no attempts.
+
+    This is exactly what ``GET /api/lotto/analysis`` needs for *both* halves of
+    its answer. It used to read the numbers here and then call
+    ``list_lotto_draws(limit=2000)`` for the prize columns, which fetched all
+    1,500-odd draws a second time and dragged every attempt row along with them
+    only to throw them away."""
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 """
-                SELECT draw_date, n1, n2, n3, n4, n5, n6 FROM lotto_draw
+                SELECT draw_date, n1, n2, n3, n4, n5, n6, jackpot_prize, winners
+                FROM lotto_draw
                 WHERE n1 IS NOT NULL
                 ORDER BY draw_date ASC, id ASC
                 """

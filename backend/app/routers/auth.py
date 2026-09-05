@@ -11,12 +11,13 @@ from app.schemas.auth import LoginBody
 from app.security import (
     clear_failed_attempts,
     create_session,
+    login_required,
     record_failed_attempt,
     revoke_session,
     session_is_valid,
     too_many_failed_attempts,
 )
-from db import any_app_users, get_app_user_by_username
+from db import get_app_user_by_username
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -32,7 +33,7 @@ def _client_ip(request: Request) -> str:
 
 @router.get("/config")
 def auth_config() -> dict[str, Any]:
-    return {"login_required": any_app_users()}
+    return {"login_required": login_required()}
 
 
 @router.post("/login")
@@ -52,7 +53,7 @@ def auth_login(body: LoginBody, request: Request) -> dict[str, Any]:
 
 @router.get("/status")
 def auth_status(request: Request) -> dict[str, Any]:
-    if not any_app_users():
+    if not login_required():
         return {"authenticated": True, "login_required": False}
     return {"authenticated": session_is_valid(_bearer_token(request)), "login_required": True}
 

@@ -9,7 +9,6 @@ function fmtOptAmount(n: number | null | undefined): string {
 
 const PAYSLIP_DRAFT_EDIT_PREFIX = "blastjax:payslip:draft:edit:";
 const PAYSLIP_DRAFT_ADD_PREFIX = "blastjax:payslip:draft:add:";
-export const PAYSLIP_DRAFT_MANUAL = "blastjax:payslip:draft:manual";
 
 export function payslipDraftKeyEdit(id: number): string {
   return `${PAYSLIP_DRAFT_EDIT_PREFIX}${id}`;
@@ -26,8 +25,7 @@ export function payslipDraftKeyAdd(
 export function stashPayslipModalDraft(
   nav:
     | { screen: "edit"; row: PayslipRow }
-    | { screen: "add"; year: number; month: number; half: 1 | 2 }
-    | { screen: "manual" },
+    | { screen: "add"; year: number; month: number; half: 1 | 2 },
   form: FormState,
 ): void {
   try {
@@ -41,8 +39,6 @@ export function stashPayslipModalDraft(
         payslipDraftKeyAdd(nav.year, nav.month, nav.half),
         JSON.stringify(form),
       );
-    } else if (nav.screen === "manual") {
-      sessionStorage.setItem(PAYSLIP_DRAFT_MANUAL, JSON.stringify(form));
     }
   } catch {
     /* quota / private mode */
@@ -52,8 +48,7 @@ export function stashPayslipModalDraft(
 export function clearPayslipModalDraft(
   nav:
     | { screen: "edit"; row: PayslipRow }
-    | { screen: "add"; year: number; month: number; half: 1 | 2 }
-    | { screen: "manual" },
+    | { screen: "add"; year: number; month: number; half: 1 | 2 },
 ): void {
   try {
     if (nav.screen === "edit") {
@@ -62,8 +57,6 @@ export function clearPayslipModalDraft(
       sessionStorage.removeItem(
         payslipDraftKeyAdd(nav.year, nav.month, nav.half),
       );
-    } else if (nav.screen === "manual") {
-      sessionStorage.removeItem(PAYSLIP_DRAFT_MANUAL);
     }
   } catch {
     /* ignore */

@@ -77,13 +77,16 @@ Login is opt-in and needs no environment variable: the app is open until you add
 
 | Variable | Purpose |
 |----------|---------|
-| `DATABASE_URL` | Optional; SQLite file location (see `.env.example`). Defaults to `data/budget.sqlite`. |
+| `DATABASE_URL` | **Required**; the Neon Postgres URL the API reads and writes (see `.env.example`). Use the *pooled* endpoint — the host containing `-pooler`. |
 | `NEXT_PUBLIC_API_URL` | Optional; override API base URL for the web app (default `http://127.0.0.1:8000`). Omit or leave blank to keep the default. |
 | `NEXT_PUBLIC_BASE_PATH` | Optional; set at **build** time with `STATIC_EXPORT=1` when the app is served under a subpath. |
 | `BUDGET_CORS_ORIGINS` | Optional; comma-separated extra browser origins allowed by the API. |
 | `BUDGET_SESSION_TTL_SECONDS` | Optional; server-side session cap in seconds once at least one user has been added (Settings → Users). Defaults to 43200 (12h). |
 | `REDIS_URL` | Optional; Redis connection string for the API's cache. Defaults to `redis://localhost:6379` for a bare `uvicorn` run, `redis://redis:6379` for the `api` container. |
-| `REDIS_CACHE_TTL` | Optional; cache entry lifetime in seconds. Defaults to 300. |
+| `REDIS_CACHE_TTL` | Optional; cache entry lifetime in seconds. Defaults to 86400 (a day). A backstop only — every write invalidates the namespaces it affects, so lowering this doesn't make the app fresher, it just sends more reads to Neon. |
+| `BUDGET_DB_POOL_KEEP` | Optional; Postgres connections kept pooled between requests. Defaults to 6, sized to a page load's fan-out so repeat visits don't pay for fresh TLS handshakes. |
+| `BUDGET_DB_POOL_MAX` | Optional; ceiling on concurrent Postgres connections. Defaults to 10. |
+| `BUDGET_DB_PROBE_AFTER_SECONDS` | Optional; how long a pooled connection may sit idle before a checkout spends a `SELECT 1` liveness check on it. Defaults to 20. |
 | `API_UID` / `API_GID` | Optional; uid:gid the api container runs as (default `1000:1000`). Only needed if the bind-mounted `data/` directory is owned by another user. |
 
 > **Note:** `.env` is loaded with `override=True`, so values in the file win over variables already exported in the environment. Change the file, not the shell, when a setting doesn't seem to take effect.

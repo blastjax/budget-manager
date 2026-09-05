@@ -54,7 +54,6 @@ export function PayslipClientModal({
   goBack,
   saveEdit,
   saveAddInModal,
-  saveManualAdd,
   handleDelete,
   onPdfChange,
 }: {
@@ -69,16 +68,11 @@ export function PayslipClientModal({
   goBack: () => void;
   saveEdit: () => void | Promise<void>;
   saveAddInModal: () => void | Promise<void>;
-  saveManualAdd: () => void | Promise<void>;
   handleDelete: (id: number) => void | Promise<void>;
   onPdfChange: (id: number, hasPdf: boolean) => void;
 }) {
   const onCloseDialog = () => {
-    if (
-      nav.screen === "edit" ||
-      nav.screen === "add" ||
-      nav.screen === "manual"
-    ) {
+    if (nav.screen === "edit" || nav.screen === "add") {
       stashPayslipModalDraft(nav, modalFormRef.current);
     }
     setNav(null);
@@ -549,62 +543,6 @@ export function PayslipClientModal({
               </>
             )}
 
-            {nav.screen === "manual" && (
-              <>
-                <div className="mb-4 flex items-start justify-between gap-2">
-                  <h2 className="text-lg font-semibold text-ink">
-                    Add payslip
-                  </h2>
-                  <button
-                    type="button"
-                    className={CLOSE_BUTTON_CLASSES}
-                    onClick={() => {
-                      stashPayslipModalDraft(nav, modalFormRef.current);
-                      setNav(null);
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-                <form
-                  className="min-w-0"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void saveManualAdd();
-                  }}
-                >
-                  <PayslipFormFields
-                    form={modalForm}
-                    setForm={setModalForm}
-                    disabled={saving}
-                  />
-                  {error && (
-                    <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">
-                      {error}
-                    </p>
-                  )}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button
-                      type="submit"
-                      className={PRIMARY_BUTTON_CLASSES}
-                      disabled={saving}
-                    >
-                      {saving ? "Saving…" : "Save"}
-                    </button>
-                    <button
-                      type="button"
-                      className={SECONDARY_BUTTON_CLASSES}
-                      onClick={() => {
-                        clearPayslipModalDraft(nav);
-                        setNav(null);
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </>
-            )}
     </Modal>
   );
 }

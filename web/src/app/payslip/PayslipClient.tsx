@@ -2,7 +2,6 @@
 
 import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import {
   apiFetch,
   createPayslip,
@@ -10,7 +9,6 @@ import {
   getPayslips,
   payslipPdfUrl,
   updatePayslip,
-  type PayslipCreateBody,
   type PayslipRow,
 } from "@/lib/api";
 import {
@@ -30,7 +28,6 @@ import { fmtNum } from "./payslipDisplay";
 import {
   emptyForm,
   initialAddPayslipForm,
-  initialManualPayslipForm,
   loadPayslipDefaultsBundle,
   payslipDefaultsFormForSlotHalf,
   PAYSLIP_DEFAULTS_SAVED_EVENT,
@@ -192,33 +189,6 @@ export default function PayslipClient() {
     );
   }, []);
 
-  const scheduledSlotFromBody = (
-    body: PayslipCreateBody,
-  ): { year: number; month: number; half: 1 | 2 } | null => {
-    const { period_year: year, period_month: month, period_half: half } = body;
-    if (
-      year == null ||
-      !Number.isFinite(year) ||
-      month == null ||
-      month < 1 ||
-      month > 12 ||
-      (half !== 1 && half !== 2)
-    ) {
-      return null;
-    }
-    return {
-      year: Math.trunc(year),
-      month: Math.trunc(month),
-      half: half === 1 ? 1 : 2,
-    };
-  };
-
-  const existingScheduledRowForBody = (body: PayslipCreateBody) => {
-    const slot = scheduledSlotFromBody(body);
-    if (!slot) return null;
-    return rowsForSlot(rows, slot.year, slot.month, slot.half)[0] ?? null;
-  };
-
   useEffect(() => {
     void load();
   }, [load]);
@@ -239,31 +209,6 @@ export default function PayslipClient() {
       });
     }
   }, [rows]);
-
-  const saveManualAdd = async () => {
-    if (nav?.screen !== "manual") return;
-    setSaving(true);
-    setError(null);
-    try {
-      const body = formToCreateBody(modalForm);
-      const existing = existingScheduledRowForBody(body);
-      if (existing) {
-        const updated = await updatePayslip(existing.id, body);
-        upsertRow(updated);
-        clearPayslipModalDraft(nav);
-        setNav({ screen: "detail", row: updated });
-        return;
-      }
-      const fresh = await createPayslip(body);
-      upsertRow(fresh);
-      clearPayslipModalDraft(nav);
-      setNav(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const openSlot = (year: number, month: number, half: 1 | 2) => {
     const items = rowsForSlot(rows, year, month, half);
@@ -373,7 +318,7 @@ export default function PayslipClient() {
     }
   };
 
-  /** Prefill form for the "add" / "manual" nav screens given a defaults bundle; `null` for any other screen. */
+  /** Prefill form for the "add" nav screen given a defaults bundle; `null` for any other screen. */
   const formForNavDefaults = useCallback(
     (n: Nav, b: PayslipDefaultsBundle): FormState | null => {
       if (n.screen === "add") {
@@ -384,15 +329,12 @@ export default function PayslipClient() {
           payslipDefaultsFormForSlotHalf(b, n.half),
         );
       }
-      if (n.screen === "manual") {
-        return initialManualPayslipForm(b);
-      }
       return null;
     },
     [],
   );
 
-  // Sync modal form when entering edit/add/manual (restore session draft if present)
+  // Sync modal form when entering edit/add (restore session draft if present)
   useEffect(() => {
     if (!nav) return;
     if (nav.screen === "edit") {
@@ -413,7 +355,7 @@ export default function PayslipClient() {
 
   // The in-memory defaults cache starts out as builtin fallback values until
   // this resolves — fetch once on mount and re-apply to an already-open
-  // add/manual modal so it doesn't stay stuck showing the fallback.
+  // add modal so it doesn't stay stuck showing the fallback.
   useEffect(() => {
     void refreshPayslipDefaultsBundle().then((b) => {
       const n = navRef.current;
@@ -426,7 +368,7 @@ export default function PayslipClient() {
   useEffect(() => {
     const onDefaultsSaved = () => {
       const n = navRef.current;
-      if (!n || (n.screen !== "add" && n.screen !== "manual")) return;
+      if (!n || n.screen !== "add") return;
       const f = formForNavDefaults(n, loadPayslipDefaultsBundle());
       if (!f) return;
       clearPayslipModalDraft(n);
@@ -601,7 +543,6 @@ export default function PayslipClient() {
           goBack={goBack}
           saveEdit={saveEdit}
           saveAddInModal={saveAddInModal}
-          saveManualAdd={saveManualAdd}
           handleDelete={handleDelete}
           onPdfChange={setRowPdfFlag}
         />
@@ -629,11 +570,6 @@ export default function PayslipClient() {
           <PdfBulkUploadClient />
         </Modal>
       )}
-
-      <FloatingAddButton
-        hidden={!!nav}
-        onClick={() => setNav({ screen: "manual" })}
-      />
     </div>
   );
 }

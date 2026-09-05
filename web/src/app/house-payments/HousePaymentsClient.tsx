@@ -2,7 +2,6 @@
 
 import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import {
   createHousePayment,
@@ -383,6 +382,22 @@ export default function HousePaymentsClient() {
       <section>
         <h2 className="text-lg font-medium text-ink">Plans</h2>
         <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+          {!loading && (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPlanId(null);
+                  setPlanForm(emptyPlanForm);
+                  setPlanModalOpen(true);
+                }}
+                className="flex min-h-[8rem] w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-line-strong p-3 text-center text-sm text-ink-3 transition-colors duration-150 hover:border-brand hover:text-brand sm:p-4"
+              >
+                <span className="text-lg font-medium">+</span>
+                <span className="font-medium">Add house payment</span>
+              </button>
+            </li>
+          )}
           {!loading &&
             rows.map((r) => (
               <li
@@ -635,16 +650,6 @@ export default function HousePaymentsClient() {
               )}
             </div>
       </Modal>
-
-      <FloatingAddButton
-        hidden={planModalOpen || entriesModalId != null}
-        onClick={() => {
-          setEditingPlanId(null);
-          setPlanForm(emptyPlanForm);
-          setPlanModalOpen(true);
-        }}
-        ariaLabel="Add house payment"
-      />
     </div>
   );
 }

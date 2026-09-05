@@ -2,7 +2,6 @@
 
 import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import {
   createLottoAttempt,
@@ -1599,8 +1598,6 @@ export default function LottoClient() {
     );
   };
 
-  const anyModalOpen = drawModal.open || attemptsModal.open || pasteModal.open || importModal.open;
-
   const attemptsModalTitle =
     attemptsModal.mode === "add"
       ? "Add attempt(s)"
@@ -1633,6 +1630,13 @@ export default function LottoClient() {
 
         {showDataTools && (
           <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+              onClick={openAddDraw}
+            >
+              + Add result
+            </button>
             <button
               type="button"
               className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
@@ -2098,8 +2102,6 @@ export default function LottoClient() {
           </div>
         </form>
       </Modal>
-
-      <FloatingAddButton hidden={anyModalOpen} onClick={openAddDraw} ariaLabel="Add lotto result" />
     </div>
   );
 }

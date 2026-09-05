@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import { DatePickerField } from "@/components/DatePickerField";
 import { DateRangePickerField } from "@/components/DateRangePickerField";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { LocationLink } from "@/components/LocationLink";
 import { Modal } from "@/components/Modal";
 import { TimeField } from "@/components/TimeField";
@@ -1180,12 +1179,6 @@ export default function TravelsClient() {
     );
   };
 
-  const anyModalOpen =
-    tripModal.open ||
-    flightModal.open ||
-    transportModal.open ||
-    itineraryModal.open ||
-    accommodationModal.open;
   const accommodationPreview = previewNightsDays(
     accommodationModal.checkinDate,
     accommodationModal.checkoutDate,
@@ -1212,6 +1205,14 @@ export default function TravelsClient() {
       {!loading && trips.length === 0 && (
         <p className={DASHED_EMPTY_CLASSES}>No trips yet — add one to get started.</p>
       )}
+
+      <button
+        type="button"
+        onClick={openAddTrip}
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong px-4 py-3 text-sm font-medium text-ink-3 transition-colors duration-150 hover:border-brand hover:text-brand"
+      >
+        + Add trip
+      </button>
 
       <div className="flex flex-col gap-6">
         {yearGroups.map((yg) => {
@@ -2032,8 +2033,6 @@ export default function TravelsClient() {
           </div>
         </form>
       </Modal>
-
-      <FloatingAddButton hidden={anyModalOpen} onClick={openAddTrip} ariaLabel="Add trip" />
     </div>
   );
 }

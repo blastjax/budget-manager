@@ -12,6 +12,7 @@ from starlette.concurrency import run_in_threadpool
 
 import cache
 from app.deps import require_session
+from app.security import forget_login_required
 from db import close_connection_pool, init_schema
 
 _WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -76,6 +77,22 @@ def _invalidate_namespaces(names: tuple[str, ...]) -> None:
         cache.invalidate(name)
 
 
+"""
+Paths whose writes invalidate something that isn't a response cache namespace.
+Adding or removing a user is what switches login on and off, and
+``require_session`` answers that from a cache on every request.
+"""
+_EXTRA_INVALIDATORS: tuple[tuple[str, Any], ...] = (
+    ("/api/users", forget_login_required),
+)
+
+
+def _run_extra_invalidators(path: str) -> None:
+    for route, fn in _EXTRA_INVALIDATORS:
+        if path == route or path.startswith(route + "/"):
+            fn()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_schema()
@@ -121,6 +138,7 @@ def create_app() -> FastAPI:
             namespaces = _cache_prefixes_for(path)
             if namespaces:
                 await run_in_threadpool(_invalidate_namespaces, namespaces)
+            _run_extra_invalidators(path)
         return response
 
     from app.routers import (

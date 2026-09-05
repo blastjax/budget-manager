@@ -27,7 +27,7 @@ from db import (
     delete_lotto_draw,
     get_lotto_draw_id_by_date,
     insert_lotto_attempt,
-    list_lotto_draw_numbers,
+    list_lotto_draw_results,
     list_lotto_draws,
     set_lotto_attempt_hidden,
     update_lotto_attempt,
@@ -218,12 +218,14 @@ def lotto_analysis(top: int = Query(default=10, ge=1, le=58)) -> dict[str, Any]:
     winner counts, draw dates, and how crowd-pleasing the winning
     combinations were. See the two ``lotto_*_analysis`` services for what
     each field means."""
-    rows = list_lotto_draw_numbers()
+    key = f"lotto:analysis:{top}"
+    hit = cache.get(key)
+    if hit is not None:
+        return hit
+    rows = list_lotto_draw_results()
     if not rows:
         raise HTTPException(status_code=404, detail="No draws with results yet to analyze.")
     numbers_analysis = analyze_draws([_numbers(r) for r in rows], top_n=top)
-    # The lean number query carries no jackpot/winner columns, so the prize
-    # side reads the full draw rows.
     records = [
         DrawRecord(
             draw_date=dt.date.fromisoformat(str(d["draw_date"])[:10]),
@@ -231,13 +233,14 @@ def lotto_analysis(top: int = Query(default=10, ge=1, le=58)) -> dict[str, Any]:
             jackpot_prize=d["jackpot_prize"],
             winners=d["winners"],
         )
-        for detail in list_lotto_draws(limit=2000)
-        if (d := detail["draw"])["n1"] is not None
+        for d in rows
     ]
-    return {
+    result = {
         "numbers": _serialize_analysis(numbers_analysis),
         "prizes": _serialize_prize_analysis(analyze_prizes(records, top_n=top)),
     }
+    cache.set(key, result)
+    return result
 
 
 @router.post("/api/lotto")

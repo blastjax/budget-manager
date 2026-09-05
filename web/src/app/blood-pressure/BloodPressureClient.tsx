@@ -13,7 +13,6 @@ import {
   YAxis,
 } from "recharts";
 import { ChartZoomControls } from "@/components/ChartZoomControls";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { Modal } from "@/components/Modal";
 import { useTheme } from "@/components/ThemeProvider";
 import { ToggleLegendList } from "@/components/ToggleLegendList";
@@ -30,6 +29,7 @@ import { getChartTooltipStyle } from "@/lib/chartTooltipStyle";
 import { formatDateTime, formatMonthDayShort } from "@/lib/dateFormat";
 import { fmtIntegerOrDash } from "@/lib/formatNumber";
 import {
+  ADD_BUTTON_CLASSES,
   CARD_CLASSES,
   CLOSE_BUTTON_CLASSES,
   DASHED_EMPTY_CLASSES,
@@ -444,9 +444,18 @@ export default function BloodPressureClient() {
       </section>
 
       <section>
-        <h2 className="text-lg font-medium text-ink">
-          Records
-        </h2>
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="text-lg font-medium text-ink">
+            Records
+          </h2>
+          <button
+            type="button"
+            className={ADD_BUTTON_CLASSES}
+            onClick={openAdd}
+          >
+            + Add reading
+          </button>
+        </div>
         <ul className="mt-4 flex flex-col gap-2">
           {!loading &&
             rows.map((r) => {
@@ -673,12 +682,6 @@ export default function BloodPressureClient() {
           </div>
         </form>
       </Modal>
-
-      <FloatingAddButton
-        hidden={modalOpen}
-        onClick={openAdd}
-        ariaLabel="Add blood-pressure reading"
-      />
     </div>
   );
 }
