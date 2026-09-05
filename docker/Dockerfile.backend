@@ -1,4 +1,5 @@
-# API: local SQLite file under /app/data (see docker-compose and docker/README.md).
+# API: talks to cloud Postgres (Neon) via DATABASE_URL. The /app/data mount
+# below is no longer the datastore — it is kept only as a scratch/upload dir.
 # Build with context directory `backend/` (see docker-compose).
 # syntax=docker/dockerfile:1
 FROM python:3.12-slim-bookworm
@@ -32,6 +33,9 @@ COPY --chown=app:app . .
 USER app
 
 EXPOSE 8000
-# Single worker on purpose: SQLite is the datastore and the OTP session store
-# falls back to per-process memory when Redis is down (see app/security.py).
+# Single worker on purpose: the session store falls back to per-process memory
+# when Redis is down (see app/security.py), so a second worker would hand out
+# sessions the first one cannot see. The datastore is now Postgres, which would
+# itself be fine across workers — Redis being reachable is the remaining
+# precondition for raising this.
 CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

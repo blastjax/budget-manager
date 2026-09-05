@@ -6,7 +6,7 @@ so managing users itself still requires being logged in."""
 
 from __future__ import annotations
 
-import sqlite3
+import psycopg2
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -42,7 +42,7 @@ def users_list() -> dict[str, Any]:
 def users_create(body: AppUserCreate) -> dict[str, Any]:
     try:
         row = insert_app_user(body.username.strip(), hash_password(body.password))
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         raise HTTPException(status_code=409, detail="That username is already taken.")
     return {"user": _serialize(row)}
 
@@ -66,7 +66,7 @@ def users_update(user_id: int, body: AppUserUpdate) -> dict[str, Any]:
     password_hash = hash_password(body.password) if body.password is not None else None
     try:
         row = update_app_user(user_id, username, password_hash)
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         raise HTTPException(status_code=409, detail="That username is already taken.")
     if row is None:
         raise HTTPException(status_code=404, detail="User not found.")

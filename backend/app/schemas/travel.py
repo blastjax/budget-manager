@@ -23,6 +23,19 @@ def _clean_optional(v: str | None) -> str | None:
     return trimmed or None
 
 
+def _blank_time_to_none(v: object) -> object:
+    """Let an empty or whitespace-only string mean "no time".
+
+    Runs before Pydantic parses the value, because the time fields are typed
+    ``dt.time`` now that the columns are real TIME: clearing the field in the
+    UI sends ``""``, which would otherwise fail validation instead of unsetting
+    the value the way it did when these were plain strings.
+    """
+    if isinstance(v, str):
+        return v.strip() or None
+    return v
+
+
 def _require_text(v: str, label: str) -> str:
     trimmed = v.strip()
     if not trimmed:
@@ -59,8 +72,8 @@ class TravelTripCreate(BaseModel):
 class TravelFlightCreate(BaseModel):
     flight_number: str = Field(min_length=1)
     flight_date: dt.date | None = None
-    departure_time: str | None = None
-    arrival_time: str | None = None
+    departure_time: dt.time | None = None
+    arrival_time: dt.time | None = None
     from_location: str | None = None
     from_map_url: str | None = None
     to_location: str | None = None
@@ -72,9 +85,12 @@ class TravelFlightCreate(BaseModel):
     def _flight_number(cls, v: str) -> str:
         return _require_text(v, "Flight number")
 
+    @field_validator("departure_time", "arrival_time", mode="before")
+    @classmethod
+    def _blank_time(cls, v: object) -> object:
+        return _blank_time_to_none(v)
+
     @field_validator(
-        "departure_time",
-        "arrival_time",
         "from_location",
         "from_map_url",
         "to_location",
@@ -94,18 +110,21 @@ class TravelTransportCreate(BaseModel):
     mode: Literal["bus", "train"]
     number: str | None = None
     travel_date: dt.date | None = None
-    departure_time: str | None = None
-    arrival_time: str | None = None
+    departure_time: dt.time | None = None
+    arrival_time: dt.time | None = None
     from_location: str | None = None
     from_map_url: str | None = None
     to_location: str | None = None
     to_map_url: str | None = None
     notes: str | None = None
 
+    @field_validator("departure_time", "arrival_time", mode="before")
+    @classmethod
+    def _blank_time(cls, v: object) -> object:
+        return _blank_time_to_none(v)
+
     @field_validator(
         "number",
-        "departure_time",
-        "arrival_time",
         "from_location",
         "from_map_url",
         "to_location",
@@ -122,8 +141,8 @@ class TravelItineraryCreate(BaseModel):
     # Optional — set only when the item spans past its start date (an
     # overnight train, a multi-day trek). None means a same-day item.
     item_end_date: dt.date | None = None
-    start_time: str | None = None
-    end_time: str | None = None
+    start_time: dt.time | None = None
+    end_time: dt.time | None = None
     activity: str = Field(min_length=1)
     location_name: str | None = None
     location_map_url: str | None = None
@@ -134,7 +153,12 @@ class TravelItineraryCreate(BaseModel):
     def _activity(cls, v: str) -> str:
         return _require_text(v, "Activity")
 
-    @field_validator("start_time", "end_time", "location_name", "location_map_url", "notes")
+    @field_validator("start_time", "end_time", mode="before")
+    @classmethod
+    def _blank_time(cls, v: object) -> object:
+        return _blank_time_to_none(v)
+
+    @field_validator("location_name", "location_map_url", "notes")
     @classmethod
     def _optional(cls, v: str | None) -> str | None:
         return _clean_optional(v)
@@ -150,8 +174,8 @@ class TravelAccommodationCreate(BaseModel):
     name: str = Field(min_length=1)
     checkin_date: dt.date
     checkout_date: dt.date
-    checkin_time: str | None = None
-    checkout_time: str | None = None
+    checkin_time: dt.time | None = None
+    checkout_time: dt.time | None = None
     booking_confirmation: str | None = None
     instructions: str | None = None
     location_name: str | None = None
@@ -163,9 +187,12 @@ class TravelAccommodationCreate(BaseModel):
     def _name(cls, v: str) -> str:
         return _require_text(v, "Name")
 
+    @field_validator("checkin_time", "checkout_time", mode="before")
+    @classmethod
+    def _blank_time(cls, v: object) -> object:
+        return _blank_time_to_none(v)
+
     @field_validator(
-        "checkin_time",
-        "checkout_time",
         "booking_confirmation",
         "instructions",
         "location_name",

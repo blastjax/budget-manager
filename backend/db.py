@@ -1,113 +1,217 @@
 """
-Payslip and installment storage: local SQLite file under ``data/`` (default
-``<repo-root>/data/budget.sqlite``, overridable via ``DATABASE_URL``).
+Payslip and installment storage: cloud PostgreSQL (Neon), via ``DATABASE_URL``.
+
+The query layer below is written in SQLite's dialect -- ``?`` placeholders and
+all -- because that is what it was when the app ran on a local file. Rather
+than rewrite ~2,500 lines of working SQL, ``db_cursor`` hands out a thin
+wrapper that translates each statement on its way to psycopg2:
+
+  - ``?`` placeholders become ``%s`` (quote- and comment-aware, so a ``?``
+    inside a string literal or a ``--`` comment is left alone)
+  - a literal ``%`` is doubled when parameters are present, since psycopg2
+    uses ``%`` for its own interpolation
+
+The rest of the dialect already lines up: ``RETURNING``, ``ON CONFLICT ... DO
+UPDATE SET ... excluded.x`` and ``NULLS LAST`` are Postgres syntax that SQLite
+adopted, and the schema uses no SQLite-only functions.
+
+Values coming back are normalised in ``_row_to_dict`` so callers see exactly
+what they saw under SQLite -- JSON-safe primitives:
+
+  - TIMESTAMPTZ(0) / DATE / TIME -> ISO-8601 ``str``
+  - NUMERIC                      -> ``float`` (not ``Decimal``)
+  - BYTEA                        -> ``bytes`` (not ``memoryview``)
+
+The timestamp columns are ``TIMESTAMPTZ(0)`` -- whole seconds -- so every
+rendered value has the same shape. At microsecond precision ``.isoformat()``
+drops the fractional part when it happens to be zero, which had one column
+emitting both ``...T02:06:38.428777+00:00`` and ``...T08:56:00+00:00``. See
+``backend/scripts/normalize_time_types.py``.
+
+That matters beyond tidiness: ``cache.set`` serialises responses with
+``json.dumps(..., default=str)``, which renders a ``datetime`` as
+``"2026-04-13 02:06:38+00:00"`` while FastAPI renders the same value as
+``"2026-04-13T02:06:38+00:00"``. Left alone, a response would change shape
+depending on whether it came from Redis or the database. Normalising here
+gives one representation everywhere.
+
+The schema itself is owned by ``backend/scripts/migrate_sqlite_to_postgres.py``,
+not by this module -- ``init_schema()`` only verifies that the expected tables
+are present, so there is no second copy of the DDL to drift out of sync.
 """
 
 from __future__ import annotations
 
 import os
-import sqlite3
+import threading
 from contextlib import contextmanager
+from datetime import date, datetime, time
+from decimal import Decimal
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+import psycopg2
+from psycopg2 import pool as _pg_pool
 
 from dotenv import load_dotenv
 
 _BACKEND_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _BACKEND_DIR.parent
-_DEFAULT_SQLITE_PATH = _REPO_ROOT / "data" / "budget.sqlite"
 
 
 def _load_env_files() -> None:
-    """Load repo-root `.env` then `backend/.env` (or `/app/.env` in the API image)."""
-    for path in (_BACKEND_DIR.parent / ".env", _BACKEND_DIR / ".env"):
+    """Load repo-root ``.env``, ``backend/.env`` (or ``/app/.env`` in the API
+    image), then ``.env.local``.
+
+    ``.env.local`` is loaded last but does NOT override a variable already set
+    in the real environment: in Docker the compose file supplies
+    ``DATABASE_URL`` directly, and a stale ``.env.local`` baked into an image
+    must never win over it. Locally, where nothing sets the variable, it is
+    what points development at Neon.
+    """
+    for path in (_REPO_ROOT / ".env", _BACKEND_DIR / ".env"):
         if path.is_file():
             load_dotenv(path, override=True)
+    local = _REPO_ROOT / ".env.local"
+    if local.is_file():
+        load_dotenv(local, override=False)
 
 
 _load_env_files()
 
 
-def _parse_sqlite_path(raw: str) -> Path:
-    """Accept a ``sqlite:///relative/path``, ``sqlite:////absolute/path`` URL,
-    or a bare filesystem path. Relative paths resolve against the repo root
-    (the same anchor the migration script uses), so a local ``uvicorn`` run
-    and the one-off migration agree on where the file lives."""
-    s = raw.strip()
-    low = s.lower()
-    if low.startswith("sqlite:///"):
-        s = s[len("sqlite:///") :]
-    elif low.startswith("sqlite:"):
-        s = s[len("sqlite:") :]
-    path = Path(s)
-    if not path.is_absolute():
-        path = _REPO_ROOT / path
-    return path
-
-
-def sqlite_path() -> Path:
-    """Resolve the SQLite file location: ``DATABASE_URL`` if set, else the
-    default ``data/budget.sqlite`` under the repo root."""
-    raw = (os.environ.get("DATABASE_URL") or "").strip()
-    if raw:
-        return _parse_sqlite_path(raw)
-    return _DEFAULT_SQLITE_PATH
-
-
 def database_url() -> str:
-    """The database this app always reads from and writes to."""
-    return f"sqlite:///{sqlite_path().as_posix()}"
+    """The Postgres database this app reads from and writes to.
+
+    Prefers ``DATABASE_URL`` (Neon's *pooled* endpoint, which is the right one
+    for many short web requests). ``DATABASE_URL_UNPOOLED`` is only a fallback
+    -- it is meant for DDL and bulk loads, like the migration script.
+    """
+    for name in ("DATABASE_URL", "DATABASE_URL_UNPOOLED"):
+        raw = (os.environ.get(name) or "").strip()
+        if raw.startswith(("postgres://", "postgresql://")):
+            return raw
+    return ""
 
 
 def cloud_database_url() -> str:
-    """Back-compat alias for ``database_url()`` — kept so callers that used to
+    """Back-compat alias for ``database_url()`` -- kept so callers that used to
     distinguish "the cloud DB" from a local override don't need to change."""
     return database_url()
 
 
 def storage_kind() -> str:
-    return "sqlite"
+    return "postgres" if database_url() else "none"
 
 
 def use_database() -> bool:
-    """The SQLite file is self-provisioning, so storage is always available."""
-    return True
+    """Whether a usable Postgres URL is configured."""
+    return bool(database_url())
+
+
+# ---------------------------------------------------------------- connections
+
+_POOL: Any = None
+_POOL_LOCK = threading.Lock()
+
+
+def _pool() -> Any:
+    """Lazily build the shared connection pool.
+
+    Sync FastAPI endpoints run in a worker threadpool, so this has to be the
+    thread-safe pool. TCP keepalives are on because Neon sits behind a network
+    that will quietly drop an idle connection.
+    """
+    global _POOL
+    if _POOL is None:
+        with _POOL_LOCK:
+            if _POOL is None:
+                url = database_url()
+                if not url:
+                    raise RuntimeError("DATABASE_URL is not set to a Postgres URL")
+                _POOL = _pg_pool.ThreadedConnectionPool(
+                    minconn=int(os.environ.get("BUDGET_DB_POOL_MIN", "1")),
+                    maxconn=int(os.environ.get("BUDGET_DB_POOL_MAX", "10")),
+                    dsn=url,
+                    connect_timeout=10,
+                    application_name="blastjax-api",
+                    # Pin the session to UTC once, at connect time, instead of
+                    # issuing a SET on every checkout — the stored timestamps
+                    # are UTC and a round-trip to Singapore per request is not
+                    # worth spending. Neon's pooled endpoint accepts this.
+                    options="-c timezone=UTC",
+                    keepalives=1,
+                    keepalives_idle=30,
+                    keepalives_interval=10,
+                    keepalives_count=5,
+                )
+    return _POOL
 
 
 def close_connection_pool() -> None:
-    """No-op: SQLite connections here are opened and closed per call, not pooled."""
-    return None
+    """Close every pooled connection. Called from the app's lifespan shutdown."""
+    global _POOL
+    with _POOL_LOCK:
+        if _POOL is not None:
+            try:
+                _POOL.closeall()
+            except Exception:
+                pass
+            _POOL = None
 
 
-@contextmanager
-def db_cursor(conn: sqlite3.Connection):
-    cur = conn.cursor()
+def _usable(conn: Any) -> bool:
+    """Cheap liveness probe for a connection taken from the pool.
+
+    Neon suspends an idle compute and closes its connections, and this app is
+    idle for long stretches, so a pooled connection is genuinely likely to be
+    dead on arrival. psycopg2 would not notice until the first real statement
+    failed mid-request, so spend one round-trip to find out up front.
+    """
+    if conn.closed:
+        return False
     try:
-        yield cur
-    finally:
-        cur.close()
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        conn.rollback()
+        return True
+    except psycopg2.Error:
+        return False
 
 
 @contextmanager
 def get_connection():
-    """Open, use, and close one SQLite connection for the duration of the block.
+    """Check out one pooled connection for the duration of the block.
 
     Commits on success; rolls back on any exception so a failed multi-statement
     write (e.g. insert + recompute) never leaves a partial change committed.
     """
-    path = sqlite_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), timeout=30, check_same_thread=False)
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
+    pool = _pool()
+    conn = None
     try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
+        for _ in range(3):
+            candidate = pool.getconn()
+            if _usable(candidate):
+                conn = candidate
+                break
+            # Dead connection: drop it rather than return it to the pool, so
+            # the next getconn() builds a fresh one instead of handing this
+            # same corpse back around the loop.
+            pool.putconn(candidate, close=True)
+        if conn is None:
+            raise psycopg2.OperationalError(
+                "could not obtain a live database connection from the pool"
+            )
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
     finally:
-        conn.close()
+        if conn is not None:
+            pool.putconn(conn)
 
 
 def check_connection() -> bool:
@@ -120,607 +224,174 @@ def check_connection() -> bool:
         return False
 
 
+# ------------------------------------------------------------ SQL translation
+
+
+@lru_cache(maxsize=1024)
+def _translate_sql(sql: str, has_params: bool) -> str:
+    """Rewrite SQLite-dialect ``?`` placeholders into psycopg2's ``%s``.
+
+    Scans rather than regex-replaces so that a ``?`` or ``%`` inside a string
+    literal, a quoted identifier, a ``--`` comment or a ``/* */`` block is left
+    exactly as written.
+    """
+    out: list[str] = []
+    i = 0
+    n = len(sql)
+    while i < n:
+        ch = sql[i]
+        # String literal or quoted identifier: copy through, honouring the
+        # doubled-quote escape ('' and "").
+        if ch in ("'", '"'):
+            quote = ch
+            out.append(ch)
+            i += 1
+            while i < n:
+                out.append(sql[i])
+                if sql[i] == quote:
+                    if i + 1 < n and sql[i + 1] == quote:
+                        out.append(sql[i + 1])
+                        i += 2
+                        continue
+                    i += 1
+                    break
+                i += 1
+            continue
+        # Line comment.
+        if ch == "-" and i + 1 < n and sql[i + 1] == "-":
+            while i < n and sql[i] != "\n":
+                out.append(sql[i])
+                i += 1
+            continue
+        # Block comment.
+        if ch == "/" and i + 1 < n and sql[i + 1] == "*":
+            out.append(sql[i])
+            out.append(sql[i + 1])
+            i += 2
+            while i < n and not (sql[i] == "*" and i + 1 < n and sql[i + 1] == "/"):
+                out.append(sql[i])
+                i += 1
+            continue
+        if ch == "?":
+            out.append("%s")
+            i += 1
+            continue
+        if ch == "%" and has_params:
+            # psycopg2 only %-interpolates when parameters are supplied, so
+            # doubling is correct exactly then.
+            out.append("%%")
+            i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+class _TranslatingCursor:
+    """psycopg2 cursor that accepts the SQLite-dialect SQL used below."""
+
+    __slots__ = ("_cur",)
+
+    def __init__(self, cur: Any) -> None:
+        self._cur = cur
+
+    def execute(self, sql: str, params: Any = None) -> Any:
+        if params is None:
+            return self._cur.execute(_translate_sql(sql, False))
+        return self._cur.execute(_translate_sql(sql, True), tuple(params))
+
+    def executemany(self, sql: str, seq: Any) -> Any:
+        rows = [tuple(p) for p in seq]
+        return self._cur.executemany(_translate_sql(sql, True), rows)
+
+    def __getattr__(self, name: str) -> Any:
+        # description, fetchone/fetchall/fetchmany, rowcount, close, ...
+        return getattr(self._cur, name)
+
+    def __iter__(self) -> Any:
+        return iter(self._cur)
+
+
+@contextmanager
+def db_cursor(conn: Any):
+    cur = conn.cursor()
+    try:
+        yield _TranslatingCursor(cur)
+    finally:
+        cur.close()
+
+
+# ------------------------------------------------------------------ row types
+
+
+def _normalize(value: Any) -> Any:
+    """Coerce psycopg2's rich types back to the JSON-safe primitives the rest
+    of the app (and the Redis cache) expect. See the module docstring."""
+    if isinstance(value, datetime):  # must precede date: datetime subclasses it
+        return value.isoformat()
+    if isinstance(value, (date, time)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, memoryview):
+        return bytes(value)
+    return value
+
+
+def _zip_row(cols: Any, row: Any) -> dict[str, Any]:
+    """Normalising ``dict(zip(cols, row))``, for the callers that hoist the
+    column names out of the loop rather than re-reading ``cur.description``."""
+    return {c: _normalize(v) for c, v in zip(cols, row)}
+
+
 def _row_to_dict(cur: Any, row: Any) -> dict[str, Any]:
-    return dict(zip([d[0] for d in cur.description], row))
+    return {d[0]: _normalize(v) for d, v in zip(cur.description, row)}
 
 
 def _with_bool(row: dict[str, Any], key: str) -> dict[str, Any]:
-    """SQLite has no native boolean storage class — the driver hands back plain
-    ``0``/``1`` integers for BOOLEAN-affinity columns and boolean expressions,
-    where Postgres/psycopg2 gave a real ``bool``. Coerce so JSON responses keep
-    serializing as ``true``/``false`` instead of ``1``/``0``."""
+    """Kept for callers below. Postgres already returns a real ``bool`` for
+    BOOLEAN columns and boolean expressions such as ``(pdf_data IS NOT NULL)``,
+    so this is now a no-op guard rather than the coercion it was under SQLite."""
     if key in row and row[key] is not None:
         row[key] = bool(row[key])
     return row
 
 
-# One CREATE TABLE (plus its indexes) per statement, in FK-safe dependency
-# order: ``credit_card`` and ``house_payment`` before the tables that
-# reference them, ``installment`` before ``installment_line``. Uses
-# ``IF NOT EXISTS`` throughout, so re-running against a database that already
-# has these tables (e.g. one produced by
-# ``backend/scripts/migrate_postgres_to_sqlite.py``) is a no-op.
-_SCHEMA_STATEMENTS: list[str] = [
-    """
-    CREATE TABLE IF NOT EXISTS credit_card (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        credit_limit REAL NOT NULL,
-        last_statement_balance REAL NOT NULL DEFAULT 0,
-        current_balance REAL NOT NULL DEFAULT 0,
-        minimum_due REAL NOT NULL DEFAULT 0,
-        interest_rate REAL NOT NULL DEFAULT 3.5,
-        statement_date TEXT,
-        due_date TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (
-            credit_limit >= 0 AND last_statement_balance >= 0
-            AND minimum_due >= 0 AND interest_rate >= 0
-        )
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS payslip (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        total REAL,
-        commission REAL,
-        reimbursement REAL,
-        medical_reimbursement REAL,
-        others REAL,
-        mp2 REAL,
-        allowances REAL,
-        thirteenth_month REAL,
-        basic_salary REAL,
-        period_year INTEGER,
-        period_month INTEGER,
-        period_half INTEGER,
-        notes TEXT,
-        withholding_tax REAL,
-        sss_contribution REAL,
-        philhealth REAL,
-        pag_ibig REAL,
-        pdf_data BLOB,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_payslip_created ON payslip (created_at DESC)",
-    """
-    CREATE INDEX IF NOT EXISTS idx_payslip_period_sort ON payslip (
-        period_year DESC, period_month DESC, period_half DESC, created_at DESC
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS installment (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        installment_current INTEGER NOT NULL,
-        installment_total INTEGER NOT NULL,
-        principal REAL NOT NULL,
-        interest REAL,
-        payment_total REAL NOT NULL,
-        start_date TEXT NOT NULL,
-        finish_date TEXT NOT NULL,
-        remaining REAL NOT NULL,
-        original_total REAL NOT NULL,
-        credit_card_id INTEGER REFERENCES credit_card(id) ON DELETE SET NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (
-            installment_total >= 1
-            AND installment_current >= 1
-            AND installment_current <= installment_total + 1
-        ),
-        CHECK (payment_total >= 0 AND remaining >= 0)
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_installment_created ON installment (created_at DESC)",
-    "CREATE INDEX IF NOT EXISTS idx_installment_finish_name ON installment (finish_date, name)",
-    "CREATE INDEX IF NOT EXISTS idx_installment_credit_card_id ON installment (credit_card_id)",
-    """
-    CREATE TABLE IF NOT EXISTS installment_line (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        installment_id INTEGER NOT NULL REFERENCES installment(id) ON DELETE CASCADE,
-        seq INTEGER NOT NULL,
-        principal REAL NOT NULL DEFAULT 0,
-        interest REAL,
-        payment_total REAL NOT NULL,
-        UNIQUE (installment_id, seq)
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_installment_line_parent ON installment_line (installment_id)",
-    """
-    CREATE TABLE IF NOT EXISTS house_payment (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        notes TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_house_payment_created ON house_payment (created_at DESC)",
-    "CREATE INDEX IF NOT EXISTS idx_house_payment_name ON house_payment (name)",
-    """
-    CREATE TABLE IF NOT EXISTS house_payment_entry (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        house_payment_id INTEGER NOT NULL REFERENCES house_payment(id) ON DELETE CASCADE,
-        paid_on DATE NOT NULL,
-        amount REAL NOT NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (amount >= 0)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_house_payment_entry_parent
-        ON house_payment_entry (house_payment_id, paid_on DESC)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS blood_pressure (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        systolic INTEGER,
-        diastolic INTEGER,
-        pulse INTEGER,
-        spo2 INTEGER,
-        temperature NUMERIC(5, 2),
-        weight NUMERIC(6, 2),
-        notes TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (
-            (systolic IS NULL AND diastolic IS NULL AND pulse IS NULL)
-            OR (systolic > 0 AND diastolic > 0 AND pulse > 0)
-        ),
-        CHECK (spo2 IS NULL OR (spo2 > 0 AND spo2 <= 100)),
-        CHECK (temperature IS NULL OR (temperature > 25 AND temperature <= 45)),
-        CHECK (weight IS NULL OR weight > 0),
-        CHECK (
-            systolic IS NOT NULL OR diastolic IS NOT NULL OR pulse IS NOT NULL
-            OR spo2 IS NOT NULL OR temperature IS NOT NULL OR weight IS NOT NULL
-            OR notes IS NOT NULL
-        )
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_blood_pressure_created ON blood_pressure (created_at DESC)",
-    """
-    CREATE TABLE IF NOT EXISTS fixed_expense (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        period_half INTEGER NOT NULL,
-        period_year INTEGER NOT NULL,
-        period_month INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        description TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (period_half IN (1, 2)),
-        CHECK (amount > 0),
-        CHECK (period_month BETWEEN 1 AND 12)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_fixed_expense_period
-        ON fixed_expense (period_year, period_month, period_half, created_at DESC)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS monthly_expense (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT,
-        amount REAL NOT NULL,
-        period_half INTEGER NOT NULL,
-        period_year INTEGER NOT NULL,
-        period_month INTEGER NOT NULL,
-        is_recurring BOOLEAN NOT NULL DEFAULT 0,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (period_half IN (1, 2)),
-        CHECK (amount > 0),
-        CHECK (period_month BETWEEN 1 AND 12)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_monthly_expense_period
-        ON monthly_expense (period_year, period_month, period_half, created_at DESC)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS calendar_day_override (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        day DATE NOT NULL UNIQUE,
-        amount REAL NOT NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (amount >= 0)
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS pay_period_start_override (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        period_year INTEGER NOT NULL,
-        period_month INTEGER NOT NULL,
-        period_half INTEGER NOT NULL,
-        start_date DATE NOT NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (period_half IN (1, 2)),
-        CHECK (period_month BETWEEN 1 AND 12),
-        UNIQUE (period_year, period_month, period_half)
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS payslip_default (
-        half INTEGER PRIMARY KEY,
-        period_year TEXT NOT NULL DEFAULT '',
-        period_month TEXT NOT NULL DEFAULT '',
-        total TEXT NOT NULL DEFAULT '',
-        basic_salary TEXT NOT NULL DEFAULT '',
-        commission TEXT NOT NULL DEFAULT '',
-        reimbursement TEXT NOT NULL DEFAULT '',
-        medical_reimbursement TEXT NOT NULL DEFAULT '',
-        others TEXT NOT NULL DEFAULT '',
-        mp2 TEXT NOT NULL DEFAULT '',
-        allowances TEXT NOT NULL DEFAULT '',
-        thirteenth_month TEXT NOT NULL DEFAULT '',
-        notes TEXT NOT NULL DEFAULT '',
-        withholding_tax TEXT NOT NULL DEFAULT '',
-        sss_contribution TEXT NOT NULL DEFAULT '',
-        philhealth TEXT NOT NULL DEFAULT '',
-        pag_ibig TEXT NOT NULL DEFAULT '',
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (half IN (1, 2))
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS payslip_default_settings (
-        id INTEGER PRIMARY KEY,
-        settings_half TEXT NOT NULL DEFAULT 'first',
-        CHECK (id = 1),
-        CHECK (settings_half IN ('first', 'second'))
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS credit_card_payment (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        credit_card_id INTEGER NOT NULL REFERENCES credit_card(id) ON DELETE CASCADE,
-        amount REAL NOT NULL,
-        payment_date TEXT NOT NULL,
-        note TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (amount > 0)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_credit_card_payment_parent
-        ON credit_card_payment (credit_card_id, payment_date DESC)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS lotto_draw (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        draw_date DATE NOT NULL UNIQUE,
-        n1 INTEGER,
-        n2 INTEGER,
-        n3 INTEGER,
-        n4 INTEGER,
-        n5 INTEGER,
-        n6 INTEGER,
-        jackpot_prize REAL,
-        winners INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (
-            (n1 IS NULL AND n2 IS NULL AND n3 IS NULL AND n4 IS NULL AND n5 IS NULL AND n6 IS NULL)
-            OR (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
-        ),
-        CHECK (jackpot_prize IS NULL OR jackpot_prize >= 0),
-        CHECK (winners >= 0)
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_lotto_draw_date ON lotto_draw (draw_date DESC)",
-    """
-    CREATE TABLE IF NOT EXISTS lotto_attempt (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        draw_id INTEGER NOT NULL REFERENCES lotto_draw(id) ON DELETE CASCADE,
-        ticket INTEGER,
-        n1 INTEGER NOT NULL,
-        n2 INTEGER NOT NULL,
-        n3 INTEGER NOT NULL,
-        n4 INTEGER NOT NULL,
-        n5 INTEGER NOT NULL,
-        n6 INTEGER NOT NULL,
-        hidden INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_lotto_attempt_parent ON lotto_attempt (draw_id, created_at)",
-    """
-    CREATE TABLE IF NOT EXISTS travel_trip (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        entry_year INTEGER NOT NULL,
-        entry_month INTEGER NOT NULL,
-        -- Inclusive end month, same year, for a trip spanning several
-        -- consecutive months. Equal to entry_month for a single-month trip
-        -- (the default the "Add trip" form starts you on).
-        entry_month_end INTEGER NOT NULL,
-        notes TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (length(trim(title)) > 0),
-        CHECK (entry_month BETWEEN 1 AND 12),
-        CHECK (entry_month_end BETWEEN 1 AND 12),
-        CHECK (entry_month_end >= entry_month)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_travel_trip_period
-        ON travel_trip (entry_year DESC, entry_month DESC, id DESC)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS travel_flight (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id INTEGER NOT NULL REFERENCES travel_trip(id) ON DELETE CASCADE,
-        flight_number TEXT NOT NULL,
-        flight_date DATE,
-        departure_time TEXT,
-        arrival_time TEXT,
-        from_location TEXT,
-        from_map_url TEXT,
-        to_location TEXT,
-        to_map_url TEXT,
-        notes TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (length(trim(flight_number)) > 0)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_travel_flight_parent
-        ON travel_flight (trip_id, flight_date, created_at)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS travel_transport (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id INTEGER NOT NULL REFERENCES travel_trip(id) ON DELETE CASCADE,
-        -- Ground transport leg — bus or train. Same shape as travel_flight,
-        -- with a mode and an optional (rather than required) number, since
-        -- a bus route isn't always known/labeled the way a flight number is.
-        mode TEXT NOT NULL,
-        number TEXT,
-        travel_date DATE,
-        departure_time TEXT,
-        arrival_time TEXT,
-        from_location TEXT,
-        from_map_url TEXT,
-        to_location TEXT,
-        to_map_url TEXT,
-        notes TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (mode IN ('bus', 'train'))
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_travel_transport_parent
-        ON travel_transport (trip_id, travel_date, created_at)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS travel_itinerary (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id INTEGER NOT NULL REFERENCES travel_trip(id) ON DELETE CASCADE,
-        item_date DATE NOT NULL,
-        -- Optional end date for an item that spans past its start date (an
-        -- overnight train, a multi-day trek); NULL means a same-day item.
-        item_end_date DATE,
-        start_time TEXT,
-        end_time TEXT,
-        activity TEXT NOT NULL,
-        location_name TEXT,
-        location_map_url TEXT,
-        notes TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (length(trim(activity)) > 0),
-        CHECK (item_end_date IS NULL OR item_end_date >= item_date)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_travel_itinerary_parent
-        ON travel_itinerary (trip_id, item_date, start_time, created_at)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS travel_accommodation (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id INTEGER NOT NULL REFERENCES travel_trip(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        checkin_date DATE NOT NULL,
-        checkout_date DATE NOT NULL,
-        checkin_time TEXT,
-        checkout_time TEXT,
-        booking_confirmation TEXT,
-        instructions TEXT,
-        location_name TEXT,
-        location_map_url TEXT,
-        notes TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (length(trim(name)) > 0),
-        CHECK (checkout_date >= checkin_date)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_travel_accommodation_parent
-        ON travel_accommodation (trip_id, checkin_date, created_at)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS app_user (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE COLLATE NOCASE,
-        password_hash TEXT NOT NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (length(trim(username)) > 0)
-    )
-    """,
-]
+# ------------------------------------------------------------------ schema
 
-
-def _migrate_lotto_draw_allow_pending() -> None:
-    """Older DBs have ``n1``..``n6`` NOT NULL on ``lotto_draw``. Rebuild the
-    table so a draw's date can be logged before its winning numbers are
-    known — attempts can be recorded ahead of the actual draw, then the
-    result filled in later via the same edit form.
-
-    Runs on its own autocommit connection (outside ``get_connection()``, which
-    turns foreign keys on) since SQLite requires FKs off for a table rebuild
-    like this, and that pragma is a no-op inside a transaction."""
-    path = sqlite_path()
-    if not path.exists():
-        return  # fresh DB — the CREATE TABLE statement below defines it correctly
-    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
-    try:
-        cols = conn.execute("PRAGMA table_info(lotto_draw)").fetchall()
-        if not cols:
-            return  # table doesn't exist yet
-        notnull_by_name = {c[1]: c[3] for c in cols}
-        if not notnull_by_name.get("n1"):
-            return  # already migrated (nullable), or an unexpected shape — leave alone
-        conn.execute("PRAGMA foreign_keys = OFF")
-        conn.execute("BEGIN")
-        try:
-            conn.execute(
-                """
-                CREATE TABLE lotto_draw_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    draw_date DATE NOT NULL UNIQUE,
-                    n1 INTEGER, n2 INTEGER, n3 INTEGER, n4 INTEGER, n5 INTEGER, n6 INTEGER,
-                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CHECK (
-                        (n1 IS NULL AND n2 IS NULL AND n3 IS NULL AND n4 IS NULL AND n5 IS NULL AND n6 IS NULL)
-                        OR (n1 >= 1 AND n1 < n2 AND n2 < n3 AND n3 < n4 AND n4 < n5 AND n5 < n6 AND n6 <= 58)
-                    )
-                )
-                """
-            )
-            conn.execute(
-                """
-                INSERT INTO lotto_draw_new (id, draw_date, n1, n2, n3, n4, n5, n6, created_at)
-                SELECT id, draw_date, n1, n2, n3, n4, n5, n6, created_at FROM lotto_draw
-                """
-            )
-            conn.execute("DROP TABLE lotto_draw")
-            conn.execute("ALTER TABLE lotto_draw_new RENAME TO lotto_draw")
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_lotto_draw_date ON lotto_draw (draw_date DESC)"
-            )
-            conn.execute("COMMIT")
-        except Exception:
-            conn.execute("ROLLBACK")
-            raise
-        finally:
-            conn.execute("PRAGMA foreign_keys = ON")
-    finally:
-        conn.close()
-
-
-def _migrate_lotto_attempt_add_ticket() -> None:
-    """Older DBs don't have the ``ticket`` column on ``lotto_attempt``. Attempts
-    uploaded together as one physical ticket (up to a handful of board plays)
-    share a ticket number so the UI can cluster them; existing attempts get
-    ``ticket = NULL`` (ungrouped) and can be assigned one later via edit."""
-    path = sqlite_path()
-    if not path.exists():
-        return  # fresh DB — the CREATE TABLE statement below defines it correctly
-    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
-    try:
-        cols = conn.execute("PRAGMA table_info(lotto_attempt)").fetchall()
-        if not cols:
-            return  # table doesn't exist yet
-        if any(c[1] == "ticket" for c in cols):
-            return  # already migrated
-        conn.execute("ALTER TABLE lotto_attempt ADD COLUMN ticket INTEGER")
-    finally:
-        conn.close()
-
-
-def _migrate_lotto_attempt_add_hidden() -> None:
-    """Older DBs don't have the ``hidden`` column on ``lotto_attempt``. Hiding
-    an attempt tucks it out of the normal view without deleting it; existing
-    attempts get ``hidden = 0`` (visible)."""
-    path = sqlite_path()
-    if not path.exists():
-        return  # fresh DB — the CREATE TABLE statement below defines it correctly
-    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
-    try:
-        cols = conn.execute("PRAGMA table_info(lotto_attempt)").fetchall()
-        if not cols:
-            return  # table doesn't exist yet
-        if any(c[1] == "hidden" for c in cols):
-            return  # already migrated
-        conn.execute("ALTER TABLE lotto_attempt ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0")
-    finally:
-        conn.close()
-
-
-def _migrate_lotto_draw_add_jackpot_winners() -> None:
-    """Older DBs don't have ``jackpot_prize``/``winners`` on ``lotto_draw``.
-    Existing draws get ``jackpot_prize = NULL`` and ``winners = 0`` until
-    backfilled (e.g. via the historic-results import)."""
-    path = sqlite_path()
-    if not path.exists():
-        return  # fresh DB — the CREATE TABLE statement below defines it correctly
-    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
-    try:
-        cols = conn.execute("PRAGMA table_info(lotto_draw)").fetchall()
-        if not cols:
-            return  # table doesn't exist yet
-        names = {c[1] for c in cols}
-        if "jackpot_prize" not in names:
-            conn.execute("ALTER TABLE lotto_draw ADD COLUMN jackpot_prize REAL")
-        if "winners" not in names:
-            conn.execute(
-                "ALTER TABLE lotto_draw ADD COLUMN winners INTEGER NOT NULL DEFAULT 0"
-            )
-    finally:
-        conn.close()
-
-
-def _migrate_travel_trip_add_month_end() -> None:
-    """Older DBs don't have ``entry_month_end`` on ``travel_trip``. Existing
-    (single-month) trips get ``entry_month_end = entry_month`` — the same
-    default a freshly-created trip starts with."""
-    path = sqlite_path()
-    if not path.exists():
-        return  # fresh DB — the CREATE TABLE statement below defines it correctly
-    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
-    try:
-        cols = conn.execute("PRAGMA table_info(travel_trip)").fetchall()
-        if not cols:
-            return  # table doesn't exist yet
-        if any(c[1] == "entry_month_end" for c in cols):
-            return  # already migrated
-        conn.execute("ALTER TABLE travel_trip ADD COLUMN entry_month_end INTEGER")
-        conn.execute("UPDATE travel_trip SET entry_month_end = entry_month WHERE entry_month_end IS NULL")
-    finally:
-        conn.close()
-
-
-def _migrate_travel_itinerary_add_end_date() -> None:
-    """Older DBs don't have ``item_end_date`` on ``travel_itinerary``. Existing
-    items stay same-day (``item_end_date = NULL``) until edited to add a span —
-    e.g. an overnight train logged as a single-day item before this existed."""
-    path = sqlite_path()
-    if not path.exists():
-        return  # fresh DB — the CREATE TABLE statement below defines it correctly
-    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)
-    try:
-        cols = conn.execute("PRAGMA table_info(travel_itinerary)").fetchall()
-        if not cols:
-            return  # table doesn't exist yet
-        if any(c[1] == "item_end_date" for c in cols):
-            return  # already migrated
-        conn.execute("ALTER TABLE travel_itinerary ADD COLUMN item_end_date DATE")
-    finally:
-        conn.close()
+# The migration script owns the DDL; this is only what startup asserts is
+# present, so the two cannot drift into two different schemas.
+_EXPECTED_TABLES = (
+    "_app_meta", "app_user", "blood_pressure", "calendar_day_override",
+    "credit_card", "credit_card_payment", "fixed_expense", "house_payment",
+    "house_payment_entry", "installment", "installment_line", "lotto_attempt",
+    "lotto_draw", "monthly_expense", "pay_period_start_override", "payslip",
+    "payslip_default", "payslip_default_settings", "travel_accommodation",
+    "travel_flight", "travel_itinerary", "travel_transport", "travel_trip",
+)
 
 
 def init_schema() -> None:
-    """Create every table/index that doesn't already exist. Idempotent and cheap
-    enough to call on every startup — ``CREATE ... IF NOT EXISTS`` short-circuits
-    once the schema is in place."""
-    _migrate_lotto_draw_allow_pending()
-    _migrate_lotto_attempt_add_ticket()
-    _migrate_lotto_attempt_add_hidden()
-    _migrate_lotto_draw_add_jackpot_winners()
-    _migrate_travel_trip_add_month_end()
-    _migrate_travel_itinerary_add_end_date()
+    """Verify the expected tables exist. Does not create anything.
+
+    The schema is created and populated by
+    ``backend/scripts/migrate_sqlite_to_postgres.py``. Failing loudly here beats
+    silently auto-creating an empty table and serving a blank app as if the
+    data had never existed.
+    """
     with get_connection() as conn:
-        for stmt in _SCHEMA_STATEMENTS:
-            conn.execute(stmt)
-        conn.commit()
+        with db_cursor(conn) as cur:
+            cur.execute(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+            )
+            present = {r[0] for r in cur.fetchall()}
+    missing = [t for t in _EXPECTED_TABLES if t not in present]
+    if missing:
+        raise RuntimeError(
+            "Postgres is missing "
+            f"{len(missing)} expected table(s): {', '.join(missing)}. "
+            "Run: python backend/scripts/migrate_sqlite_to_postgres.py"
+        )
 
 
 _PAYSLIP_RETURN_COLS = """
@@ -848,13 +519,14 @@ def list_payslips(limit: int = 200) -> list[dict[str, Any]]:
                 ORDER BY period_year DESC NULLS LAST,
                          period_month DESC NULLS LAST,
                          period_half DESC NULLS LAST,
-                         created_at DESC
+                         created_at DESC,
+                         id DESC
                 LIMIT ?
                 """,
                 (limit,),
             )
             cols = [d[0] for d in cur.description]
-            return [_with_bool(dict(zip(cols, r)), "has_pdf") for r in cur.fetchall()]
+            return [_with_bool(_zip_row(cols, r), "has_pdf") for r in cur.fetchall()]
 
 
 def get_payslip(payslip_id: int) -> dict[str, Any] | None:
@@ -1022,7 +694,7 @@ def list_installments(
             cols = [d[0] for d in cur.description]
             out: list[dict[str, Any]] = []
             for r in cur.fetchall():
-                out.append(dict(zip(cols, r)))
+                out.append(_zip_row(cols, r))
             return out
 
 
@@ -1050,7 +722,7 @@ def list_installments_with_lines(limit: int = 500) -> list[dict[str, Any]]:
                 (limit,),
             )
             cols = [d[0] for d in cur.description]
-            headers = [dict(zip(cols, r)) for r in cur.fetchall()]
+            headers = [_zip_row(cols, r) for r in cur.fetchall()]
             if not headers:
                 return []
             ids = [h["id"] for h in headers]
@@ -1108,7 +780,7 @@ def _installment_lines_rows(cur: Any, installment_id: int) -> list[dict[str, Any
         (installment_id,),
     )
     cols = [d[0] for d in cur.description]
-    return [dict(zip(cols, r)) for r in cur.fetchall()]
+    return [_zip_row(cols, r) for r in cur.fetchall()]
 
 
 def _installment_detail(cur: Any, installment_id: int) -> dict[str, Any] | None:
@@ -1587,7 +1259,7 @@ def _house_payment_entries_rows(
         (house_payment_id,),
     )
     cols = [d[0] for d in cur.description]
-    return [dict(zip(cols, r)) for r in cur.fetchall()]
+    return [_zip_row(cols, r) for r in cur.fetchall()]
 
 
 def _house_payment_detail(
@@ -1616,7 +1288,7 @@ def list_house_payments(limit: int = 500) -> list[dict[str, Any]]:
                 (limit,),
             )
             cols = [d[0] for d in cur.description]
-            return [dict(zip(cols, r)) for r in cur.fetchall()]
+            return [_zip_row(cols, r) for r in cur.fetchall()]
 
 
 def get_house_payment(house_payment_id: int) -> dict[str, Any] | None:
@@ -2651,7 +2323,10 @@ def list_app_users() -> list[dict[str, Any]]:
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
-                f"SELECT {_APP_USER_PUBLIC_COLS} FROM app_user ORDER BY username COLLATE NOCASE ASC"
+                # LOWER(): Postgres has no NOCASE collation, so the
+                # case-insensitive ordering SQLite got from the column's
+                # COLLATE NOCASE has to be spelled out.
+                f"SELECT {_APP_USER_PUBLIC_COLS} FROM app_user ORDER BY LOWER(username) ASC"
             )
             return [_row_to_dict(cur, r) for r in cur.fetchall()]
 
@@ -2659,7 +2334,7 @@ def list_app_users() -> list[dict[str, Any]]:
 def insert_app_user(username: str, password_hash: str) -> dict[str, Any]:
     """Insert one user and return the public row (no ``password_hash``).
 
-    Raises ``sqlite3.IntegrityError`` if ``username`` (case-insensitively)
+    Raises ``psycopg2.IntegrityError`` if ``username`` (case-insensitively)
     already exists — the caller turns that into a 409.
     """
     with get_connection() as conn:
@@ -2681,8 +2356,11 @@ def get_app_user_by_username(username: str) -> dict[str, Any] | None:
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
+                # LOWER() on both sides: SQLite matched case-insensitively via
+                # the column's COLLATE NOCASE, and login must keep doing so.
+                # The unique index on LOWER(username) serves this lookup.
                 "SELECT id, username, password_hash, created_at FROM app_user "
-                "WHERE username = ? COLLATE NOCASE",
+                "WHERE LOWER(username) = LOWER(?)",
                 (username,),
             )
             row = cur.fetchone()
@@ -2697,7 +2375,7 @@ def update_app_user(
     """Update whichever of ``username``/``password_hash`` is not None and
     return the refreshed public row (or ``None`` if no such user).
 
-    Raises ``sqlite3.IntegrityError`` on a username collision.
+    Raises ``psycopg2.IntegrityError`` on a username collision.
     """
     with get_connection() as conn:
         with db_cursor(conn) as cur:

@@ -123,6 +123,9 @@ jobs:
 
           export API_IMAGE='${{ env.API_IMAGE }}'
           export WEB_IMAGE='${{ env.WEB_IMAGE }}'
+          # Neon Postgres connection string. Required: docker-compose.yml
+          # refuses to start the api container without it.
+          export DATABASE_URL='${{ secrets.DATABASE_URL }}'
           export WEB_PORT='${{ secrets.WEB_PORT || 3000 }}'
           export BUDGET_CORS_ORIGINS='${{ secrets.BUDGET_CORS_ORIGINS }}'
           # --policy always: api/web define both `image:` and `build:` (the

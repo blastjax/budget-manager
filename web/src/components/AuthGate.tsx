@@ -8,7 +8,6 @@ import {
   getSessionToken,
   setSessionToken,
 } from "@/lib/auth";
-import { Logo } from "@/components/Icons";
 import {
   CARD_CLASSES,
   INPUT_CLASSES,
@@ -28,7 +27,6 @@ function Screen({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen min-h-[100dvh] w-full flex-col items-center justify-center gap-6 bg-page px-4">
       <div className="flex items-center gap-3">
-        <Logo className="size-10" />
         <span className="text-lg font-semibold tracking-[-0.2px] text-ink">
           Blastjax
         </span>
