@@ -143,9 +143,6 @@ export async function createPayslip(body: PayslipCreateBody) {
   return sendJson<PayslipRow>("POST", "/api/payslip", body);
 }
 
-export async function getPayslip(id: number) {
-  return getJson<PayslipRow>(`/api/payslip/${id}`);
-}
 
 export async function updatePayslip(id: number, body: PayslipCreateBody) {
   return sendJson<PayslipRow>("PUT", `/api/payslip/${id}`, body);
@@ -155,13 +152,6 @@ export async function deletePayslip(id: number) {
   return sendJson<{ ok: boolean }>("DELETE", `/api/payslip/${id}`);
 }
 
-export async function importPayslipJson(data: Record<string, unknown>) {
-  return sendJson<{ filename: string; inserted: number; ids: number[] }>(
-    "POST",
-    "/api/payslip/import-json",
-    data,
-  );
-}
 
 /** URL that serves the payslip's attached PDF inline (for `<iframe>`/links). */
 export function payslipPdfUrl(id: number): string {
@@ -271,18 +261,6 @@ export async function recordInstallmentPayment(id: number) {
   return sendJson<{ installment: InstallmentRow }>(
     "POST",
     `/api/installment/${id}/pay`,
-  );
-}
-
-export async function updateInstallmentLine(
-  installmentId: number,
-  seq: number,
-  body: { principal: number; interest: number | null },
-) {
-  return sendJson<InstallmentDetailResponse>(
-    "PUT",
-    `/api/installment/${installmentId}/line/${seq}`,
-    body,
   );
 }
 

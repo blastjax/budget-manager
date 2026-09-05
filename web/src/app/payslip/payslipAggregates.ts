@@ -37,19 +37,6 @@ export function medicalBucketStartYear(r: PayslipRow): number | null {
   return null;
 }
 
-export function sumMedicalReimbursementForMedicalYear(
-  rows: PayslipRow[],
-  aprilStartYear: number,
-): number {
-  let s = 0;
-  for (const r of rows) {
-    if (medicalBucketStartYear(r) !== aprilStartYear) continue;
-    const v = r.medical_reimbursement;
-    if (v != null && Number.isFinite(v)) s += v;
-  }
-  return s;
-}
-
 /** Calendar year containing this pay period (scheduled: period year; else created_at). */
 export function calendarYearForRow(r: PayslipRow): number | null {
   const py = r.period_year;
@@ -71,53 +58,6 @@ export function calendarYearForRow(r: PayslipRow): number | null {
     if (!Number.isNaN(d.getTime())) return d.getFullYear();
   }
   return null;
-}
-
-type SumFieldKey = Extract<
-  keyof PayslipRow,
-  | "total"
-  | "basic_salary"
-  | "commission"
-  | "reimbursement"
-  | "others"
-  | "allowances"
-  | "mp2"
-  | "withholding_tax"
-  | "sss_contribution"
-  | "philhealth"
-  | "pag_ibig"
-  | "medical_reimbursement"
-  | "thirteenth_month"
->;
-
-export function sumFieldForCalendarYear(
-  rows: PayslipRow[],
-  calendarYear: number,
-  field: SumFieldKey,
-): number {
-  let s = 0;
-  for (const r of rows) {
-    if (calendarYearForRow(r) !== calendarYear) continue;
-    const v = r[field];
-    if (v != null && Number.isFinite(v)) s += v;
-  }
-  return s;
-}
-
-/** Scheduled payslip rows in calendar year (each row = one half-month slot entry). */
-export function countPayslipRowsInCalendarYear(
-  rows: PayslipRow[],
-  calendarYear: number,
-): number {
-  let n = 0;
-  for (const r of rows) {
-    if (calendarYearForRow(r) !== calendarYear) continue;
-    const pm = r.period_month;
-    const ph = r.period_half;
-    if (pm == null || ph == null || ph < 1 || ph > 2) continue;
-    n++;
-  }
-  return n;
 }
 
 /** Sum of withholding, SSS, Philhealth, Pag-ibig, and MP2 for one payslip row. */
@@ -147,23 +87,6 @@ export function grossTotalFromRow(r: PayslipRow): number {
   );
 }
 
-export function yearsToShow(rows: PayslipRow[]): number[] {
-  const ys = new Set<number>();
-  const cy = new Date().getFullYear();
-  ys.add(cy);
-  for (const r of rows) {
-    if (
-      r.period_year != null &&
-      Number.isFinite(r.period_year) &&
-      r.period_year >= 1900 &&
-      r.period_year <= 2200
-    ) {
-      ys.add(Math.trunc(r.period_year));
-    }
-  }
-  return Array.from(ys).sort((a, b) => b - a);
-}
-
 export function rowsForSlot(
   rows: PayslipRow[],
   year: number,
@@ -189,70 +112,11 @@ export function detailPayslipNeighbors(
   return { older, newer };
 }
 
-export function unscheduledRows(rows: PayslipRow[]): PayslipRow[] {
-  return rows.filter(
-    (r) =>
-      r.period_year == null ||
-      r.period_month == null ||
-      r.period_half == null ||
-      r.period_half < 1 ||
-      r.period_half > 2,
-  );
-}
-
-export function sumTotal(rs: PayslipRow[]): number | null {
-  let s = 0;
-  let any = false;
-  for (const r of rs) {
-    if (r.total != null && Number.isFinite(r.total)) {
-      s += r.total;
-      any = true;
-    }
-  }
-  return any ? s : null;
-}
-
-/** Sum of `total` for both halves of a month (scheduled rows only). */
-export function sumTotalForMonth(
-  rows: PayslipRow[],
-  year: number,
-  month: number,
-): number | null {
-  const r1 = rowsForSlot(rows, year, month, 1);
-  const r2 = rowsForSlot(rows, year, month, 2);
-  return sumTotal([...r1, ...r2]);
-}
-
-/** Sum of `total` for all scheduled slots in a calendar year. */
-export function sumTotalForYear(
-  rows: PayslipRow[],
-  year: number,
-): number | null {
-  let s = 0;
-  let any = false;
-  for (const r of rows) {
-    if (r.period_year !== year) continue;
-    if (
-      r.period_month == null ||
-      r.period_half == null ||
-      r.period_half < 1 ||
-      r.period_half > 2
-    ) {
-      continue;
-    }
-    if (r.total != null && Number.isFinite(r.total)) {
-      s += r.total;
-      any = true;
-    }
-  }
-  return any ? s : null;
-}
-
 /**
  * Per-row gross matching the year-stats Total card: net (`total`) plus the
  * statutory deductions (withholding, SSS, Philhealth, Pag-ibig, MP2). Returns
- * ``null`` when ``total`` is missing so callers can treat empty slots the same
- * way ``sumTotal`` does.
+ * ``null`` when ``total`` is missing so callers can skip empty slots rather
+ * than counting them as zero.
  */
 export function grossWithDeductionsFromRow(r: PayslipRow): number | null {
   if (r.total == null || !Number.isFinite(r.total)) return null;
@@ -266,54 +130,6 @@ export function grossWithDeductionsFromRow(r: PayslipRow): number | null {
     num(r.pag_ibig) +
     num(r.mp2)
   );
-}
-
-export function sumGross(rs: PayslipRow[]): number | null {
-  let s = 0;
-  let any = false;
-  for (const r of rs) {
-    const g = grossWithDeductionsFromRow(r);
-    if (g == null) continue;
-    s += g;
-    any = true;
-  }
-  return any ? s : null;
-}
-
-/** Sum of gross for both halves of a month (scheduled rows only). */
-export function sumGrossForMonth(
-  rows: PayslipRow[],
-  year: number,
-  month: number,
-): number | null {
-  const r1 = rowsForSlot(rows, year, month, 1);
-  const r2 = rowsForSlot(rows, year, month, 2);
-  return sumGross([...r1, ...r2]);
-}
-
-/** Sum of gross for all scheduled slots in a calendar year. */
-export function sumGrossForYear(
-  rows: PayslipRow[],
-  year: number,
-): number | null {
-  let s = 0;
-  let any = false;
-  for (const r of rows) {
-    if (r.period_year !== year) continue;
-    if (
-      r.period_month == null ||
-      r.period_half == null ||
-      r.period_half < 1 ||
-      r.period_half > 2
-    ) {
-      continue;
-    }
-    const g = grossWithDeductionsFromRow(r);
-    if (g == null) continue;
-    s += g;
-    any = true;
-  }
-  return any ? s : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -367,7 +183,7 @@ export interface YearSlots {
   netSum: number | null;
   /** Year-wide gross sum across scheduled half-slots. ``null`` when none had totals. */
   grossSum: number | null;
-  /** Year stat-card field sums (matches ``sumFieldForCalendarYear``). */
+  /** Year stat-card field sums, one running total per payslip field. */
   fieldSums: YearFieldSums;
   /** Number of scheduled half-slot rows in this calendar year (0..N). */
   paySlotCount: number;
@@ -467,12 +283,12 @@ export function buildPayslipIndex(rows: PayslipRow[]): PayslipIndex {
     const py = r.period_year;
     const pm = r.period_month;
     const ph = r.period_half;
-    // Match the legacy aggregators: period_year/month/half must be non-null
-    // and ``period_half`` in [1, 2]. ``period_month`` is *not* range-checked
-    // here so totals that include out-of-range months stay consistent with
-    // ``sumTotalForYear``/``unscheduledRows``. The calendar UI itself only
-    // iterates months 1–12, so any oddballs slotted into ``ys.months`` are
-    // simply never rendered.
+    // A scheduled row needs period_year/month/half non-null and
+    // ``period_half`` in [1, 2]. ``period_month`` is *not* range-checked here,
+    // so a row with an out-of-range month still counts toward the year totals
+    // instead of vanishing from them. The calendar UI itself only iterates
+    // months 1–12, so any oddballs slotted into ``ys.months`` are simply
+    // never rendered.
     const isScheduledHalf =
       py != null &&
       Number.isFinite(py) &&

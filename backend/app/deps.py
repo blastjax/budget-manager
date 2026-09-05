@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import HTTPException, Request
 
 from app.security import session_is_valid
-from db import any_app_users, cloud_database_url
+from db import any_app_users, database_url
 
 
 def require_db() -> None:
@@ -17,7 +17,7 @@ def require_db() -> None:
         @router.get("/api/foo", dependencies=[Depends(require_db)])
         def foo(): ...
     """
-    if not cloud_database_url():
+    if not database_url():
         raise HTTPException(status_code=503, detail="DATABASE_URL is not set.")
 
 

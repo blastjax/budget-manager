@@ -95,19 +95,8 @@ def database_url() -> str:
     return ""
 
 
-def cloud_database_url() -> str:
-    """Back-compat alias for ``database_url()`` -- kept so callers that used to
-    distinguish "the cloud DB" from a local override don't need to change."""
-    return database_url()
-
-
 def storage_kind() -> str:
     return "postgres" if database_url() else "none"
-
-
-def use_database() -> bool:
-    """Whether a usable Postgres URL is configured."""
-    return bool(database_url())
 
 
 # ---------------------------------------------------------------- connections
@@ -878,12 +867,6 @@ def _seed_installment_lines(
     )
 
 
-def list_installment_lines(installment_id: int) -> list[dict[str, Any]]:
-    with get_connection() as conn:
-        with db_cursor(conn) as cur:
-            return _installment_lines_rows(cur, installment_id)
-
-
 def _recompute_installment_aggregates(cur: Any, installment_id: int) -> None:
     """
     Recompute ``original_total`` / ``remaining`` and (if a line exists at
@@ -942,31 +925,6 @@ def _recompute_installment_aggregates(cur: Any, installment_id: int) -> None:
             """,
             (float(sum_p), float(sum_pt_rem), installment_id),
         )
-
-
-def update_installment_line(
-    installment_id: int,
-    seq: int,
-    principal: float,
-    interest: float | None,
-) -> bool:
-    ptot = _line_payment_total(principal, interest)
-    with get_connection() as conn:
-        with db_cursor(conn) as cur:
-            cur.execute(
-                """
-                UPDATE installment_line SET
-                    principal = ?,
-                    interest = ?,
-                    payment_total = ?
-                WHERE installment_id = ? AND seq = ?
-                """,
-                (principal, interest, ptot, installment_id, seq),
-            )
-            if cur.rowcount == 0:
-                return False
-            _recompute_installment_aggregates(cur, installment_id)
-            return True
 
 
 def update_installment_line_and_fetch_detail(
@@ -1289,12 +1247,6 @@ def list_house_payments(limit: int = 500) -> list[dict[str, Any]]:
             )
             cols = [d[0] for d in cur.description]
             return [_zip_row(cols, r) for r in cur.fetchall()]
-
-
-def get_house_payment(house_payment_id: int) -> dict[str, Any] | None:
-    with get_connection() as conn:
-        with db_cursor(conn) as cur:
-            return _house_payment_row_dict(cur, house_payment_id)
 
 
 def fetch_house_payment_with_entries(

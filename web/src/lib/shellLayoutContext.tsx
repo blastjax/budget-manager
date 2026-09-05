@@ -14,11 +14,6 @@ import {
 
 const LS_SIDEBAR_COLLAPSED = "blastjax:shell:sidebarCollapsed";
 
-/** Expanded sidebar width — wide enough for an icon + label + chevron. */
-export const SIDEBAR_WIDTH = 280;
-/** Collapsed sidebar width — an icon rail with tooltips. */
-export const SIDEBAR_RAIL_WIDTH = 76;
-
 function readBool(key: string, fallback: boolean): boolean {
   if (typeof window === "undefined") return fallback;
   try {

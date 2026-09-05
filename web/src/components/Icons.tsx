@@ -263,29 +263,3 @@ export function SidebarToggleIcon(p: IconProps) {
     </Svg>
   );
 }
-
-/** The app mark — a rounded tile with the wordmark's initial. */
-export function Logo({ className = "size-9" }: IconProps) {
-  return (
-    <span
-      className={`${className} inline-flex shrink-0 items-center justify-center rounded-lg bg-brand text-white`}
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 24 24" fill="none" className="size-5">
-        <path
-          d="M5 17.5 9.5 6.5h5L19 17.5"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M8 14h8"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
-  );
-}

@@ -55,9 +55,18 @@ _CACHE_ALSO_INVALIDATES: dict[str, tuple[str, ...]] = {
 
 
 def _cache_prefixes_for(path: str) -> tuple[str, ...]:
-    """Every cache namespace a write to ``path`` invalidates, own namespace first."""
-    for route, prefix in _CACHE_PREFIXES.items():
-        if path.startswith(route):
+    """Every cache namespace a write to ``path`` invalidates, own namespace first.
+
+    A route matches only on a path-segment boundary, and longer routes are
+    tried first. Both matter: ``/api/payslip`` is a *string* prefix of
+    ``/api/payslip-defaults`` without being a *path* prefix of it, so a plain
+    ``startswith`` scan in table order sent every defaults save to the
+    ``payslip`` namespace and left ``payslip_default:bundle`` stale for a full
+    TTL — Settings kept serving the values from before the save.
+    """
+    for route in sorted(_CACHE_PREFIXES, key=len, reverse=True):
+        if path == route or path.startswith(route + "/"):
+            prefix = _CACHE_PREFIXES[route]
             return (prefix, *_CACHE_ALSO_INVALIDATES.get(prefix, ()))
     return ()
 

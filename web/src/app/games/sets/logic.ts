@@ -13,8 +13,6 @@
  * would complete one.
  */
 
-export const FEATURE_COUNT = 4;
-export const VARIANTS_PER_FEATURE = 3;
 export const DEFAULT_BOARD_SIZE = 12;
 
 export const SYMBOL_NAMES = ["Hourglass", "Star", "Cross"] as const;

@@ -36,19 +36,6 @@ export const PAGE_CONTAINER_CLASSES =
 export const CARD_CLASSES =
   "rounded-xl border border-line bg-surface p-5 shadow-xs sm:p-6";
 
-/** A card with no padding — for tables and lists that manage their own insets. */
-export const CARD_FLUSH_CLASSES =
-  "overflow-hidden rounded-xl border border-line bg-surface shadow-xs";
-
-/** A recessed panel *inside* a card (nested groups, read-only summaries). */
-export const INSET_PANEL_CLASSES =
-  "rounded-lg border border-line bg-surface-2/60 p-4";
-
-export const CARD_TITLE_CLASSES =
-  "text-base font-semibold tracking-[-0.2px] text-ink";
-
-export const CARD_DESCRIPTION_CLASSES = "mt-0.5 text-sm text-ink-3";
-
 /** Small uppercase label above a group of related controls or stats. */
 export const SECTION_LABEL_CLASSES =
   "text-xs font-medium uppercase tracking-wider text-ink-4";
@@ -83,30 +70,6 @@ export function alertClasses(
 }
 
 export const ERROR_ALERT_CLASSES = alertClasses("error");
-
-/** Pill badge for statuses and counts inside tables and cards. */
-export function badgeClasses(
-  tone: "neutral" | "brand" | "success" | "warning" | "danger" | "info" =
-    "neutral",
-): string {
-  const base =
-    "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium";
-  switch (tone) {
-    case "brand":
-      return `${base} bg-brand-soft text-brand-text`;
-    case "success":
-      return `${base} bg-success-soft text-success-text`;
-    case "warning":
-      return `${base} bg-warning-soft text-warning-text`;
-    case "danger":
-      return `${base} bg-danger-soft text-danger-text`;
-    case "info":
-      return `${base} bg-info-soft text-info-text`;
-    case "neutral":
-    default:
-      return `${base} bg-surface-2 text-ink-2`;
-  }
-}
 
 export const LOADING_TEXT_CLASSES = "text-sm text-ink-3";
 
@@ -153,12 +116,6 @@ export const SECONDARY_BUTTON_CLASSES = `${BUTTON_MD} ${OUTLINE_NEUTRAL}`;
 /** A standalone, non-destructive page action ("Today", "Clear all", "Retry"). */
 export const ACTION_BUTTON_CLASSES = `${BUTTON_MD} ${SOFT_BRAND}`;
 
-/** Neutral outline at medium size — the generic "another option" button. */
-export const OUTLINE_BUTTON_CLASSES = SECONDARY_BUTTON_CLASSES;
-
-/** Filled red — a destructive *confirmation*, not a row action. */
-export const DANGER_BUTTON_CLASSES = `${BUTTON_MD} bg-danger text-white shadow-xs hover:opacity-90`;
-
 export const ADD_BUTTON_CLASSES = `${BUTTON_SM} ${FILL_BRAND}`;
 
 export const EDIT_BUTTON_CLASSES = `${BUTTON_SM} ${OUTLINE_NEUTRAL}`;
@@ -169,9 +126,6 @@ export const DELETE_BUTTON_CLASSES = `${BUTTON_SM} ${OUTLINE_DANGER}`;
 export const DETAIL_BUTTON_CLASSES = `${BUTTON_SM} ${GHOST_NEUTRAL}`;
 
 export const CLOSE_BUTTON_CLASSES = `${BUTTON_SM} ${OUTLINE_NEUTRAL}`;
-
-/** Ghost button at medium size — low-emphasis chrome beside stronger actions. */
-export const GHOST_BUTTON_CLASSES = `${BUTTON_MD} ${GHOST_NEUTRAL}`;
 
 /** A square icon button (prev/next month arrows, chevrons, menu toggles). */
 export const ICON_BUTTON_CLASSES =
