@@ -105,6 +105,35 @@ function numbersToText(numbers: number[]): string {
   return numbers.join(", ");
 }
 
+/** "5, 17, 29" -> "05-17-29" — the zero-padded, dash-joined shape every txt
+ * export (historic results and attempts alike) writes numbers in. */
+function numbersToDashString(numbers: number[]): string {
+  return numbers.map((n) => String(n).padStart(2, "0")).join("-");
+}
+
+/** The stored "YYYY-MM-DD" -> "M/D/YYYY", for a txt export row. Distinct
+ * from `isoToUsDate` above only in name — this one's for text going out to
+ * a file, not into a form field, but the format the exports use matches
+ * what `parseDrawDate` reads back in. */
+function isoToExportDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${m}/${d}/${y}`;
+}
+
+/** Triggers a browser download of `text` as a UTF-8 .txt file named
+ * `filename`, without navigating away from the page. */
+function downloadTextFile(filename: string, text: string): void {
+  const blob = new Blob([text], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** A logged attempt whose numbers exactly match some *other* draw's result
  * somewhere else in the history — "if only you'd played this combo on that
  * date instead." Excludes an attempt matching the very draw it was logged
@@ -161,14 +190,16 @@ type ExportFields = { numbers: string; date: string; jackpot: string; winners: s
 
 function drawToExportFields(detail: LottoDrawDetail): ExportFields | null {
   if (detail.draw.numbers.length !== 6) return null;
-  const numbers = detail.draw.numbers.map((n) => String(n).padStart(2, "0")).join("-");
-  const [y, m, d] = detail.draw.draw_date.split("-").map(Number);
-  const date = `${m}/${d}/${y}`;
   const jackpot = (detail.draw.jackpot_prize ?? 0).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return { numbers, date, jackpot, winners: String(detail.draw.winners) };
+  return {
+    numbers: numbersToDashString(detail.draw.numbers),
+    date: isoToExportDate(detail.draw.draw_date),
+    jackpot,
+    winners: String(detail.draw.winners),
+  };
 }
 
 /** `draws` newest-first -> oldest-first for the export, matching how a
@@ -198,6 +229,68 @@ function buildLottoExportText(draws: LottoDrawDetail[]): string {
         `${r.jackpot.padStart(widths.jackpot)} | ${r.winners.padStart(widths.winners)} |`,
     )
     .join("\n");
+}
+
+/** Renders a draw's attempts in the same blank-line-separated "ticket
+ * blocks" shape "Upload from txt" reads: attempts sharing a ticket number
+ * are grouped under a "Ticket N" header, one 6-number line per attempt;
+ * attempts with no ticket each stand alone as their own headerless block.
+ * Re-uploading this file recreates every attempt — though since the
+ * importer turns every block into a ticket (see `submitUpload`), a
+ * previously ungrouped attempt comes back with a new ticket number of its
+ * own rather than staying ungrouped. That's a limitation of the importer's
+ * format, not something this exporter can route around.
+ *
+ * `tagHidden` appends "[hidden]" to a hidden attempt's line — useful for a
+ * human-readable export, but never set it on a file meant to be
+ * re-uploaded, since it isn't part of the grammar `parseNumbers` accepts. */
+function attemptsToTicketBlocksText(
+  attempts: LottoAttemptRow[],
+  { tagHidden = false }: { tagHidden?: boolean } = {},
+): string {
+  const byTicket = new Map<number, LottoAttemptRow[]>();
+  const loose: LottoAttemptRow[] = [];
+  for (const a of attempts) {
+    if (a.ticket != null) {
+      const arr = byTicket.get(a.ticket);
+      if (arr) arr.push(a);
+      else byTicket.set(a.ticket, [a]);
+    } else {
+      loose.push(a);
+    }
+  }
+  const lineFor = (a: LottoAttemptRow) =>
+    numbersToDashString(a.numbers) + (tagHidden && a.hidden ? "  [hidden]" : "");
+
+  const blocks: string[] = [];
+  for (const ticket of [...byTicket.keys()].sort((a, b) => a - b)) {
+    blocks.push([`Ticket ${ticket}`, ...byTicket.get(ticket)!.map(lineFor)].join("\n"));
+  }
+  for (const a of loose) {
+    blocks.push(lineFor(a));
+  }
+  return blocks.join("\n\n");
+}
+
+/** `draws` newest-first -> oldest-first, matching `buildLottoExportText`.
+ * Draws with no attempts logged are skipped — nothing to export for them.
+ * Each draw's section opens with a date + result header (not part of the
+ * "Upload from txt" grammar, so this file is for reading, not
+ * re-importing whole) followed by its attempts in the usual ticket-block
+ * shape, hidden attempts tagged inline. */
+function buildAllAttemptsExportText(draws: LottoDrawDetail[]): string {
+  const withAttempts = [...draws].reverse().filter((d) => d.attempts.length > 0);
+  return withAttempts
+    .map((d) => {
+      const result =
+        d.draw.numbers.length === 6
+          ? `result ${numbersToDashString(d.draw.numbers)}`
+          : "result not in yet";
+      const header = `${isoToExportDate(d.draw.draw_date)} - ${result}`;
+      const body = attemptsToTicketBlocksText(d.attempts, { tagHidden: true });
+      return `${header}\n${body}`;
+    })
+    .join("\n\n");
 }
 
 /** Like `parseNumbers`, but blank input means "no result yet" rather than an
@@ -854,15 +947,28 @@ export default function LottoClient() {
    * included (see `drawToExportFields`). */
   const onExportHistoric = () => {
     const text = buildLottoExportText(draws);
-    const blob = new Blob([text + (text ? "\n" : "")], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `lotto-results-${new Date().toISOString().slice(0, 10)}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    downloadTextFile(
+      `lotto-results-${new Date().toISOString().slice(0, 10)}.txt`,
+      text + (text ? "\n" : ""),
+    );
+  };
+
+  /** Downloads every attempt logged across every draw, grouped by date. See
+   * `buildAllAttemptsExportText` — this is a full backup/review file, not
+   * something meant to be re-uploaded as a whole. */
+  const onExportAllAttempts = () => {
+    const text = buildAllAttemptsExportText(draws);
+    downloadTextFile(
+      `lotto-attempts-${new Date().toISOString().slice(0, 10)}.txt`,
+      text + (text ? "\n" : ""),
+    );
+  };
+
+  /** Downloads one draw's attempts in the same shape "Upload from txt"
+   * reads, so it can be re-uploaded against this or another date. */
+  const onExportDrawAttempts = (detail: LottoDrawDetail) => {
+    const text = attemptsToTicketBlocksText(detail.attempts);
+    downloadTextFile(`lotto-attempts-${detail.draw.draw_date}.txt`, text + (text ? "\n" : ""));
   };
 
   const openImport = () => {
@@ -1159,6 +1265,17 @@ export default function LottoClient() {
             >
               + Add attempt
             </button>
+            {hasAttempts && (
+              <button
+                type="button"
+                disabled={saving}
+                className={`${ACTION_BUTTON_CLASSES} px-2 py-1.5 text-xs sm:px-3 sm:text-sm`}
+                onClick={() => onExportDrawAttempts(detail)}
+                title="Download this draw's attempts as a text file, in the same format Upload from txt reads"
+              >
+                Export attempts
+              </button>
+            )}
             <button
               type="button"
               disabled={saving}
@@ -1345,6 +1462,15 @@ export default function LottoClient() {
               title="Download every draw with a result as a pipe-delimited text file, in the same format Import historic results reads"
             >
               Export historic results
+            </button>
+            <button
+              type="button"
+              className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+              onClick={onExportAllAttempts}
+              disabled={draws.every((d) => d.attempts.length === 0)}
+              title="Download every attempt you've logged, across every draw, grouped by date"
+            >
+              Export all attempts
             </button>
             <button
               type="button"
