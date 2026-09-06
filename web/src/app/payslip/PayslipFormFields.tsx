@@ -25,6 +25,9 @@ export function PayslipFormFields({
    * the year/month get overwritten by the actual slot every time the
    * template is applied. */
   showPeriodYearMonth = true,
+  /** Set false to hide the Commission field — Settings → Companies decides
+   * this per company (some companies just don't have commission). */
+  showCommission = true,
 }: {
   form: FormState;
   setForm: Dispatch<SetStateAction<FormState>>;
@@ -37,6 +40,7 @@ export function PayslipFormFields({
   lockCompany?: boolean;
   requirePeriodHalf?: boolean;
   showPeriodYearMonth?: boolean;
+  showCommission?: boolean;
 }) {
   const onAmountBlur =
     (key: keyof FormState) => (e: FocusEvent<HTMLInputElement>) => {
@@ -210,7 +214,7 @@ export function PayslipFormFields({
           [
             ["total", "Total"],
             ["basic_salary", "Basic salary"],
-            ["commission", "Commission"],
+            ...(showCommission ? ([["commission", "Commission"]] as const) : []),
             ["reimbursement", "Reimbursement"],
             ["medical_reimbursement", "Medical reimbursement"],
             ["others", "Others"],

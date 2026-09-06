@@ -23,8 +23,19 @@ import {
   STAT_THEMES,
 } from "./payslipStatConstants";
 
-export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
+export function PayslipYearStatsSection({
+  index,
+  showCommission = true,
+}: {
+  index: PayslipIndex;
+  /** Settings → Companies decides this per company (some companies just
+   * don't have commission), so the stat card follows suit. */
+  showCommission?: boolean;
+}) {
   const [statsYear, setStatsYear] = useState(() => new Date().getFullYear());
+  const statCardOrder = showCommission
+    ? DEFAULT_STAT_CARD_ORDER
+    : DEFAULT_STAT_CARD_ORDER.filter((id) => id !== "commission");
 
   const yearSlots = yearSlotsFromIndex(index, statsYear);
   const sums = yearSlots.fieldSums;
@@ -270,7 +281,7 @@ export function PayslipYearStatsSection({ index }: { index: PayslipIndex }) {
       </div>
 
       <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 sm:grid-cols-2 sm:gap-4 md:gap-5">
-        {DEFAULT_STAT_CARD_ORDER.map((id) => renderStatCard(id))}
+        {statCardOrder.map((id) => renderStatCard(id))}
       </div>
 
       <div className="mt-4 flex w-full justify-center sm:mt-5">

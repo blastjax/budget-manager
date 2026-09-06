@@ -27,11 +27,13 @@ export function CompaniesSettingsPanel() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [newName, setNewName] = useState("");
+  const [newShowCommission, setNewShowCommission] = useState(true);
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [editShowCommission, setEditShowCommission] = useState(true);
   const [editError, setEditError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -68,8 +70,9 @@ export function CompaniesSettingsPanel() {
     setAdding(true);
     setAddError(null);
     try {
-      await createCompany(name);
+      await createCompany(name, newShowCommission);
       setNewName("");
+      setNewShowCommission(true);
       setInfoMsg(`Added "${name}".`);
       load();
     } catch (e: unknown) {
@@ -82,6 +85,7 @@ export function CompaniesSettingsPanel() {
   function startEdit(company: CompanyRow) {
     setEditingId(company.id);
     setEditName(company.name);
+    setEditShowCommission(company.show_commission);
     setEditError(null);
   }
 
@@ -99,7 +103,7 @@ export function CompaniesSettingsPanel() {
     setSavingEdit(true);
     setEditError(null);
     try {
-      await updateCompany(companyId, name);
+      await updateCompany(companyId, name, editShowCommission);
       setEditingId(null);
       setInfoMsg("Company updated.");
       load();
@@ -207,6 +211,14 @@ export function CompaniesSettingsPanel() {
                         onChange={(e) => setEditName(e.target.value)}
                       />
                     </div>
+                    <label className="flex items-center gap-2 text-sm text-ink-2">
+                      <input
+                        type="checkbox"
+                        checked={editShowCommission}
+                        onChange={(e) => setEditShowCommission(e.target.checked)}
+                      />
+                      Show commission
+                    </label>
                     {editError && <div className={ERROR_ALERT_CLASSES}>{editError}</div>}
                     <div className="flex flex-wrap items-center gap-2">
                       <button
@@ -230,6 +242,9 @@ export function CompaniesSettingsPanel() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="font-medium text-ink">{company.name}</p>
+                      <p className="text-xs text-ink-3">
+                        Commission {company.show_commission ? "shown" : "hidden"}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -270,6 +285,14 @@ export function CompaniesSettingsPanel() {
             autoComplete="off"
           />
         </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-ink-2">
+          <input
+            type="checkbox"
+            checked={newShowCommission}
+            onChange={(e) => setNewShowCommission(e.target.checked)}
+          />
+          Show commission
+        </label>
         {addError && <div className={`mt-3 ${ERROR_ALERT_CLASSES}`}>{addError}</div>}
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button

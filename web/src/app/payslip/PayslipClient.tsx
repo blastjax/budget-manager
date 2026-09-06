@@ -423,6 +423,8 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
   const index = useMemo(() => buildPayslipIndex(rows), [rows]);
   const years = index.years;
   const unsorted = index.unscheduled;
+  const showCommission =
+    companies.find((c) => c.name === company)?.show_commission ?? true;
 
   return (
     <div className={PAGE_CONTAINER_CLASSES}>
@@ -476,7 +478,9 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
           </div>
         </div>
 
-        {!loading && <PayslipYearStatsSection index={index} />}
+        {!loading && (
+          <PayslipYearStatsSection index={index} showCommission={showCommission} />
+        )}
 
         {!loading && (
           <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">

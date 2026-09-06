@@ -186,6 +186,9 @@ export function PayslipDefaultsPanel() {
               setForm={setDisplayedForm}
               requirePeriodHalf
               showPeriodYearMonth={false}
+              showCommission={
+                companies.find((c) => c.name === company)?.show_commission ?? true
+              }
             />
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-3">

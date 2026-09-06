@@ -1175,18 +1175,26 @@ export type CompanyRow = {
   name: string;
   created_at: string;
   sort_order: number;
+  /** Whether the Commission field/stat card show up on this company's Payslip page. */
+  show_commission: boolean;
 };
 
 export async function getCompanies() {
   return getJson<{ companies: CompanyRow[] }>("/api/companies");
 }
 
-export async function createCompany(name: string) {
-  return sendJson<{ company: CompanyRow }>("POST", "/api/companies", { name });
+export async function createCompany(name: string, showCommission = true) {
+  return sendJson<{ company: CompanyRow }>("POST", "/api/companies", {
+    name,
+    show_commission: showCommission,
+  });
 }
 
-export async function updateCompany(id: number, name: string) {
-  return sendJson<{ company: CompanyRow }>("PUT", `/api/companies/${id}`, { name });
+export async function updateCompany(id: number, name: string, showCommission: boolean) {
+  return sendJson<{ company: CompanyRow }>("PUT", `/api/companies/${id}`, {
+    name,
+    show_commission: showCommission,
+  });
 }
 
 export async function deleteCompany(id: number) {

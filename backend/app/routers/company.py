@@ -39,7 +39,7 @@ def companies_list() -> dict[str, Any]:
 @router.post("")
 def companies_create(body: CompanyCreate) -> dict[str, Any]:
     try:
-        row = insert_company(body.name.strip())
+        row = insert_company(body.name.strip(), body.show_commission)
     except psycopg2.IntegrityError:
         raise HTTPException(status_code=409, detail="That company already exists.")
     return {"company": _serialize(row)}
@@ -62,7 +62,7 @@ def companies_reorder(body: CompanyReorder) -> dict[str, Any]:
 @router.put("/{company_id}")
 def companies_update(company_id: int, body: CompanyUpdate) -> dict[str, Any]:
     try:
-        row = update_company(company_id, body.name.strip())
+        row = update_company(company_id, body.name.strip(), body.show_commission)
     except psycopg2.IntegrityError:
         raise HTTPException(status_code=409, detail="That company already exists.")
     if row is None:

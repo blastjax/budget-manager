@@ -2530,7 +2530,7 @@ def delete_app_user(user_id: int) -> bool:
             return cur.rowcount > 0
 
 
-_COMPANY_PUBLIC_COLS = "id, name, created_at, sort_order"
+_COMPANY_PUBLIC_COLS = "id, name, created_at, sort_order, show_commission"
 
 
 def list_companies() -> list[dict[str, Any]]:
@@ -2543,7 +2543,7 @@ def list_companies() -> list[dict[str, Any]]:
             return [_row_to_dict(cur, r) for r in cur.fetchall()]
 
 
-def insert_company(name: str) -> dict[str, Any]:
+def insert_company(name: str, show_commission: bool = True) -> dict[str, Any]:
     """Insert one company at the end of the order and return its row.
 
     Raises ``psycopg2.IntegrityError`` if ``name`` (case-insensitively)
@@ -2553,11 +2553,11 @@ def insert_company(name: str) -> dict[str, Any]:
         with db_cursor(conn) as cur:
             cur.execute(
                 f"""
-                INSERT INTO company (name, sort_order)
-                VALUES (?, COALESCE((SELECT MAX(sort_order) FROM company), -1) + 1)
+                INSERT INTO company (name, sort_order, show_commission)
+                VALUES (?, COALESCE((SELECT MAX(sort_order) FROM company), -1) + 1, ?)
                 RETURNING {_COMPANY_PUBLIC_COLS}
                 """,
-                (name,),
+                (name, show_commission),
             )
             return _row_to_dict(cur, cur.fetchone())
 
@@ -2591,17 +2591,19 @@ def reorder_companies(ordered_ids: list[int]) -> list[dict[str, Any]] | None:
             return [_row_to_dict(cur, r) for r in cur.fetchall()]
 
 
-def update_company(company_id: int, name: str) -> dict[str, Any] | None:
-    """Rename a company and return its refreshed row (or ``None`` if no such
-    company). Raises ``psycopg2.IntegrityError`` on a name collision."""
+def update_company(
+    company_id: int, name: str, show_commission: bool = True
+) -> dict[str, Any] | None:
+    """Rename/retag a company and return its refreshed row (or ``None`` if no
+    such company). Raises ``psycopg2.IntegrityError`` on a name collision."""
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 f"""
-                UPDATE company SET name = ? WHERE id = ?
+                UPDATE company SET name = ?, show_commission = ? WHERE id = ?
                 RETURNING {_COMPANY_PUBLIC_COLS}
                 """,
-                (name, company_id),
+                (name, show_commission, company_id),
             )
             row = cur.fetchone()
             return _row_to_dict(cur, row) if row else None

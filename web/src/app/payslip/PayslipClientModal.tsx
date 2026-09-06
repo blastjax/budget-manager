@@ -80,6 +80,8 @@ export function PayslipClientModal({
     }
     setNav(null);
   };
+  const showCommission =
+    companies.find((c) => c.name === modalForm.company)?.show_commission ?? true;
   return (
     <Modal
       open
@@ -473,6 +475,7 @@ export function PayslipClientModal({
                     setForm={setModalForm}
                     companies={companies}
                     disabled={saving}
+                    showCommission={showCommission}
                   />
                   {error && (
                     <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">
@@ -530,6 +533,7 @@ export function PayslipClientModal({
                     disabled={saving}
                     lockPeriod
                     lockCompany
+                    showCommission={showCommission}
                   />
                   {error && (
                     <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">
