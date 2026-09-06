@@ -529,6 +529,7 @@ export function PayslipClientModal({
                     companies={companies}
                     disabled={saving}
                     lockPeriod
+                    lockCompany
                   />
                   {error && (
                     <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">

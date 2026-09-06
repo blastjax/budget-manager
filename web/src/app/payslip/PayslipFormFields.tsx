@@ -14,6 +14,10 @@ export function PayslipFormFields({
   companies,
   disabled,
   lockPeriod,
+  /** Fixes Company to whatever `form.company` already is (no picking a
+   * different one) — used when adding a payslip from a company-scoped page,
+   * where the company is already decided by which page you're on. */
+  lockCompany,
   /** When true, half of month is always 1st or 2nd (no blank option). */
   requirePeriodHalf,
   /** Set false to hide Period year / Month — used when editing a default
@@ -30,6 +34,7 @@ export function PayslipFormFields({
   companies?: CompanyRow[];
   disabled?: boolean;
   lockPeriod?: boolean;
+  lockCompany?: boolean;
   requirePeriodHalf?: boolean;
   showPeriodYearMonth?: boolean;
 }) {
@@ -128,7 +133,7 @@ export function PayslipFormFields({
               onChange={(e) =>
                 setForm((f) => ({ ...f, company: e.target.value }))
               }
-              disabled={disabled}
+              disabled={disabled || lockCompany}
               required
             >
               {!companies.some((c) => c.name === form.company) && (
