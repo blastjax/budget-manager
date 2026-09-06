@@ -129,6 +129,9 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
   const [modalForm, setModalForm] = useState<FormState>(emptyForm());
   const [showGross, setShowGross] = useState(true);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  // Bulk/less-common actions tucked behind one toggle instead of competing
+  // with the page's actual content for attention (same pattern as Lotto).
+  const [showDataTools, setShowDataTools] = useState(false);
   const modalFormRef = useRef(modalForm);
   modalFormRef.current = modalForm;
   const navRef = useRef(nav);
@@ -231,6 +234,21 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
     }
   };
 
+  /** Data tools' "+ Add payslip" — opens the add modal without a calendar
+   * slot to anchor it to, so period year/month/half start editable (today's
+   * date is just a starting point, not a lock). */
+  const openAddPayslipFreeform = () => {
+    const today = new Date();
+    const half: 1 | 2 = today.getDate() <= 15 ? 1 : 2;
+    setNav({
+      screen: "add",
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+      half,
+      freeform: true,
+    });
+  };
+
   const goBack = () => {
     setNav((n) => {
       if (!n) return null;
@@ -306,7 +324,14 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
     setError(null);
     try {
       const body = formToCreateBody(modalForm);
-      const existing = rowsForSlot(rows, nav.year, nav.month, nav.half)[0];
+      // The period fields are editable when the modal was opened freeform
+      // (Data tools), so what actually gets saved can differ from the slot
+      // the modal was opened for — check for a collision, and navigate back,
+      // against what's in the form rather than the original nav.
+      const year = body.period_year ?? nav.year;
+      const month = body.period_month ?? nav.month;
+      const half = (body.period_half ?? nav.half) as 1 | 2;
+      const existing = rowsForSlot(rows, year, month, half)[0];
       if (existing) {
         const updated = await updatePayslip(existing.id, body);
         upsertRow(updated);
@@ -317,12 +342,7 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
       const fresh = await createPayslip(body);
       upsertRow(fresh);
       clearPayslipModalDraft(nav);
-      setNav({
-        screen: "slot",
-        year: nav.year,
-        month: nav.month,
-        half: nav.half,
-      });
+      setNav({ screen: "slot", year, month, half });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -428,14 +448,39 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
 
   return (
     <div className={PAGE_CONTAINER_CLASSES}>
-      <PageHeader
-        title={`${company} Payslip`}
-        description={
-          <>
-            Browse payslips by year and month, split by pay period.
-          </>
-        }
-      />
+      <header>
+        <PageHeader
+          title={`${company} Payslip`}
+          description={
+            <>
+              Browse payslips by year and month, split by pay period.
+            </>
+          }
+          actions={
+            <button
+              type="button"
+              className={ACTION_BUTTON_CLASSES}
+              aria-expanded={showDataTools}
+              onClick={() => setShowDataTools((v) => !v)}
+            >
+              Data tools <span aria-hidden>{showDataTools ? "▴" : "▾"}</span>
+            </button>
+          }
+        />
+
+        {showDataTools && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={`${ACTION_BUTTON_CLASSES} px-3 py-1.5 text-sm`}
+              onClick={openAddPayslipFreeform}
+              title="Add a payslip for any year/month, without picking a calendar slot first"
+            >
+              + Add payslip
+            </button>
+          </div>
+        )}
+      </header>
 
       {error && (
         <div className={ERROR_ALERT_CLASSES} role="alert">

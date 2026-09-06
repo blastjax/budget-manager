@@ -509,7 +509,9 @@ export function PayslipClientModal({
               <>
                 <div className="mb-4 flex items-start justify-between gap-2">
                   <h2 className="text-lg font-semibold text-ink">
-                    New · {slotTitle(nav.year, nav.month, nav.half)}
+                    {nav.freeform
+                      ? "New payslip"
+                      : `New · ${slotTitle(nav.year, nav.month, nav.half)}`}
                   </h2>
                   <button
                     type="button"
@@ -531,7 +533,7 @@ export function PayslipClientModal({
                     setForm={setModalForm}
                     companies={companies}
                     disabled={saving}
-                    lockPeriod
+                    lockPeriod={!nav.freeform}
                     lockCompany
                     showCommission={showCommission}
                   />
