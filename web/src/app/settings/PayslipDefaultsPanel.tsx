@@ -185,6 +185,7 @@ export function PayslipDefaultsPanel() {
               form={displayedForm}
               setForm={setDisplayedForm}
               requirePeriodHalf
+              showPeriodYearMonth={false}
             />
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-3">

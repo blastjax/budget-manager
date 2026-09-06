@@ -16,6 +16,11 @@ export function PayslipFormFields({
   lockPeriod,
   /** When true, half of month is always 1st or 2nd (no blank option). */
   requirePeriodHalf,
+  /** Set false to hide Period year / Month — used when editing a default
+   * *template* (Settings → Payslip defaults), where only the half matters:
+   * the year/month get overwritten by the actual slot every time the
+   * template is applied. */
+  showPeriodYearMonth = true,
 }: {
   form: FormState;
   setForm: Dispatch<SetStateAction<FormState>>;
@@ -26,6 +31,7 @@ export function PayslipFormFields({
   disabled?: boolean;
   lockPeriod?: boolean;
   requirePeriodHalf?: boolean;
+  showPeriodYearMonth?: boolean;
 }) {
   const onAmountBlur =
     (key: keyof FormState) => (e: FocusEvent<HTMLInputElement>) => {
@@ -136,37 +142,41 @@ export function PayslipFormFields({
             </select>
           </label>
         )}
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-ink-2">Period year</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            className={INPUT_CLASSES}
-            value={form.period_year}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, period_year: e.target.value }))
-            }
-            disabled={disabled || lockPeriod}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-ink-2">Month</span>
-          <select
-            className={INPUT_CLASSES}
-            value={form.period_month}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, period_month: e.target.value }))
-            }
-            disabled={disabled || lockPeriod}
-          >
-            <option value="">—</option>
-            {MONTHS.map((m) => (
-              <option key={m} value={String(m)}>
-                {MONTH_NAMES_FULL[m - 1]}
-              </option>
-            ))}
-          </select>
-        </label>
+        {showPeriodYearMonth && (
+          <>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-2">Period year</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                className={INPUT_CLASSES}
+                value={form.period_year}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, period_year: e.target.value }))
+                }
+                disabled={disabled || lockPeriod}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-2">Month</span>
+              <select
+                className={INPUT_CLASSES}
+                value={form.period_month}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, period_month: e.target.value }))
+                }
+                disabled={disabled || lockPeriod}
+              >
+                <option value="">—</option>
+                {MONTHS.map((m) => (
+                  <option key={m} value={String(m)}>
+                    {MONTH_NAMES_FULL[m - 1]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-ink-2">Half of month</span>
           <select
