@@ -23,3 +23,9 @@ class CompanyUpdate(BaseModel):
         if not self.name.strip():
             raise ValueError("Company name cannot be blank.")
         return self
+
+
+class CompanyReorder(BaseModel):
+    """Every company id, in the desired display order (top to bottom)."""
+
+    ids: list[int] = Field(..., min_length=1)

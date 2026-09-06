@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import {
   createCompany,
   deleteCompany,
   getCompanies,
+  reorderCompanies,
   updateCompany,
   type CompanyRow,
 } from "@/lib/api";
@@ -35,6 +36,7 @@ export function CompaniesSettingsPanel() {
   const [savingEdit, setSavingEdit] = useState(false);
 
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
+  const [reorderError, setReorderError] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -119,6 +121,47 @@ export function CompaniesSettingsPanel() {
     }
   }
 
+  function handleCardDragStart(e: DragEvent<HTMLLIElement>, company: CompanyRow) {
+    const el = e.target as HTMLElement | null;
+    if (el?.closest("input, textarea, button, select, option")) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData("text/plain", String(company.id));
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleCardDragOver(e: DragEvent<HTMLLIElement>) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  /** Reorders locally right away, then persists — reverting on failure so the
+   * list never quietly disagrees with the sidebar for long. */
+  async function handleCardDrop(e: DragEvent<HTMLLIElement>, onto: CompanyRow) {
+    e.preventDefault();
+    const fromId = Number(e.dataTransfer.getData("text/plain"));
+    if (!Number.isFinite(fromId) || fromId === onto.id) return;
+
+    const previous = companies;
+    const next = [...companies];
+    const from = next.findIndex((c) => c.id === fromId);
+    const to = next.findIndex((c) => c.id === onto.id);
+    if (from < 0 || to < 0) return;
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setCompanies(next);
+    setReorderError(null);
+
+    try {
+      const res = await reorderCompanies(next.map((c) => c.id));
+      setCompanies(res.companies);
+    } catch (e: unknown) {
+      setCompanies(previous);
+      setReorderError(e instanceof Error ? e.message : "Failed to save the new order.");
+    }
+  }
+
   return (
     <section className={CARD_CLASSES}>
       <h2 className="text-lg font-medium text-ink">Companies</h2>
@@ -136,9 +179,21 @@ export function CompaniesSettingsPanel() {
         ) : companies.length === 0 ? (
           <div className={DASHED_EMPTY_CLASSES}>No companies yet.</div>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-line dark:divide-zinc-900">
-            {companies.map((company) => (
-              <li key={company.id} className="p-4">
+          <>
+            {reorderError && (
+              <div className={`mb-3 ${ERROR_ALERT_CLASSES}`}>{reorderError}</div>
+            )}
+            <ul className="divide-y divide-zinc-200 rounded-lg border border-line dark:divide-zinc-900">
+              {companies.map((company) => (
+                <li
+                  key={company.id}
+                  className="cursor-grab p-4 active:cursor-grabbing"
+                  title="Drag to reorder"
+                  draggable
+                  onDragStart={(e) => handleCardDragStart(e, company)}
+                  onDragOver={handleCardDragOver}
+                  onDrop={(e) => void handleCardDrop(e, company)}
+                >
                 {editingId === company.id ? (
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1">
@@ -194,9 +249,10 @@ export function CompaniesSettingsPanel() {
                     </div>
                   </div>
                 )}
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
 

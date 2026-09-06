@@ -11,11 +11,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.deps import require_db
-from app.schemas.company import CompanyCreate, CompanyUpdate
+from app.schemas.company import CompanyCreate, CompanyReorder, CompanyUpdate
 from db import (
     delete_company,
     insert_company,
     list_companies,
+    reorder_companies,
     update_company,
 )
 
@@ -42,6 +43,20 @@ def companies_create(body: CompanyCreate) -> dict[str, Any]:
     except psycopg2.IntegrityError:
         raise HTTPException(status_code=409, detail="That company already exists.")
     return {"company": _serialize(row)}
+
+
+@router.put("/reorder")
+def companies_reorder(body: CompanyReorder) -> dict[str, Any]:
+    """Registered ahead of PUT /{company_id} -- Starlette matches routes by
+    path pattern before FastAPI tries to coerce {company_id} to int, so
+    "reorder" would otherwise 422 there instead of reaching this handler."""
+    rows = reorder_companies(body.ids)
+    if rows is None:
+        raise HTTPException(
+            status_code=400,
+            detail="ids must list every company id exactly once.",
+        )
+    return {"companies": [_serialize(r) for r in rows]}
 
 
 @router.put("/{company_id}")

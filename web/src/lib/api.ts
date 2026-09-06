@@ -1174,6 +1174,7 @@ export type CompanyRow = {
   id: number;
   name: string;
   created_at: string;
+  sort_order: number;
 };
 
 export async function getCompanies() {
@@ -1190,6 +1191,14 @@ export async function updateCompany(id: number, name: string) {
 
 export async function deleteCompany(id: number) {
   return sendJson<{ ok: boolean }>("DELETE", `/api/companies/${id}`);
+}
+
+/** Persists a new display order — `ids` must list every company id exactly
+ * once, top to bottom. Drives both the Companies list and the sidebar's
+ * per-company Payslip entries, since both just render `getCompanies()`'s
+ * order as-is. */
+export async function reorderCompanies(ids: number[]) {
+  return sendJson<{ companies: CompanyRow[] }>("PUT", "/api/companies/reorder", { ids });
 }
 
 /** A trip is filed under an entry year + start/end month (like a journal

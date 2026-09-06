@@ -2530,21 +2530,21 @@ def delete_app_user(user_id: int) -> bool:
             return cur.rowcount > 0
 
 
-_COMPANY_PUBLIC_COLS = "id, name, created_at"
+_COMPANY_PUBLIC_COLS = "id, name, created_at, sort_order"
 
 
 def list_companies() -> list[dict[str, Any]]:
-    """All companies, alphabetical (case-insensitive, like app_user)."""
+    """All companies, in their drag-to-reorder order (Settings → Companies)."""
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
-                f"SELECT {_COMPANY_PUBLIC_COLS} FROM company ORDER BY LOWER(name) ASC"
+                f"SELECT {_COMPANY_PUBLIC_COLS} FROM company ORDER BY sort_order ASC"
             )
             return [_row_to_dict(cur, r) for r in cur.fetchall()]
 
 
 def insert_company(name: str) -> dict[str, Any]:
-    """Insert one company and return its row.
+    """Insert one company at the end of the order and return its row.
 
     Raises ``psycopg2.IntegrityError`` if ``name`` (case-insensitively)
     already exists -- the caller turns that into a 409.
@@ -2553,13 +2553,42 @@ def insert_company(name: str) -> dict[str, Any]:
         with db_cursor(conn) as cur:
             cur.execute(
                 f"""
-                INSERT INTO company (name)
-                VALUES (?)
+                INSERT INTO company (name, sort_order)
+                VALUES (?, COALESCE((SELECT MAX(sort_order) FROM company), -1) + 1)
                 RETURNING {_COMPANY_PUBLIC_COLS}
                 """,
                 (name,),
             )
             return _row_to_dict(cur, cur.fetchone())
+
+
+def reorder_companies(ordered_ids: list[int]) -> list[dict[str, Any]] | None:
+    """Renumber ``sort_order`` so companies appear in ``ordered_ids`` order.
+
+    Returns ``None`` if ``ordered_ids`` is not exactly the set of existing
+    company ids (the caller turns that into a 400) -- otherwise the freshly
+    reordered list, same shape as ``list_companies``.
+    """
+    if not ordered_ids:
+        return None
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute("SELECT id FROM company")
+            existing_ids = {r[0] for r in cur.fetchall()}
+            if set(ordered_ids) != existing_ids or len(ordered_ids) != len(existing_ids):
+                return None
+            # Push every sort_order into a non-overlapping range first so the
+            # per-row UPDATEs below can renumber freely without tripping the
+            # UNIQUE (sort_order) index mid-statement.
+            cur.execute("UPDATE company SET sort_order = id + 1000000")
+            for i, cid in enumerate(ordered_ids):
+                cur.execute(
+                    "UPDATE company SET sort_order = ? WHERE id = ?", (i, int(cid))
+                )
+            cur.execute(
+                f"SELECT {_COMPANY_PUBLIC_COLS} FROM company ORDER BY sort_order ASC"
+            )
+            return [_row_to_dict(cur, r) for r in cur.fetchall()]
 
 
 def update_company(company_id: int, name: str) -> dict[str, Any] | None:
