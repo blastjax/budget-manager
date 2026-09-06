@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 import cache
 from app.deps import require_db
@@ -46,12 +46,12 @@ def _fallback_form(half: int) -> dict[str, Any]:
 
 
 @router.get("/api/payslip-defaults")
-def payslip_defaults_get() -> dict[str, Any]:
-    key = "payslip_default:bundle"
+def payslip_defaults_get(company: str = Query(..., min_length=1)) -> dict[str, Any]:
+    key = f"payslip_default:bundle:{company}"
     hit = cache.get(key)
     if hit is not None:
         return hit
-    saved = get_payslip_defaults()
+    saved = get_payslip_defaults(company)
     result = {
         "formFirst": saved["form_first"] or _fallback_form(1),
         "formSecond": saved["form_second"] or _fallback_form(2),
@@ -63,8 +63,9 @@ def payslip_defaults_get() -> dict[str, Any]:
 
 @router.put("/api/payslip-defaults")
 def payslip_defaults_put(body: PayslipDefaultsUpsert) -> dict[str, Any]:
+    company = body.company.strip()
     save_payslip_defaults(
-        body.form_first.model_dump(), body.form_second.model_dump(), body.settings_half
+        company, body.form_first.model_dump(), body.form_second.model_dump(), body.settings_half
     )
     # Echo back what was just saved instead of re-reading through the (not
     # yet invalidated) cache — the app-wide write middleware busts it after

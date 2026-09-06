@@ -1,6 +1,7 @@
 import { getPayslipDefaults, savePayslipDefaults } from "@/lib/api";
 
 export type FormState = {
+  company: string;
   period_year: string;
   period_month: string;
   period_half: "" | "1" | "2";
@@ -24,6 +25,7 @@ export const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 export function emptyForm(): FormState {
   return {
+    company: "",
     period_year: "",
     period_month: "",
     period_half: "",
@@ -105,7 +107,7 @@ function formSecondFallback(): FormState {
   return { ...defaultFormWithBuiltin(), period_half: "2" };
 }
 
-/** Same values `loadPayslipDefaultsBundle()` returns before the database fetch resolves (SSR-safe). */
+/** Same values `loadPayslipDefaultsBundle(company)` returns before the database fetch resolves (SSR-safe). */
 export function getPayslipDefaultsBundleFallback(): PayslipDefaultsBundle {
   return {
     formFirst: formFirstFallback(),
@@ -220,41 +222,53 @@ function bundleFromApiResponse(resp: {
   };
 }
 
-function stripHalf(f: FormState): Omit<FormState, "period_half"> {
-  const { period_half: _period_half, ...rest } = f;
+/** Fields that are per-payslip choices, not part of a reusable default
+ * template: `period_half` is fixed by which slot the template is for, and
+ * `company` isn't something a saved template should carry (the backend's
+ * PayslipDefaultForm doesn't even have the column). */
+function stripHalf(f: FormState): Omit<FormState, "period_half" | "company"> {
+  const { period_half: _period_half, company: _company, ...rest } = f;
   return rest;
 }
 
-let cachedDefaultsBundle: PayslipDefaultsBundle | null = null;
+/** One in-memory cache entry per company — each company has its own pair of
+ * half templates and its own active-half toggle. */
+const cachedDefaultsBundleByCompany = new Map<string, PayslipDefaultsBundle>();
 
 /**
- * Best-known form defaults, read synchronously from an in-memory cache
- * populated by `refreshPayslipDefaultsBundle()`. Falls back to the builtin
- * defaults (SSR-safe) until that first fetch from the database resolves.
+ * Best-known form defaults for `company`, read synchronously from an
+ * in-memory cache populated by `refreshPayslipDefaultsBundle()`. Falls back
+ * to the builtin defaults (SSR-safe) until that company's first fetch from
+ * the database resolves.
  */
-export function loadPayslipDefaultsBundle(): PayslipDefaultsBundle {
-  return cachedDefaultsBundle ?? getPayslipDefaultsBundleFallback();
+export function loadPayslipDefaultsBundle(company: string): PayslipDefaultsBundle {
+  return cachedDefaultsBundleByCompany.get(company) ?? getPayslipDefaultsBundleFallback();
 }
 
 /**
- * Fetches the saved defaults bundle from the database and refreshes the
- * in-memory cache `loadPayslipDefaultsBundle()` reads from. The first time
- * this resolves to an unsaved (still-fallback) database bundle, it migrates
- * any pre-database browser-local values found so they aren't silently lost.
+ * Fetches `company`'s saved defaults bundle from the database and refreshes
+ * the in-memory cache `loadPayslipDefaultsBundle()` reads from. The first
+ * time this resolves to an unsaved (still-fallback) database bundle, it
+ * migrates any pre-database browser-local values found so they aren't
+ * silently lost — that legacy key predates companies entirely, so this only
+ * ever matters for whichever company happens to load first with nothing
+ * saved yet.
  */
-export async function refreshPayslipDefaultsBundle(): Promise<PayslipDefaultsBundle> {
+export async function refreshPayslipDefaultsBundle(
+  company: string,
+): Promise<PayslipDefaultsBundle> {
   let bundle: PayslipDefaultsBundle;
   try {
-    bundle = bundleFromApiResponse(await getPayslipDefaults());
+    bundle = bundleFromApiResponse(await getPayslipDefaults(company));
   } catch {
-    return loadPayslipDefaultsBundle();
+    return loadPayslipDefaultsBundle(company);
   }
 
   if (bundlesEqual(bundle, getPayslipDefaultsBundleFallback())) {
     const legacy = tryLoadLegacyLocalBundle();
     if (legacy && !bundlesEqual(legacy, getPayslipDefaultsBundleFallback())) {
       bundle = legacy;
-      void savePayslipDefaultsBundle(legacy).catch(() => {
+      void savePayslipDefaultsBundle(company, legacy).catch(() => {
         /* migration best-effort; keep using the legacy values locally either way */
       });
     }
@@ -265,21 +279,23 @@ export async function refreshPayslipDefaultsBundle(): Promise<PayslipDefaultsBun
     /* ignore */
   }
 
-  cachedDefaultsBundle = bundle;
+  cachedDefaultsBundleByCompany.set(company, bundle);
   return bundle;
 }
 
-/** Saves both half templates and the active-half toggle to the database. */
+/** Saves both half templates and the active-half toggle for `company` to the database. */
 export async function savePayslipDefaultsBundle(
+  company: string,
   bundle: PayslipDefaultsBundle,
 ): Promise<PayslipDefaultsBundle> {
   const resp = await savePayslipDefaults({
+    company,
     form_first: stripHalf(bundle.formFirst),
     form_second: stripHalf(bundle.formSecond),
     settings_half: bundle.settingsHalf,
   });
   const saved = bundleFromApiResponse(resp);
-  cachedDefaultsBundle = saved;
+  cachedDefaultsBundleByCompany.set(company, saved);
   notifyPayslipDefaultsSaved();
   return saved;
 }
@@ -289,8 +305,10 @@ export function initialAddPayslipForm(
   month: number,
   half: 1 | 2,
   defaultsForHalf: FormState,
+  company: string,
 ): FormState {
   const period = {
+    company,
     period_year: String(year),
     period_month: String(month),
     period_half: String(half) as "1" | "2",

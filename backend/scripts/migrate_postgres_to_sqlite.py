@@ -21,13 +21,12 @@ same shape and formatting as the source database:
 NOT NULL / CHECK constraints from the Postgres DDL are deliberately left off
 the SQLite copy. This is a data dump, not a live schema the app writes to,
 and the cloud database has some rows that predate a constraint being added
-(e.g. a legacy ``payslip.employee_hdmf`` column that a rename migration never
-actually dropped, or ``monthly_expense`` rows with a NULL ``period_half`` from
-before that column was backfilled and made NOT NULL). Enforcing the
-constraints here would make the copy reject real rows instead of preserving
-them as they actually are in Postgres. Columns present on the live source
-table but missing from this script's schema (schema drift, like
-``employee_hdmf`` above) are detected and added automatically at copy time.
+(e.g. ``monthly_expense`` rows with a NULL ``period_half`` from before that
+column was backfilled and made NOT NULL). Enforcing the constraints here
+would make the copy reject real rows instead of preserving them as they
+actually are in Postgres. Columns present on the live source table but
+missing from this script's schema (schema drift) are detected and added
+automatically at copy time.
 
 Usage (from the repo root, with the venv active):
 

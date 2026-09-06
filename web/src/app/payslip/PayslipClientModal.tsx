@@ -14,6 +14,7 @@ import {
   deletePayslipPdf,
   payslipPdfUrl,
   uploadPayslipPdf,
+  type CompanyRow,
   type PayslipRow,
 } from "@/lib/api";
 import { PayslipFormFields } from "./PayslipFormFields";
@@ -48,6 +49,7 @@ export function PayslipClientModal({
   rows,
   modalForm,
   setModalForm,
+  companies,
   saving,
   error,
   modalFormRef,
@@ -62,6 +64,7 @@ export function PayslipClientModal({
   rows: PayslipRow[];
   modalForm: FormState;
   setModalForm: Dispatch<SetStateAction<FormState>>;
+  companies: CompanyRow[];
   saving: boolean;
   error: string | null;
   modalFormRef: MutableRefObject<FormState>;
@@ -468,6 +471,7 @@ export function PayslipClientModal({
                   <PayslipFormFields
                     form={modalForm}
                     setForm={setModalForm}
+                    companies={companies}
                     disabled={saving}
                   />
                   {error && (
@@ -522,6 +526,7 @@ export function PayslipClientModal({
                   <PayslipFormFields
                     form={modalForm}
                     setForm={setModalForm}
+                    companies={companies}
                     disabled={saving}
                     lockPeriod
                   />

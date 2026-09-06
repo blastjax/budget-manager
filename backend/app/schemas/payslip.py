@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 
 class PayslipCreate(BaseModel):
+    company: str = Field(..., min_length=1, max_length=100)
     total: float | None = None
     commission: float | None = None
     reimbursement: float | None = None
@@ -26,3 +27,9 @@ class PayslipCreate(BaseModel):
         default=None,
         validation_alias=AliasChoices("pag_ibig", "employee_hdmf"),
     )
+
+    @model_validator(mode="after")
+    def _check_company(self) -> "PayslipCreate":
+        if not self.company.strip():
+            raise ValueError("Company cannot be blank.")
+        return self

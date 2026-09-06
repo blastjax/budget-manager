@@ -78,6 +78,7 @@ def payslip_create(body: PayslipCreate) -> dict[str, Any]:
         body.sss_contribution,
         body.philhealth,
         body.pag_ibig,
+        company=body.company.strip(),
     )
     return _serialize_payslip(row)
 
@@ -134,6 +135,7 @@ def payslip_replace(payslip_id: int, body: PayslipCreate) -> dict[str, Any]:
         body.sss_contribution,
         body.philhealth,
         body.pag_ibig,
+        company=body.company.strip(),
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Payslip not found.")

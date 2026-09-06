@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 
 class PayslipDefaultForm(BaseModel):
@@ -27,6 +27,13 @@ class PayslipDefaultForm(BaseModel):
 
 
 class PayslipDefaultsUpsert(BaseModel):
+    company: str = Field(..., min_length=1, max_length=100)
     form_first: PayslipDefaultForm
     form_second: PayslipDefaultForm
     settings_half: Literal["first", "second"]
+
+    @model_validator(mode="after")
+    def _check_company(self) -> "PayslipDefaultsUpsert":
+        if not self.company.strip():
+            raise ValueError("Company cannot be blank.")
+        return self

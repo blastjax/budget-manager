@@ -10,10 +10,11 @@ import {
   SEGMENTED_WRAPPER_CLASSES,
 } from "@/lib/ui";
 import { ChartColorsSettingsPanel } from "./ChartColorsSettingsPanel";
+import { CompaniesSettingsPanel } from "./CompaniesSettingsPanel";
 import { PayslipDefaultsPanel } from "./PayslipDefaultsPanel";
 import { UsersSettingsPanel } from "./UsersSettingsPanel";
 
-type SettingsTab = "payslip" | "charts" | "users";
+type SettingsTab = "payslip" | "companies" | "charts" | "users";
 
 export default function SettingsClient() {
   const [tab, setTab] = useState<SettingsTab>("payslip");
@@ -22,7 +23,7 @@ export default function SettingsClient() {
     <div className={PAGE_CONTAINER_CLASSES}>
       <PageHeader
         title="Settings"
-        description={<>Manage payslip defaults, chart colors, and users.</>}
+        description={<>Manage payslip defaults, companies, chart colors, and users.</>}
         actions={
           <div
             className={`shrink-0 ${SEGMENTED_WRAPPER_CLASSES}`}
@@ -41,6 +42,19 @@ export default function SettingsClient() {
               onClick={() => setTab("payslip")}
             >
               Payslip
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "companies"}
+              className={`${SEGMENTED_BUTTON_CLASSES} ${
+                tab === "companies"
+                  ? SEGMENTED_BUTTON_ACTIVE_CLASSES
+                  : SEGMENTED_BUTTON_INACTIVE_CLASSES
+              }`}
+              onClick={() => setTab("companies")}
+            >
+              Companies
             </button>
             <button
               type="button"
@@ -73,6 +87,7 @@ export default function SettingsClient() {
       />
 
       {tab === "payslip" && <PayslipDefaultsPanel />}
+      {tab === "companies" && <CompaniesSettingsPanel />}
       {tab === "charts" && <ChartColorsSettingsPanel />}
       {tab === "users" && <UsersSettingsPanel />}
     </div>

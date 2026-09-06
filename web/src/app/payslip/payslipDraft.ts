@@ -77,6 +77,7 @@ export function parseOptYear(s: string): number | null {
 
 export function formFromRow(r: PayslipRow): FormState {
   return {
+    company: r.company,
     period_year:
       r.period_year != null && Number.isFinite(r.period_year)
         ? String(Math.trunc(r.period_year))
@@ -106,6 +107,7 @@ export function formFromRow(r: PayslipRow): FormState {
 
 export function formToCreateBody(f: FormState): PayslipCreateBody {
   return {
+    company: f.company.trim(),
     period_year: parseOptYear(f.period_year),
     period_month:
       f.period_month.trim() === ""

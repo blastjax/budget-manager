@@ -94,6 +94,7 @@ async function sendJson<T>(
 
 export type PayslipRow = {
   id: number;
+  company: string;
   total: number | null;
   commission: number | null;
   reimbursement: number | null;
@@ -116,6 +117,7 @@ export type PayslipRow = {
 };
 
 export type PayslipCreateBody = {
+  company: string;
   total?: number | null;
   commission?: number | null;
   reimbursement?: number | null;
@@ -874,11 +876,12 @@ export type PayslipDefaultsBundleDto = {
   settingsHalf: string;
 };
 
-export async function getPayslipDefaults() {
-  return getJson<PayslipDefaultsBundleDto>("/api/payslip-defaults");
+export async function getPayslipDefaults(company: string) {
+  return getJson<PayslipDefaultsBundleDto>("/api/payslip-defaults", { company });
 }
 
 export async function savePayslipDefaults(body: {
+  company: string;
   form_first: PayslipDefaultFormDto;
   form_second: PayslipDefaultFormDto;
   settings_half: "first" | "second";
@@ -1164,6 +1167,29 @@ export async function verifyAppUserPassword(username: string, password: string) 
     username,
     password,
   });
+}
+
+/** A company payslips are tagged under; managed via Settings → Companies. */
+export type CompanyRow = {
+  id: number;
+  name: string;
+  created_at: string;
+};
+
+export async function getCompanies() {
+  return getJson<{ companies: CompanyRow[] }>("/api/companies");
+}
+
+export async function createCompany(name: string) {
+  return sendJson<{ company: CompanyRow }>("POST", "/api/companies", { name });
+}
+
+export async function updateCompany(id: number, name: string) {
+  return sendJson<{ company: CompanyRow }>("PUT", `/api/companies/${id}`, { name });
+}
+
+export async function deleteCompany(id: number) {
+  return sendJson<{ ok: boolean }>("DELETE", `/api/companies/${id}`);
 }
 
 /** A trip is filed under an entry year + start/end month (like a journal

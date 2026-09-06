@@ -529,6 +529,7 @@ _PAYSLIP_RETURN_COLS = """
     thirteenth_month, basic_salary,
     period_year, period_month, period_half, notes,
     withholding_tax, sss_contribution, philhealth, pag_ibig,
+    company,
     (pdf_data IS NOT NULL) AS has_pdf,
     created_at
 """
@@ -552,8 +553,17 @@ def insert_payslip(
     sss_contribution: float | None = None,
     philhealth: float | None = None,
     pag_ibig: float | None = None,
+    *,
+    company: str,
 ) -> dict[str, Any]:
-    """Insert and return the full row (single round trip thanks to ``RETURNING``)."""
+    """Insert and return the full row (single round trip thanks to ``RETURNING``).
+
+    ``company`` is required -- validated non-blank by ``PayslipCreate`` before
+    this is ever called. The bulk JSON-import path (``insert_payslips_bulk``)
+    is separate and unaffected: its historical records carry no company at
+    all, so those rows still fall back to the column's own
+    ``DEFAULT 'Sophos'``.
+    """
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
@@ -563,8 +573,9 @@ def insert_payslip(
                     medical_reimbursement, others, mp2, allowances,
                     thirteenth_month, basic_salary,
                     period_year, period_month, period_half, notes,
-                    withholding_tax, sss_contribution, philhealth, pag_ibig
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    withholding_tax, sss_contribution, philhealth, pag_ibig,
+                    company
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING {_PAYSLIP_RETURN_COLS}
                 """,
                 (
@@ -585,6 +596,7 @@ def insert_payslip(
                     sss_contribution,
                     philhealth,
                     pag_ibig,
+                    company,
                 ),
             )
             return _with_bool(_row_to_dict(cur, cur.fetchone()), "has_pdf")
@@ -688,6 +700,8 @@ def update_payslip(
     sss_contribution: float | None = None,
     philhealth: float | None = None,
     pag_ibig: float | None = None,
+    *,
+    company: str,
 ) -> dict[str, Any] | None:
     """Update and return the full row, or ``None`` if no row matched."""
     with get_connection() as conn:
@@ -711,7 +725,8 @@ def update_payslip(
                     withholding_tax = ?,
                     sss_contribution = ?,
                     philhealth = ?,
-                    pag_ibig = ?
+                    pag_ibig = ?,
+                    company = ?
                 WHERE id = ?
                 RETURNING {_PAYSLIP_RETURN_COLS}
                 """,
@@ -733,6 +748,7 @@ def update_payslip(
                     sss_contribution,
                     philhealth,
                     pag_ibig,
+                    company,
                     payslip_id,
                 ),
             )
@@ -2064,20 +2080,27 @@ def _payslip_default_row_to_form(row: dict[str, Any] | None, half: int) -> dict[
     return out
 
 
-def get_payslip_defaults() -> dict[str, Any]:
-    """Saved Settings → Payslip defaults templates, keyed by half (1st/2nd).
+def get_payslip_defaults(company: str) -> dict[str, Any]:
+    """Saved Settings → Payslip defaults templates for one company, keyed by
+    half (1st/2nd).
 
     Returns ``None`` for a half or for ``settings_half`` when nothing has
-    been saved yet — the router fills in the builtin fallback."""
+    been saved yet for this company — the router fills in the builtin
+    fallback."""
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
-                f"SELECT half, {', '.join(_PAYSLIP_DEFAULT_FORM_COLS)} FROM payslip_default"
+                f"SELECT half, {', '.join(_PAYSLIP_DEFAULT_FORM_COLS)} "
+                "FROM payslip_default WHERE company = ?",
+                (company,),
             )
             rows_by_half = {
                 r["half"]: r for r in (_row_to_dict(cur, row) for row in cur.fetchall())
             }
-            cur.execute("SELECT settings_half FROM payslip_default_settings WHERE id = 1")
+            cur.execute(
+                "SELECT settings_half FROM payslip_default_settings WHERE company = ?",
+                (company,),
+            )
             settings_row = cur.fetchone()
             settings_half = _row_to_dict(cur, settings_row)["settings_half"] if settings_row else None
     return {
@@ -2088,9 +2111,10 @@ def get_payslip_defaults() -> dict[str, Any]:
 
 
 def save_payslip_defaults(
-    form_first: dict[str, Any], form_second: dict[str, Any], settings_half: str
+    company: str, form_first: dict[str, Any], form_second: dict[str, Any], settings_half: str
 ) -> None:
-    """Upsert both half templates and the active-half toggle in one transaction."""
+    """Upsert both half templates and the active-half toggle for one company,
+    in one transaction."""
     cols_sql = ", ".join(_PAYSLIP_DEFAULT_FORM_COLS)
     placeholders_sql = ", ".join("?" for _ in _PAYSLIP_DEFAULT_FORM_COLS)
     updates_sql = ", ".join(f"{c} = excluded.{c}" for c in _PAYSLIP_DEFAULT_FORM_COLS)
@@ -2100,19 +2124,19 @@ def save_payslip_defaults(
                 values = [str(form.get(c) or "") for c in _PAYSLIP_DEFAULT_FORM_COLS]
                 cur.execute(
                     f"""
-                    INSERT INTO payslip_default (half, {cols_sql})
-                    VALUES (?, {placeholders_sql})
-                    ON CONFLICT (half) DO UPDATE SET {updates_sql}
+                    INSERT INTO payslip_default (company, half, {cols_sql})
+                    VALUES (?, ?, {placeholders_sql})
+                    ON CONFLICT (company, half) DO UPDATE SET {updates_sql}
                     """,
-                    (half, *values),
+                    (company, half, *values),
                 )
             cur.execute(
                 """
-                INSERT INTO payslip_default_settings (id, settings_half)
-                VALUES (1, ?)
-                ON CONFLICT (id) DO UPDATE SET settings_half = excluded.settings_half
+                INSERT INTO payslip_default_settings (company, settings_half)
+                VALUES (?, ?)
+                ON CONFLICT (company) DO UPDATE SET settings_half = excluded.settings_half
                 """,
-                (settings_half,),
+                (company, settings_half),
             )
 
 
@@ -2497,6 +2521,78 @@ def delete_app_user(user_id: int) -> bool:
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute("DELETE FROM app_user WHERE id = ?", (user_id,))
+            return cur.rowcount > 0
+
+
+_COMPANY_PUBLIC_COLS = "id, name, created_at"
+
+
+def list_companies() -> list[dict[str, Any]]:
+    """All companies, alphabetical (case-insensitive, like app_user)."""
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                f"SELECT {_COMPANY_PUBLIC_COLS} FROM company ORDER BY LOWER(name) ASC"
+            )
+            return [_row_to_dict(cur, r) for r in cur.fetchall()]
+
+
+def insert_company(name: str) -> dict[str, Any]:
+    """Insert one company and return its row.
+
+    Raises ``psycopg2.IntegrityError`` if ``name`` (case-insensitively)
+    already exists -- the caller turns that into a 409.
+    """
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                f"""
+                INSERT INTO company (name)
+                VALUES (?)
+                RETURNING {_COMPANY_PUBLIC_COLS}
+                """,
+                (name,),
+            )
+            return _row_to_dict(cur, cur.fetchone())
+
+
+def update_company(company_id: int, name: str) -> dict[str, Any] | None:
+    """Rename a company and return its refreshed row (or ``None`` if no such
+    company). Raises ``psycopg2.IntegrityError`` on a name collision."""
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute(
+                f"""
+                UPDATE company SET name = ? WHERE id = ?
+                RETURNING {_COMPANY_PUBLIC_COLS}
+                """,
+                (name, company_id),
+            )
+            row = cur.fetchone()
+            return _row_to_dict(cur, row) if row else None
+
+
+def delete_company(company_id: int) -> bool:
+    """Delete a company, or False if no such id.
+
+    Raises ``ValueError`` (the caller turns that into a 409) if any payslip
+    still carries this company's name -- deletion never cascades into
+    payslip rows.
+    """
+    with get_connection() as conn:
+        with db_cursor(conn) as cur:
+            cur.execute("SELECT name FROM company WHERE id = ?", (company_id,))
+            row = cur.fetchone()
+            if row is None:
+                return False
+            name = row[0]
+            cur.execute("SELECT COUNT(*) FROM payslip WHERE company = ?", (name,))
+            in_use = cur.fetchone()[0]
+            if in_use:
+                raise ValueError(
+                    f'Cannot delete "{name}": {in_use} payslip(s) still use it.'
+                )
+            cur.execute("DELETE FROM company WHERE id = ?", (company_id,))
             return cur.rowcount > 0
 
 

@@ -6,9 +6,11 @@ import {
   apiFetch,
   createPayslip,
   deletePayslip,
+  getCompanies,
   getPayslips,
   payslipPdfUrl,
   updatePayslip,
+  type CompanyRow,
   type PayslipRow,
 } from "@/lib/api";
 import {
@@ -117,9 +119,10 @@ function EyeOffIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-export default function PayslipClient() {
+export default function PayslipClient({ company = "Sophos" }: { company?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<PayslipRow[]>([]);
+  const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [nav, setNav] = useState<Nav | null>(null);
@@ -192,6 +195,15 @@ export default function PayslipClient() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    getCompanies()
+      .then((r) => setCompanies(r.companies))
+      .catch(() => {
+        /* the company select just falls back to showing the row's own
+         * value (see PayslipFormFields) if this never loads */
+      });
+  }, []);
 
   /**
    * Warm each payslip's PDF (browser HTTP cache + backend Redis cache) as
@@ -327,11 +339,12 @@ export default function PayslipClient() {
           n.month,
           n.half,
           payslipDefaultsFormForSlotHalf(b, n.half),
+          company,
         );
       }
       return null;
     },
-    [],
+    [company],
   );
 
   // Sync modal form when entering edit/add (restore session draft if present)
@@ -348,28 +361,28 @@ export default function PayslipClient() {
       }
       setModalForm(formFromRow(nav.row));
     } else {
-      const f = formForNavDefaults(nav, loadPayslipDefaultsBundle());
+      const f = formForNavDefaults(nav, loadPayslipDefaultsBundle(company));
       if (f) setModalForm(f);
     }
-  }, [nav, formForNavDefaults]);
+  }, [nav, formForNavDefaults, company]);
 
   // The in-memory defaults cache starts out as builtin fallback values until
   // this resolves — fetch once on mount and re-apply to an already-open
   // add modal so it doesn't stay stuck showing the fallback.
   useEffect(() => {
-    void refreshPayslipDefaultsBundle().then((b) => {
+    void refreshPayslipDefaultsBundle(company).then((b) => {
       const n = navRef.current;
       if (!n) return;
       const f = formForNavDefaults(n, b);
       if (f) setModalForm(f);
     });
-  }, [formForNavDefaults]);
+  }, [formForNavDefaults, company]);
 
   useEffect(() => {
     const onDefaultsSaved = () => {
       const n = navRef.current;
       if (!n || n.screen !== "add") return;
-      const f = formForNavDefaults(n, loadPayslipDefaultsBundle());
+      const f = formForNavDefaults(n, loadPayslipDefaultsBundle(company));
       if (!f) return;
       clearPayslipModalDraft(n);
       setModalForm(f);
@@ -381,7 +394,7 @@ export default function PayslipClient() {
         onDefaultsSaved,
       );
     };
-  }, [formForNavDefaults]);
+  }, [formForNavDefaults, company]);
 
   useEffect(() => {
     if (!nav || nav.screen !== "detail") return;
@@ -414,7 +427,7 @@ export default function PayslipClient() {
   return (
     <div className={PAGE_CONTAINER_CLASSES}>
       <PageHeader
-        title="Payslip"
+        title={`${company} Payslip`}
         description={
           <>
             Browse payslips by year and month, split by pay period.
@@ -537,6 +550,7 @@ export default function PayslipClient() {
           rows={rows}
           modalForm={modalForm}
           setModalForm={setModalForm}
+          companies={companies}
           saving={saving}
           error={error}
           modalFormRef={modalFormRef}

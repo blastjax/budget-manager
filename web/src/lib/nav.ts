@@ -60,7 +60,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
       {
         href: "/payslip",
-        label: "Payslip",
+        label: "Sophos Payslip",
         icon: DocumentIcon,
         children: [
           { href: "/commission", label: "Commission", icon: TrendingUpIcon },

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dispatch, FocusEvent, SetStateAction } from "react";
+import type { CompanyRow } from "@/lib/api";
 import { MONTH_NAMES_FULL } from "@/lib/dateFormat";
 import { formatAmountOnBlur } from "@/lib/parseFormNumber";
 import { INPUT_CLASSES } from "@/lib/ui";
@@ -10,6 +11,7 @@ import { MONTHS } from "./payslipModalForm";
 export function PayslipFormFields({
   form,
   setForm,
+  companies,
   disabled,
   lockPeriod,
   /** When true, half of month is always 1st or 2nd (no blank option). */
@@ -17,6 +19,10 @@ export function PayslipFormFields({
 }: {
   form: FormState;
   setForm: Dispatch<SetStateAction<FormState>>;
+  /** Managed companies (Settings → Companies) a payslip can be tagged under.
+   * Omit to hide the Company field entirely — used when editing a default
+   * *template* (Settings → Payslip defaults), which isn't tied to a company. */
+  companies?: CompanyRow[];
   disabled?: boolean;
   lockPeriod?: boolean;
   requirePeriodHalf?: boolean;
@@ -107,6 +113,29 @@ export function PayslipFormFields({
   return (
     <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,17.5rem)] lg:items-start lg:gap-8">
       <div className="grid min-w-0 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {companies && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-ink-2">Company</span>
+            <select
+              className={INPUT_CLASSES}
+              value={form.company}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, company: e.target.value }))
+              }
+              disabled={disabled}
+              required
+            >
+              {!companies.some((c) => c.name === form.company) && (
+                <option value={form.company}>{form.company || "—"}</option>
+              )}
+              {companies.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-ink-2">Period year</span>
           <input

@@ -6,6 +6,18 @@ Read-only against SQLite -- it never writes back, and it does not touch
 ``backend/db.py`` or any app code. The app still runs on SQLite after this;
 this script only populates the Postgres side.
 
+This is a point-in-time snapshot of the schema as it existed for that one
+migration, not a living mirror of the Postgres schema -- ``src_counts`` needs
+every table below to also exist in the SQLite file, so a table born straight
+in Postgres after the migration (e.g. ``company``) cannot be added here
+without breaking a re-run; column-level drift since (e.g. ``payslip.company``,
+the retired ``payslip.employee_hdmf``/``payslip.sss``, or
+``payslip_default``/``payslip_default_settings`` gaining a ``company`` column
+and losing their single-tenant keys -- the latter also drops the
+``payslip_default_settings.id`` column SQLite still has) is reflected here for
+documentation but would need the SQLite file to actually match to re-run
+cleanly.
+
 The Postgres schema mirrors the SQLite DDL in ``data/budget.sqlite``
 column-for-column (types, PRIMARY KEY, UNIQUE, CHECK, and FOREIGN KEY):
 
@@ -313,14 +325,13 @@ _SCHEMA: list[tuple[str, str]] = [
         pag_ibig              DOUBLE PRECISION,
         pdf_data              BYTEA,
         created_at            TIMESTAMPTZ(0) DEFAULT CURRENT_TIMESTAMP,
-        employee_hdmf         DOUBLE PRECISION,
-        sss                   DOUBLE PRECISION
+        company               TEXT NOT NULL DEFAULT 'Sophos'
         """,
     ),
     (
         "payslip_default",
         """
-        half                  INTEGER PRIMARY KEY,
+        half                  INTEGER NOT NULL,
         period_year           TEXT NOT NULL DEFAULT '',
         period_month          TEXT NOT NULL DEFAULT '',
         total                 TEXT NOT NULL DEFAULT '',
@@ -338,15 +349,16 @@ _SCHEMA: list[tuple[str, str]] = [
         philhealth            TEXT NOT NULL DEFAULT '',
         pag_ibig              TEXT NOT NULL DEFAULT '',
         updated_at            TIMESTAMPTZ(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (half IN (1, 2))
+        company               TEXT NOT NULL DEFAULT 'Sophos',
+        CHECK (half IN (1, 2)),
+        PRIMARY KEY (company, half)
         """,
     ),
     (
         "payslip_default_settings",
         """
-        id            INTEGER PRIMARY KEY,
         settings_half TEXT NOT NULL DEFAULT 'first',
-        CHECK (id = 1),
+        company       TEXT PRIMARY KEY DEFAULT 'Sophos',
         CHECK (settings_half IN ('first', 'second'))
         """,
     ),
