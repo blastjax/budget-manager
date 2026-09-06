@@ -154,7 +154,7 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
   const load = useCallback(async () => {
     setError(null);
     try {
-      const r = await getPayslips(2000);
+      const r = await getPayslips(2000, company);
       setRows(r.payslips);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load payslips");
@@ -162,7 +162,7 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [company]);
 
   /**
    * Patch the in-memory ``rows`` list instead of re-fetching all 2000 rows

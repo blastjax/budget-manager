@@ -58,15 +58,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
           { href: "/house-payments", label: "House Payments", icon: HomeIcon },
         ],
       },
-      {
-        href: "/payslip",
-        label: "Sophos Payslip",
-        icon: DocumentIcon,
-        children: [
-          { href: "/commission", label: "Commission", icon: TrendingUpIcon },
-          { href: "/salary-stats", label: "Salary Stats", icon: ChartBarIcon },
-        ],
-      },
+      { href: "/commission", label: "Commission", icon: TrendingUpIcon },
+      // One "<Company> Payslip" entry per row from Settings → Companies is
+      // spliced in here at render time (see SidebarNav) -- companies are
+      // data, not something this static map can list ahead of time.
     ],
   },
   {
@@ -98,6 +93,21 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     items: [{ href: "/settings", label: "Settings", icon: SettingsIcon }],
   },
 ];
+
+/** The "<Company> Payslip" nav item for one company (Settings → Companies),
+ * with its own Salary Stats page nested under it. Built at render time in
+ * SidebarNav rather than listed here statically, since companies are data. */
+export function payslipNavItem(company: string): NavItem {
+  const slug = encodeURIComponent(company);
+  return {
+    href: `/payslip/${slug}`,
+    label: `${company} Payslip`,
+    icon: DocumentIcon,
+    children: [
+      { href: `/salary-stats/${slug}`, label: "Salary Stats", icon: ChartBarIcon },
+    ],
+  };
+}
 
 /** Every destination, flattened — parents and sub-pages alike. */
 export type NavDestination = {
@@ -141,6 +151,16 @@ export function matchingNavHref(pathname: string): string {
   );
   for (const { href } of sorted) {
     if (pathname === href || pathname.startsWith(`${href}/`)) return href;
+  }
+  // /payslip/<company> and /salary-stats/<company> are data-driven (one per
+  // row in Settings → Companies), so they can't be listed in NAV_DESTINATIONS
+  // above -- self-match the first segment so the sidebar item SidebarNav
+  // builds for that company (see payslipNavItem) still gets to highlight.
+  for (const base of ["/payslip", "/salary-stats"]) {
+    if (pathname.startsWith(`${base}/`)) {
+      const first = pathname.slice(base.length + 1).split("/")[0];
+      return `${base}/${first}`;
+    }
   }
   return "";
 }

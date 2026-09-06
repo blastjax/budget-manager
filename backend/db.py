@@ -649,14 +649,20 @@ def insert_payslips_bulk(records: list[dict[str, Any]]) -> list[int]:
             return [int(r[0]) for r in cur.fetchall()]
 
 
-def list_payslips(limit: int = 200) -> list[dict[str, Any]]:
+def list_payslips(limit: int = 200, company: str | None = None) -> list[dict[str, Any]]:
+    """All payslips, or just one company's when ``company`` is given (each
+    company's Payslip page passes its own name so pages don't bleed into
+    each other's data)."""
     limit = max(1, min(limit, 2000))
+    where_sql = "WHERE company = ?" if company is not None else ""
+    params: tuple[Any, ...] = (company, limit) if company is not None else (limit,)
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 f"""
                 SELECT {_PAYSLIP_RETURN_COLS}
                 FROM payslip
+                {where_sql}
                 ORDER BY period_year DESC NULLS LAST,
                          period_month DESC NULLS LAST,
                          period_half DESC NULLS LAST,
@@ -664,7 +670,7 @@ def list_payslips(limit: int = 200) -> list[dict[str, Any]]:
                          id DESC
                 LIMIT ?
                 """,
-                (limit,),
+                params,
             )
             cols = [d[0] for d in cur.description]
             return [_with_bool(_zip_row(cols, r), "has_pdf") for r in cur.fetchall()]

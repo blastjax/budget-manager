@@ -227,7 +227,9 @@ function bundleFromApiResponse(resp: {
  * `company` isn't something a saved template should carry (the backend's
  * PayslipDefaultForm doesn't even have the column). */
 function stripHalf(f: FormState): Omit<FormState, "period_half" | "company"> {
-  const { period_half: _period_half, company: _company, ...rest } = f;
+  const rest = { ...f };
+  delete (rest as Partial<FormState>).period_half;
+  delete (rest as Partial<FormState>).company;
   return rest;
 }
 

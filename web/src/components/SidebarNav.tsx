@@ -9,9 +9,9 @@ import {
   LogoutIcon,
   type IconProps,
 } from "@/components/Icons";
-import { dataApiBase } from "@/lib/api";
+import { dataApiBase, getCompanies } from "@/lib/api";
 import { clearSessionToken, getSessionToken } from "@/lib/auth";
-import { matchingNavHref, NAV_SECTIONS, type NavItem } from "@/lib/nav";
+import { matchingNavHref, payslipNavItem, NAV_SECTIONS, type NavItem } from "@/lib/nav";
 import { useShellLayout } from "@/lib/shellLayoutContext";
 import { ICON_BUTTON_CLASSES } from "@/lib/ui";
 
@@ -148,10 +148,38 @@ export function SidebarNav() {
   // (login not required, or required and satisfied), so this value is
   // correct for the component's whole lifetime.
   const [hasSession] = useState(() => getSessionToken() !== null);
+  const [companyItems, setCompanyItems] = useState<NavItem[]>([]);
 
   useEffect(() => {
     closeMobileNav();
   }, [pathname, closeMobileNav]);
+
+  // One "<Company> Payslip" entry per row from Settings → Companies —
+  // there's no build-time list of these, so the sidebar fetches it directly.
+  useEffect(() => {
+    getCompanies()
+      .then((r) => setCompanyItems(r.companies.map((c) => payslipNavItem(c.name))))
+      .catch(() => {
+        /* sidebar just shows Finances without any company entries */
+      });
+  }, []);
+
+  const sections = useMemo(
+    () =>
+      NAV_SECTIONS.map((section) =>
+        section.title === "Finances"
+          ? {
+              ...section,
+              items: [
+                ...section.items.slice(0, 1),
+                ...companyItems,
+                ...section.items.slice(1),
+              ],
+            }
+          : section,
+      ),
+    [companyItems],
+  );
 
   const activeHref = useMemo(() => matchingNavHref(pathname), [pathname]);
 
@@ -211,7 +239,7 @@ export function SidebarNav() {
         className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overflow-x-hidden px-3 py-4"
         aria-label="Main"
       >
-        {NAV_SECTIONS.map((section, sectionIndex) => (
+        {sections.map((section, sectionIndex) => (
           <div
             key={section.title ?? `section-${sectionIndex}`}
             className="flex flex-col gap-1"

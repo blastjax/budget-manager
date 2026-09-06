@@ -374,7 +374,7 @@ function LineRangeMonthPicker({
 
 type PieMode = "month" | "year";
 
-export default function SalaryStatsClient() {
+export default function SalaryStatsClient({ company = "Sophos" }: { company?: string }) {
   const [rows, setRows] = useState<PayslipRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -423,7 +423,7 @@ export default function SalaryStatsClient() {
     setError(null);
     setLoading(true);
     try {
-      const r = await getPayslips(2000);
+      const r = await getPayslips(2000, company);
       setRows(r.payslips);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load payslips");
@@ -431,7 +431,7 @@ export default function SalaryStatsClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [company]);
 
   useEffect(() => {
     void load();
@@ -567,7 +567,7 @@ export default function SalaryStatsClient() {
   return (
     <div className={PAGE_CONTAINER_CLASSES}>
       <PageHeader
-        title="Salary Stats"
+        title={`${company} Salary Stats`}
         description={
           <>
             Compare income and deductions across months and years.

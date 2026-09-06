@@ -48,12 +48,15 @@ def _serialize_payslip(row: dict[str, Any]) -> dict[str, Any]:
 @router.get("/api/payslip")
 def payslip_list(
     limit: int = Query(default=1000, ge=1, le=2000),
+    company: str | None = Query(default=None),
 ) -> dict[str, Any]:
-    key = f"payslip:list:{limit}"
+    key = f"payslip:list:{limit}:{company or ''}"
     hit = cache.get(key)
     if hit is not None:
         return hit
-    result = {"payslips": [_serialize_payslip(r) for r in list_payslips(limit=limit)]}
+    result = {
+        "payslips": [_serialize_payslip(r) for r in list_payslips(limit=limit, company=company)]
+    }
     cache.set(key, result)
     return result
 

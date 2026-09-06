@@ -137,8 +137,8 @@ export type PayslipCreateBody = {
   pag_ibig?: number | null;
 };
 
-export async function getPayslips(limit?: number) {
-  return getJson<{ payslips: PayslipRow[] }>("/api/payslip", { limit });
+export async function getPayslips(limit?: number, company?: string) {
+  return getJson<{ payslips: PayslipRow[] }>("/api/payslip", { limit, company });
 }
 
 export async function createPayslip(body: PayslipCreateBody) {

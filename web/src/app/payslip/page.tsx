@@ -1,11 +1,36 @@
-import type { Metadata } from "next";
-import PayslipClient from "./PayslipClient";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Sophos Payslip",
-  description: "Upload and track payslip totals",
-};
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getCompanies } from "@/lib/api";
+import { LOADING_TEXT_CLASSES, PAGE_CONTAINER_CLASSES } from "@/lib/ui";
 
-export default function PayslipPage() {
-  return <PayslipClient company="Sophos" />;
+/** `/payslip` has no company of its own — send visitors to the first
+ * company's Payslip page (Settings → Companies decides which one). */
+export default function PayslipRedirectPage() {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCompanies()
+      .then((r) => {
+        const first = r.companies[0]?.name;
+        if (first) {
+          router.replace(`/payslip/${encodeURIComponent(first)}`);
+        } else {
+          setError("Add a company under Settings → Companies to see its payslips.");
+        }
+      })
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : "Failed to load companies."),
+      );
+  }, [router]);
+
+  return (
+    <div className={PAGE_CONTAINER_CLASSES}>
+      <p className={error ? "text-sm text-red-700 dark:text-red-400" : LOADING_TEXT_CLASSES}>
+        {error ?? "Loading…"}
+      </p>
+    </div>
+  );
 }
