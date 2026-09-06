@@ -143,7 +143,7 @@ const MONTHLY_CHART_TYPE_LABEL: Record<MonthlyChartType, string> = {
 const HORIZON_OPTIONS = [3, 6, 12] as const;
 type Horizon = (typeof HORIZON_OPTIONS)[number];
 
-export default function CommissionClient() {
+export default function CommissionClient({ company = "Sophos" }: { company?: string }) {
   const [rows, setRows] = useState<PayslipRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +173,7 @@ export default function CommissionClient() {
     setError(null);
     setLoading(true);
     try {
-      const r = await getPayslips(2000);
+      const r = await getPayslips(2000, company);
       setRows(r.payslips);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load payslips");
@@ -181,7 +181,7 @@ export default function CommissionClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [company]);
 
   useEffect(() => {
     void load();
@@ -277,7 +277,7 @@ export default function CommissionClient() {
   return (
     <div className={PAGE_CONTAINER_CLASSES}>
       <PageHeader
-        title="Commission"
+        title={`${company} Commission`}
         description={
           <>
             Track commission earned per month and forecast what&apos;s still to come.
