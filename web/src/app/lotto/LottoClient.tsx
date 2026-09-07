@@ -1252,7 +1252,7 @@ export default function LottoClient() {
       (c) => c.bestMatch >= 3,
     );
     const drawNumbersDisplay = hasResult ? (
-      <div className="mt-2 flex flex-wrap gap-1 sm:gap-1.5">
+      <div className="mt-2 flex flex-wrap justify-center gap-1 sm:gap-1.5">
         {detail.draw.numbers.map((n) => (
           <NumberBall key={n} n={n} variant="result" />
         ))}
