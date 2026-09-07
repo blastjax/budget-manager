@@ -528,7 +528,7 @@ _PAYSLIP_RETURN_COLS = """
     medical_reimbursement, others, mp2, allowances,
     thirteenth_month, basic_salary,
     period_year, period_month, period_half, notes,
-    withholding_tax, sss_contribution, philhealth, pag_ibig,
+    withholding_tax, sss_contribution, philhealth, pag_ibig, trust_fund,
     company,
     (pdf_data IS NOT NULL) AS has_pdf,
     created_at
@@ -553,6 +553,7 @@ def insert_payslip(
     sss_contribution: float | None = None,
     philhealth: float | None = None,
     pag_ibig: float | None = None,
+    trust_fund: float | None = None,
     *,
     company: str,
 ) -> dict[str, Any]:
@@ -574,8 +575,9 @@ def insert_payslip(
                     thirteenth_month, basic_salary,
                     period_year, period_month, period_half, notes,
                     withholding_tax, sss_contribution, philhealth, pag_ibig,
+                    trust_fund,
                     company
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING {_PAYSLIP_RETURN_COLS}
                 """,
                 (
@@ -596,6 +598,7 @@ def insert_payslip(
                     sss_contribution,
                     philhealth,
                     pag_ibig,
+                    trust_fund,
                     company,
                 ),
             )
@@ -620,6 +623,7 @@ _PAYSLIP_INSERT_COLS: tuple[str, ...] = (
     "sss_contribution",
     "philhealth",
     "pag_ibig",
+    "trust_fund",
 )
 
 
@@ -706,6 +710,7 @@ def update_payslip(
     sss_contribution: float | None = None,
     philhealth: float | None = None,
     pag_ibig: float | None = None,
+    trust_fund: float | None = None,
     *,
     company: str,
 ) -> dict[str, Any] | None:
@@ -732,6 +737,7 @@ def update_payslip(
                     sss_contribution = ?,
                     philhealth = ?,
                     pag_ibig = ?,
+                    trust_fund = ?,
                     company = ?
                 WHERE id = ?
                 RETURNING {_PAYSLIP_RETURN_COLS}
@@ -754,6 +760,7 @@ def update_payslip(
                     sss_contribution,
                     philhealth,
                     pag_ibig,
+                    trust_fund,
                     company,
                     payslip_id,
                 ),
@@ -2075,6 +2082,7 @@ _PAYSLIP_DEFAULT_FORM_COLS = (
     "sss_contribution",
     "philhealth",
     "pag_ibig",
+    "trust_fund",
 )
 
 
@@ -2530,7 +2538,10 @@ def delete_app_user(user_id: int) -> bool:
             return cur.rowcount > 0
 
 
-_COMPANY_PUBLIC_COLS = "id, name, created_at, sort_order, show_commission"
+_COMPANY_PUBLIC_COLS = (
+    "id, name, created_at, sort_order, show_commission, show_reimbursement, "
+    "show_medical_reimbursement, show_pag_ibig, show_mp2, show_trust_fund"
+)
 
 
 def list_companies() -> list[dict[str, Any]]:
@@ -2543,7 +2554,15 @@ def list_companies() -> list[dict[str, Any]]:
             return [_row_to_dict(cur, r) for r in cur.fetchall()]
 
 
-def insert_company(name: str, show_commission: bool = True) -> dict[str, Any]:
+def insert_company(
+    name: str,
+    show_commission: bool = True,
+    show_reimbursement: bool = True,
+    show_medical_reimbursement: bool = True,
+    show_pag_ibig: bool = True,
+    show_mp2: bool = True,
+    show_trust_fund: bool = False,
+) -> dict[str, Any]:
     """Insert one company at the end of the order and return its row.
 
     Raises ``psycopg2.IntegrityError`` if ``name`` (case-insensitively)
@@ -2553,11 +2572,22 @@ def insert_company(name: str, show_commission: bool = True) -> dict[str, Any]:
         with db_cursor(conn) as cur:
             cur.execute(
                 f"""
-                INSERT INTO company (name, sort_order, show_commission)
-                VALUES (?, COALESCE((SELECT MAX(sort_order) FROM company), -1) + 1, ?)
+                INSERT INTO company (
+                    name, sort_order, show_commission, show_reimbursement,
+                    show_medical_reimbursement, show_pag_ibig, show_mp2, show_trust_fund
+                )
+                VALUES (?, COALESCE((SELECT MAX(sort_order) FROM company), -1) + 1, ?, ?, ?, ?, ?, ?)
                 RETURNING {_COMPANY_PUBLIC_COLS}
                 """,
-                (name, show_commission),
+                (
+                    name,
+                    show_commission,
+                    show_reimbursement,
+                    show_medical_reimbursement,
+                    show_pag_ibig,
+                    show_mp2,
+                    show_trust_fund,
+                ),
             )
             return _row_to_dict(cur, cur.fetchone())
 
@@ -2592,7 +2622,14 @@ def reorder_companies(ordered_ids: list[int]) -> list[dict[str, Any]] | None:
 
 
 def update_company(
-    company_id: int, name: str, show_commission: bool = True
+    company_id: int,
+    name: str,
+    show_commission: bool = True,
+    show_reimbursement: bool = True,
+    show_medical_reimbursement: bool = True,
+    show_pag_ibig: bool = True,
+    show_mp2: bool = True,
+    show_trust_fund: bool = False,
 ) -> dict[str, Any] | None:
     """Rename/retag a company and return its refreshed row (or ``None`` if no
     such company). Raises ``psycopg2.IntegrityError`` on a name collision."""
@@ -2600,10 +2637,27 @@ def update_company(
         with db_cursor(conn) as cur:
             cur.execute(
                 f"""
-                UPDATE company SET name = ?, show_commission = ? WHERE id = ?
+                UPDATE company SET
+                    name = ?,
+                    show_commission = ?,
+                    show_reimbursement = ?,
+                    show_medical_reimbursement = ?,
+                    show_pag_ibig = ?,
+                    show_mp2 = ?,
+                    show_trust_fund = ?
+                WHERE id = ?
                 RETURNING {_COMPANY_PUBLIC_COLS}
                 """,
-                (name, show_commission, company_id),
+                (
+                    name,
+                    show_commission,
+                    show_reimbursement,
+                    show_medical_reimbursement,
+                    show_pag_ibig,
+                    show_mp2,
+                    show_trust_fund,
+                    company_id,
+                ),
             )
             row = cur.fetchone()
             return _row_to_dict(cur, row) if row else None

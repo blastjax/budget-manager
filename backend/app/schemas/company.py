@@ -8,6 +8,11 @@ from pydantic import BaseModel, Field, model_validator
 class CompanyCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     show_commission: bool = True
+    show_reimbursement: bool = True
+    show_medical_reimbursement: bool = True
+    show_pag_ibig: bool = True
+    show_mp2: bool = True
+    show_trust_fund: bool = False
 
     @model_validator(mode="after")
     def _check_name(self) -> "CompanyCreate":
@@ -19,6 +24,11 @@ class CompanyCreate(BaseModel):
 class CompanyUpdate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     show_commission: bool = True
+    show_reimbursement: bool = True
+    show_medical_reimbursement: bool = True
+    show_pag_ibig: bool = True
+    show_mp2: bool = True
+    show_trust_fund: bool = False
 
     @model_validator(mode="after")
     def _check_name(self) -> "CompanyUpdate":

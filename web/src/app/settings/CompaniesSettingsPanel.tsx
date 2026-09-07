@@ -3,10 +3,12 @@
 import { useEffect, useState, type DragEvent } from "react";
 import {
   createCompany,
+  DEFAULT_COMPANY_COLUMN_FLAGS,
   deleteCompany,
   getCompanies,
   reorderCompanies,
   updateCompany,
+  type CompanyColumnFlags,
   type CompanyRow,
 } from "@/lib/api";
 import {
@@ -21,19 +23,75 @@ import {
   SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 
+/** Every per-company column toggle, in the order they're checkboxed and
+ * summarized. Trust Fund is the only one that defaults to hidden — see
+ * `DEFAULT_COMPANY_COLUMN_FLAGS`. */
+const COLUMN_TOGGLES: { key: keyof CompanyColumnFlags; label: string }[] = [
+  { key: "show_commission", label: "Commission" },
+  { key: "show_reimbursement", label: "Reimbursement" },
+  { key: "show_medical_reimbursement", label: "Medical reimbursement" },
+  { key: "show_pag_ibig", label: "Pag-ibig" },
+  { key: "show_mp2", label: "MP2" },
+  { key: "show_trust_fund", label: "Trust Fund" },
+];
+
+/** "All columns shown" for a company that never diverged from the defaults,
+ * otherwise which columns are hidden and/or (for Trust Fund) turned on. */
+function describeFlags(flags: CompanyColumnFlags): string {
+  const hidden = COLUMN_TOGGLES.filter(
+    (t) => DEFAULT_COMPANY_COLUMN_FLAGS[t.key] && !flags[t.key],
+  ).map((t) => t.label);
+  const shown = COLUMN_TOGGLES.filter(
+    (t) => !DEFAULT_COMPANY_COLUMN_FLAGS[t.key] && flags[t.key],
+  ).map((t) => t.label);
+  if (hidden.length === 0 && shown.length === 0) return "All columns shown";
+  const parts: string[] = [];
+  if (hidden.length) parts.push(`Hides ${hidden.join(", ")}`);
+  if (shown.length) parts.push(`Shows ${shown.join(", ")}`);
+  return parts.join(" · ");
+}
+
+/** The 6 column checkboxes, shared by the add and edit forms. */
+function ColumnToggleFieldset({
+  flags,
+  setFlags,
+}: {
+  flags: CompanyColumnFlags;
+  setFlags: (flags: CompanyColumnFlags) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+      {COLUMN_TOGGLES.map(({ key, label }) => (
+        <label key={key} className="flex items-center gap-2 text-sm text-ink-2">
+          <input
+            type="checkbox"
+            checked={flags[key]}
+            onChange={(e) => setFlags({ ...flags, [key]: e.target.checked })}
+          />
+          {label}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export function CompaniesSettingsPanel() {
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [newName, setNewName] = useState("");
-  const [newShowCommission, setNewShowCommission] = useState(true);
+  const [newFlags, setNewFlags] = useState<CompanyColumnFlags>(
+    DEFAULT_COMPANY_COLUMN_FLAGS,
+  );
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-  const [editShowCommission, setEditShowCommission] = useState(true);
+  const [editFlags, setEditFlags] = useState<CompanyColumnFlags>(
+    DEFAULT_COMPANY_COLUMN_FLAGS,
+  );
   const [editError, setEditError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -70,9 +128,9 @@ export function CompaniesSettingsPanel() {
     setAdding(true);
     setAddError(null);
     try {
-      await createCompany(name, newShowCommission);
+      await createCompany(name, newFlags);
       setNewName("");
-      setNewShowCommission(true);
+      setNewFlags(DEFAULT_COMPANY_COLUMN_FLAGS);
       setInfoMsg(`Added "${name}".`);
       load();
     } catch (e: unknown) {
@@ -85,7 +143,14 @@ export function CompaniesSettingsPanel() {
   function startEdit(company: CompanyRow) {
     setEditingId(company.id);
     setEditName(company.name);
-    setEditShowCommission(company.show_commission);
+    setEditFlags({
+      show_commission: company.show_commission,
+      show_reimbursement: company.show_reimbursement,
+      show_medical_reimbursement: company.show_medical_reimbursement,
+      show_pag_ibig: company.show_pag_ibig,
+      show_mp2: company.show_mp2,
+      show_trust_fund: company.show_trust_fund,
+    });
     setEditError(null);
   }
 
@@ -103,7 +168,7 @@ export function CompaniesSettingsPanel() {
     setSavingEdit(true);
     setEditError(null);
     try {
-      await updateCompany(companyId, name, editShowCommission);
+      await updateCompany(companyId, name, editFlags);
       setEditingId(null);
       setInfoMsg("Company updated.");
       load();
@@ -211,14 +276,12 @@ export function CompaniesSettingsPanel() {
                         onChange={(e) => setEditName(e.target.value)}
                       />
                     </div>
-                    <label className="flex items-center gap-2 text-sm text-ink-2">
-                      <input
-                        type="checkbox"
-                        checked={editShowCommission}
-                        onChange={(e) => setEditShowCommission(e.target.checked)}
-                      />
-                      Show commission
-                    </label>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-ink-2">
+                        Columns shown on this company&apos;s Payslip page
+                      </span>
+                      <ColumnToggleFieldset flags={editFlags} setFlags={setEditFlags} />
+                    </div>
                     {editError && <div className={ERROR_ALERT_CLASSES}>{editError}</div>}
                     <div className="flex flex-wrap items-center gap-2">
                       <button
@@ -242,9 +305,7 @@ export function CompaniesSettingsPanel() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="font-medium text-ink">{company.name}</p>
-                      <p className="text-xs text-ink-3">
-                        Commission {company.show_commission ? "shown" : "hidden"}
-                      </p>
+                      <p className="text-xs text-ink-3">{describeFlags(company)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -285,14 +346,12 @@ export function CompaniesSettingsPanel() {
             autoComplete="off"
           />
         </div>
-        <label className="mt-3 flex items-center gap-2 text-sm text-ink-2">
-          <input
-            type="checkbox"
-            checked={newShowCommission}
-            onChange={(e) => setNewShowCommission(e.target.checked)}
-          />
-          Show commission
-        </label>
+        <div className="mt-4 flex flex-col gap-1">
+          <span className="text-xs font-medium text-ink-2">
+            Columns shown on this company&apos;s Payslip page
+          </span>
+          <ColumnToggleFieldset flags={newFlags} setFlags={setNewFlags} />
+        </div>
         {addError && <div className={`mt-3 ${ERROR_ALERT_CLASSES}`}>{addError}</div>}
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button

@@ -11,6 +11,7 @@ import {
 import { Modal } from "@/components/Modal";
 import {
   apiFetch,
+  companyColumnFlags,
   deletePayslipPdf,
   payslipPdfUrl,
   uploadPayslipPdf,
@@ -80,8 +81,7 @@ export function PayslipClientModal({
     }
     setNav(null);
   };
-  const showCommission =
-    companies.find((c) => c.name === modalForm.company)?.show_commission ?? true;
+  const flags = companyColumnFlags(companies, modalForm.company);
   return (
     <Modal
       open
@@ -191,6 +191,7 @@ export function PayslipClientModal({
 
             {nav.screen === "detail" && (() => {
               const row = rows.find((r) => r.id === nav.row.id) ?? nav.row;
+              const detailFlags = companyColumnFlags(companies, row.company);
               return (
               <>
                 <div className="mb-4 flex items-start justify-between gap-2">
@@ -302,6 +303,14 @@ export function PayslipClientModal({
                         ] as const
                       )
                       .filter(([k]) => k !== "commission" || row.period_half === 2)
+                      .filter(([k]) => {
+                        if (k === "commission") return detailFlags.show_commission;
+                        if (k === "reimbursement") return detailFlags.show_reimbursement;
+                        if (k === "medical_reimbursement") {
+                          return detailFlags.show_medical_reimbursement;
+                        }
+                        return true;
+                      })
                       .map(([k, lab]) => (
                         <div key={k}>
                           <dt className="text-xs text-ink-3">{lab}</dt>
@@ -355,20 +364,32 @@ export function PayslipClientModal({
                           {fmtNum(row.philhealth)}
                         </dd>
                       </div>
-                      <div>
-                        <dt className="text-xs text-ink-3">
-                          Pag-ibig (Employee HDMF)
-                        </dt>
-                        <dd className="tabular-nums text-red-600 dark:text-red-400">
-                          {fmtNum(row.pag_ibig)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-ink-3">MP2</dt>
-                        <dd className="tabular-nums text-red-600 dark:text-red-400">
-                          {fmtNum(row.mp2)}
-                        </dd>
-                      </div>
+                      {detailFlags.show_pag_ibig && (
+                        <div>
+                          <dt className="text-xs text-ink-3">
+                            Pag-ibig (Employee HDMF)
+                          </dt>
+                          <dd className="tabular-nums text-red-600 dark:text-red-400">
+                            {fmtNum(row.pag_ibig)}
+                          </dd>
+                        </div>
+                      )}
+                      {detailFlags.show_mp2 && (
+                        <div>
+                          <dt className="text-xs text-ink-3">MP2</dt>
+                          <dd className="tabular-nums text-red-600 dark:text-red-400">
+                            {fmtNum(row.mp2)}
+                          </dd>
+                        </div>
+                      )}
+                      {detailFlags.show_trust_fund && (
+                        <div>
+                          <dt className="text-xs text-ink-3">Trust Fund</dt>
+                          <dd className="tabular-nums text-red-600 dark:text-red-400">
+                            {fmtNum(row.trust_fund)}
+                          </dd>
+                        </div>
+                      )}
                       <div className="mt-1 border-t border-line pt-3 dark:border-zinc-600">
                         <dt className="text-xs font-semibold text-ink-2">
                           Deductions total
@@ -475,7 +496,7 @@ export function PayslipClientModal({
                     setForm={setModalForm}
                     companies={companies}
                     disabled={saving}
-                    showCommission={showCommission}
+                    flags={flags}
                   />
                   {error && (
                     <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">
@@ -535,7 +556,7 @@ export function PayslipClientModal({
                     disabled={saving}
                     lockPeriod={!nav.freeform}
                     lockCompany
-                    showCommission={showCommission}
+                    flags={flags}
                   />
                   {error && (
                     <p className={`mt-3 ${ERROR_ALERT_CLASSES}`} role="alert">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type SetStateAction } from "react";
-import { getCompanies, type CompanyRow } from "@/lib/api";
+import { companyColumnFlags, getCompanies, type CompanyRow } from "@/lib/api";
 import {
   ACTION_BUTTON_CLASSES,
   CARD_CLASSES,
@@ -186,9 +186,7 @@ export function PayslipDefaultsPanel() {
               setForm={setDisplayedForm}
               requirePeriodHalf
               showPeriodYearMonth={false}
-              showCommission={
-                companies.find((c) => c.name === company)?.show_commission ?? true
-              }
+              flags={companyColumnFlags(companies, company)}
             />
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-3">

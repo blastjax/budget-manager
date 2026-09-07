@@ -60,7 +60,7 @@ export function calendarYearForRow(r: PayslipRow): number | null {
   return null;
 }
 
-/** Sum of withholding, SSS, Philhealth, Pag-ibig, and MP2 for one payslip row. */
+/** Sum of withholding, SSS, Philhealth, Pag-ibig, MP2, and Trust Fund for one payslip row. */
 export function deductionsTotalFromRow(r: PayslipRow): number {
   const num = (v: number | null | undefined) =>
     v != null && Number.isFinite(v) ? v : 0;
@@ -69,7 +69,8 @@ export function deductionsTotalFromRow(r: PayslipRow): number {
     num(r.sss_contribution) +
     num(r.philhealth) +
     num(r.pag_ibig) +
-    num(r.mp2)
+    num(r.mp2) +
+    num(r.trust_fund)
   );
 }
 
@@ -114,9 +115,9 @@ export function detailPayslipNeighbors(
 
 /**
  * Per-row gross matching the year-stats Total card: net (`total`) plus the
- * statutory deductions (withholding, SSS, Philhealth, Pag-ibig, MP2). Returns
- * ``null`` when ``total`` is missing so callers can skip empty slots rather
- * than counting them as zero.
+ * statutory deductions (withholding, SSS, Philhealth, Pag-ibig, MP2, Trust
+ * Fund). Returns ``null`` when ``total`` is missing so callers can skip empty
+ * slots rather than counting them as zero.
  */
 export function grossWithDeductionsFromRow(r: PayslipRow): number | null {
   if (r.total == null || !Number.isFinite(r.total)) return null;
@@ -128,7 +129,8 @@ export function grossWithDeductionsFromRow(r: PayslipRow): number | null {
     num(r.sss_contribution) +
     num(r.philhealth) +
     num(r.pag_ibig) +
-    num(r.mp2)
+    num(r.mp2) +
+    num(r.trust_fund)
   );
 }
 
@@ -155,6 +157,7 @@ export interface YearFieldSums {
   pag_ibig: number;
   medical_reimbursement: number;
   thirteenth_month: number;
+  trust_fund: number;
 }
 
 export interface MonthSlot {
@@ -214,6 +217,7 @@ const EMPTY_FIELD_SUMS: YearFieldSums = Object.freeze({
   pag_ibig: 0,
   medical_reimbursement: 0,
   thirteenth_month: 0,
+  trust_fund: 0,
 }) as YearFieldSums;
 
 const EMPTY_YEAR_SLOTS: YearSlots = Object.freeze({
@@ -255,6 +259,7 @@ function makeYearSlots(): YearSlots {
       pag_ibig: 0,
       medical_reimbursement: 0,
       thirteenth_month: 0,
+      trust_fund: 0,
     },
     paySlotCount: 0,
   };
@@ -320,6 +325,7 @@ export function buildPayslipIndex(rows: PayslipRow[]): PayslipIndex {
       fs.pag_ibig += num(r.pag_ibig);
       fs.medical_reimbursement += num(r.medical_reimbursement);
       fs.thirteenth_month += num(r.thirteenth_month);
+      fs.trust_fund += num(r.trust_fund);
       if (isScheduledHalf) ys.paySlotCount += 1;
     }
 

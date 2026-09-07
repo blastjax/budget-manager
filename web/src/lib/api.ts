@@ -112,6 +112,7 @@ export type PayslipRow = {
   sss_contribution: number | null;
   philhealth: number | null;
   pag_ibig: number | null;
+  trust_fund: number | null;
   has_pdf?: boolean;
   created_at: string;
 };
@@ -135,6 +136,7 @@ export type PayslipCreateBody = {
   sss_contribution?: number | null;
   philhealth?: number | null;
   pag_ibig?: number | null;
+  trust_fund?: number | null;
 };
 
 export async function getPayslips(limit?: number, company?: string) {
@@ -868,6 +870,7 @@ export type PayslipDefaultFormDto = {
   sss_contribution: string;
   philhealth: string;
   pag_ibig: string;
+  trust_fund: string;
 };
 
 export type PayslipDefaultsBundleDto = {
@@ -1177,23 +1180,73 @@ export type CompanyRow = {
   sort_order: number;
   /** Whether the Commission field/stat card show up on this company's Payslip page. */
   show_commission: boolean;
+  show_reimbursement: boolean;
+  show_medical_reimbursement: boolean;
+  show_pag_ibig: boolean;
+  show_mp2: boolean;
+  show_trust_fund: boolean;
 };
+
+/** The 6 per-company "show this field?" toggles, split out of `CompanyRow` so
+ * callers that only need the flags (not the id/name/etc.) can pass this shape
+ * around, e.g. into `createCompany`/`updateCompany` or `PayslipFormFields`. */
+export type CompanyColumnFlags = Pick<
+  CompanyRow,
+  | "show_commission"
+  | "show_reimbursement"
+  | "show_medical_reimbursement"
+  | "show_pag_ibig"
+  | "show_mp2"
+  | "show_trust_fund"
+>;
+
+/** What every existing column defaulted to before this toggle existed
+ * (all shown), plus Trust Fund defaulting to hidden since it's new. Used
+ * whenever a payslip's `company` string doesn't match any managed company
+ * (e.g. an old/deleted one) so fields still show up rather than vanishing. */
+export const DEFAULT_COMPANY_COLUMN_FLAGS: CompanyColumnFlags = {
+  show_commission: true,
+  show_reimbursement: true,
+  show_medical_reimbursement: true,
+  show_pag_ibig: true,
+  show_mp2: true,
+  show_trust_fund: false,
+};
+
+/** Looks up `companyName` in `companies` and returns its column-visibility
+ * flags, falling back to `DEFAULT_COMPANY_COLUMN_FLAGS` when not found. */
+export function companyColumnFlags(
+  companies: CompanyRow[],
+  companyName: string,
+): CompanyColumnFlags {
+  const c = companies.find((c) => c.name === companyName);
+  return c
+    ? {
+        show_commission: c.show_commission,
+        show_reimbursement: c.show_reimbursement,
+        show_medical_reimbursement: c.show_medical_reimbursement,
+        show_pag_ibig: c.show_pag_ibig,
+        show_mp2: c.show_mp2,
+        show_trust_fund: c.show_trust_fund,
+      }
+    : DEFAULT_COMPANY_COLUMN_FLAGS;
+}
 
 export async function getCompanies() {
   return getJson<{ companies: CompanyRow[] }>("/api/companies");
 }
 
-export async function createCompany(name: string, showCommission = true) {
+export async function createCompany(name: string, flags: CompanyColumnFlags) {
   return sendJson<{ company: CompanyRow }>("POST", "/api/companies", {
     name,
-    show_commission: showCommission,
+    ...flags,
   });
 }
 
-export async function updateCompany(id: number, name: string, showCommission: boolean) {
+export async function updateCompany(id: number, name: string, flags: CompanyColumnFlags) {
   return sendJson<{ company: CompanyRow }>("PUT", `/api/companies/${id}`, {
     name,
-    show_commission: showCommission,
+    ...flags,
   });
 }
 

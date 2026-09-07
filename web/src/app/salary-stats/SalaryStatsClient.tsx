@@ -72,6 +72,7 @@ const DEDUCTION_KEYS = [
   "philhealth",
   "pag_ibig",
   "mp2",
+  "trust_fund",
 ] as const satisfies readonly ChartSeriesColorKey[];
 
 const LINE_SERIES_KEYS = [...PIE_SERIES_KEYS, ...DEDUCTION_KEYS] as const;

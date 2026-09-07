@@ -1,7 +1,11 @@
 "use client";
 
 import type { Dispatch, FocusEvent, SetStateAction } from "react";
-import type { CompanyRow } from "@/lib/api";
+import {
+  DEFAULT_COMPANY_COLUMN_FLAGS,
+  type CompanyColumnFlags,
+  type CompanyRow,
+} from "@/lib/api";
 import { MONTH_NAMES_FULL } from "@/lib/dateFormat";
 import { formatAmountOnBlur } from "@/lib/parseFormNumber";
 import { INPUT_CLASSES } from "@/lib/ui";
@@ -25,9 +29,11 @@ export function PayslipFormFields({
    * the year/month get overwritten by the actual slot every time the
    * template is applied. */
   showPeriodYearMonth = true,
-  /** Set false to hide the Commission field — Settings → Companies decides
-   * this per company (some companies just don't have commission). */
-  showCommission = true,
+  /** Which fields Settings → Companies has turned on for this payslip's
+   * company (some companies just don't have Commission, Pag-ibig, etc., and
+   * Trust Fund is off everywhere until a company turns it on). Defaults to
+   * "everything but Trust Fund" — same as before this toggle existed. */
+  flags = DEFAULT_COMPANY_COLUMN_FLAGS,
 }: {
   form: FormState;
   setForm: Dispatch<SetStateAction<FormState>>;
@@ -40,7 +46,7 @@ export function PayslipFormFields({
   lockCompany?: boolean;
   requirePeriodHalf?: boolean;
   showPeriodYearMonth?: boolean;
-  showCommission?: boolean;
+  flags?: CompanyColumnFlags;
 }) {
   const onAmountBlur =
     (key: keyof FormState) => (e: FocusEvent<HTMLInputElement>) => {
@@ -92,36 +98,56 @@ export function PayslipFormFields({
           disabled={disabled}
         />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-ink-2">
-          Pag-ibig (Employee HDMF)
-        </span>
-        <input
-          type="text"
-          inputMode="decimal"
-          className={INPUT_CLASSES}
-          value={form.pag_ibig}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, pag_ibig: e.target.value }))
-          }
-          onBlur={onAmountBlur("pag_ibig")}
-          disabled={disabled}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-ink-2">MP2</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          className={INPUT_CLASSES}
-          value={form.mp2}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, mp2: e.target.value }))
-          }
-          onBlur={onAmountBlur("mp2")}
-          disabled={disabled}
-        />
-      </label>
+      {flags.show_pag_ibig && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-ink-2">
+            Pag-ibig (Employee HDMF)
+          </span>
+          <input
+            type="text"
+            inputMode="decimal"
+            className={INPUT_CLASSES}
+            value={form.pag_ibig}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, pag_ibig: e.target.value }))
+            }
+            onBlur={onAmountBlur("pag_ibig")}
+            disabled={disabled}
+          />
+        </label>
+      )}
+      {flags.show_mp2 && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-ink-2">MP2</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            className={INPUT_CLASSES}
+            value={form.mp2}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, mp2: e.target.value }))
+            }
+            onBlur={onAmountBlur("mp2")}
+            disabled={disabled}
+          />
+        </label>
+      )}
+      {flags.show_trust_fund && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-ink-2">Trust Fund</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            className={INPUT_CLASSES}
+            value={form.trust_fund}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, trust_fund: e.target.value }))
+            }
+            onBlur={onAmountBlur("trust_fund")}
+            disabled={disabled}
+          />
+        </label>
+      )}
     </>
   );
 
@@ -214,9 +240,11 @@ export function PayslipFormFields({
           [
             ["total", "Total"],
             ["basic_salary", "Basic salary"],
-            ...(showCommission ? ([["commission", "Commission"]] as const) : []),
-            ["reimbursement", "Reimbursement"],
-            ["medical_reimbursement", "Medical reimbursement"],
+            ...(flags.show_commission ? ([["commission", "Commission"]] as const) : []),
+            ...(flags.show_reimbursement ? ([["reimbursement", "Reimbursement"]] as const) : []),
+            ...(flags.show_medical_reimbursement
+              ? ([["medical_reimbursement", "Medical reimbursement"]] as const)
+              : []),
             ["others", "Others"],
             ["allowances", "Allowances"],
           ] as const

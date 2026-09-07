@@ -9,6 +9,7 @@ export type DraggableStatId =
   | "allowances"
   | "commission"
   | "thirteenth_month"
+  | "trust_fund"
   | "months_remaining";
 
 export const DEFAULT_STAT_CARD_ORDER: DraggableStatId[] = [
@@ -19,6 +20,7 @@ export const DEFAULT_STAT_CARD_ORDER: DraggableStatId[] = [
   "allowances",
   "commission",
   "thirteenth_month",
+  "trust_fund",
   "months_remaining",
 ];
 
@@ -30,6 +32,7 @@ export const DRAGGABLE_FIELD: Record<
   | "others"
   | "allowances"
   | "thirteenth_month"
+  | "trust_fund"
 > = {
   total: "total",
   reimbursement: "reimbursement",
@@ -37,6 +40,7 @@ export const DRAGGABLE_FIELD: Record<
   allowances: "allowances",
   commission: "commission",
   thirteenth_month: "thirteenth_month",
+  trust_fund: "trust_fund",
 };
 
 export const STAT_LABEL: Record<DraggableStatId, string> = {
@@ -47,6 +51,7 @@ export const STAT_LABEL: Record<DraggableStatId, string> = {
   allowances: "Allowances",
   commission: "Commission",
   thirteenth_month: "13th Month",
+  trust_fund: "Trust Fund",
   months_remaining: "Months Remaining",
 };
 
@@ -146,6 +151,15 @@ export const STAT_THEMES: Record<DraggableStatId, StatTheme> = {
     value: "text-emerald-950 dark:text-emerald-50",
     barTrack: "bg-emerald-200/70 dark:bg-emerald-900/50",
     barFill: "bg-emerald-600 dark:bg-emerald-500",
+  },
+  trust_fund: {
+    border: "border-indigo-200 dark:border-indigo-800",
+    bg: "bg-indigo-50/80 dark:bg-indigo-950/35",
+    title: "text-indigo-900 dark:text-indigo-100",
+    sub: "text-indigo-800/90 dark:text-indigo-300/90",
+    value: "text-indigo-950 dark:text-indigo-50",
+    barTrack: "bg-indigo-200/70 dark:bg-indigo-900/50",
+    barFill: "bg-indigo-600 dark:bg-indigo-500",
   },
 };
 

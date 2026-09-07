@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import {
+  DEFAULT_COMPANY_COLUMN_FLAGS,
+  type CompanyColumnFlags,
+} from "@/lib/api";
+import {
   medicalYearStartFromPeriod,
   yearSlotsFromIndex,
   type PayslipIndex,
@@ -25,17 +29,20 @@ import {
 
 export function PayslipYearStatsSection({
   index,
-  showCommission = true,
+  flags = DEFAULT_COMPANY_COLUMN_FLAGS,
 }: {
   index: PayslipIndex;
-  /** Settings → Companies decides this per company (some companies just
-   * don't have commission), so the stat card follows suit. */
-  showCommission?: boolean;
+  /** Settings → Companies decides which of these show up per company (some
+   * companies just don't have commission, and Trust Fund is off everywhere
+   * until a company turns it on), so the stat cards follow suit. */
+  flags?: CompanyColumnFlags;
 }) {
   const [statsYear, setStatsYear] = useState(() => new Date().getFullYear());
-  const statCardOrder = showCommission
-    ? DEFAULT_STAT_CARD_ORDER
-    : DEFAULT_STAT_CARD_ORDER.filter((id) => id !== "commission");
+  const statCardOrder = DEFAULT_STAT_CARD_ORDER.filter((id) => {
+    if (id === "commission") return flags.show_commission;
+    if (id === "trust_fund") return flags.show_trust_fund;
+    return true;
+  });
 
   const yearSlots = yearSlotsFromIndex(index, statsYear);
   const sums = yearSlots.fieldSums;
@@ -58,7 +65,8 @@ export function PayslipYearStatsSection({
     sums.sss_contribution +
     sums.philhealth +
     sums.pag_ibig +
-    sums.mp2;
+    sums.mp2 +
+    sums.trust_fund;
   const totalPlusDeductions = sums.total + deductionsSumYtd;
   /** Breakdown cards: compare line items to gross (net + deductions), falling back to net if gross is unset. */
   const pctDenominator =
@@ -403,26 +411,30 @@ export function PayslipYearStatsSection({
               </div>
             </div>
           </div>
-          <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
-                Pag-ibig (Employee HDMF)
-              </h3>
-              <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
-                {fmtNum(sums.pag_ibig)}
+          {flags.show_pag_ibig && (
+            <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
+                  Pag-ibig (Employee HDMF)
+                </h3>
+                <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
+                  {fmtNum(sums.pag_ibig)}
+                </div>
               </div>
             </div>
-          </div>
-          <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
-                MP2
-              </h3>
-              <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
-                {fmtNum(sums.mp2)}
+          )}
+          {flags.show_mp2 && (
+            <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
+                  MP2
+                </h3>
+                <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
+                  {fmtNum(sums.mp2)}
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <div className={`col-span-full ${PAYSLIP_DEDUCTION_CARD_SHELL}`}>
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">

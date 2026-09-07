@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   apiFetch,
+  companyColumnFlags,
   createPayslip,
   deletePayslip,
   getCompanies,
@@ -443,8 +444,7 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
   const index = useMemo(() => buildPayslipIndex(rows), [rows]);
   const years = index.years;
   const unsorted = index.unscheduled;
-  const showCommission =
-    companies.find((c) => c.name === company)?.show_commission ?? true;
+  const flags = companyColumnFlags(companies, company);
 
   return (
     <div className={PAGE_CONTAINER_CLASSES}>
@@ -524,7 +524,7 @@ export default function PayslipClient({ company = "Sophos" }: { company?: string
         </div>
 
         {!loading && (
-          <PayslipYearStatsSection index={index} showCommission={showCommission} />
+          <PayslipYearStatsSection index={index} flags={flags} />
         )}
 
         {!loading && (
