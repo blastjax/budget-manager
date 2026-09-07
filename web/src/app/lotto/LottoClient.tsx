@@ -418,8 +418,9 @@ function NumberBall({
 }: {
   n: number;
   variant?: "neutral" | "result" | "match" | "miss";
-  /** "lg" is 3x the "md" ball — 200% bigger — used where an attempt's
-   * numbers are the whole point of the row and get the spotlight. */
+  /** "lg" is 3x the "md" ball — 200% bigger. Currently unused: attempt rows
+   * used to get the spotlight at this size but now match everywhere else
+   * ("md"). Kept in case a future row wants the emphasis again. */
   size?: "md" | "lg";
 }) {
   const styles: Record<string, string> = {
@@ -1300,15 +1301,15 @@ export default function LottoClient() {
           void onDropOnAttempt(detail.draw.id, attempt, e);
         }}
       >
-        {/* The numbers are the whole point of the row, so they sit centered
-         * and 200% bigger than everywhere else numbers appear — everything
-         * else (match status, actions) stacks centered underneath. */}
+        {/* The numbers stack centered, with match status/actions underneath —
+         * sized the same as everywhere else numbers appear (e.g. the draw
+         * result balls). */}
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           {attempt.numbers.map((n) => (
             <NumberBall
               key={n}
               n={n}
-              size="lg"
+              size="md"
               variant={hasResult ? (drawSet.has(n) ? "match" : "miss") : "neutral"}
             />
           ))}
