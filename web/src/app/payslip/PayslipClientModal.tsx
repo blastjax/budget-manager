@@ -275,24 +275,30 @@ export function PayslipClientModal({
                 <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,17.5rem)] lg:items-start lg:gap-8">
                   <div className="min-w-0">
                     <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                      <div>
-                        <dt className="text-xs text-ink-3">Gross total</dt>
-                        <dd className="tabular-nums font-medium text-ink">
-                          {fmtNum(grossTotalFromRow(row))}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-ink-3">Net total</dt>
-                        <dd className="tabular-nums font-medium text-ink">
-                          {fmtNum(row.total)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-ink-3">Basic salary</dt>
-                        <dd className="tabular-nums text-ink">
-                          {fmtNum(row.basic_salary)}
-                        </dd>
-                      </div>
+                      {detailFlags.show_total && (
+                        <>
+                          <div>
+                            <dt className="text-xs text-ink-3">Gross total</dt>
+                            <dd className="tabular-nums font-medium text-ink">
+                              {fmtNum(grossTotalFromRow(row))}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-ink-3">Net total</dt>
+                            <dd className="tabular-nums font-medium text-ink">
+                              {fmtNum(row.total)}
+                            </dd>
+                          </div>
+                        </>
+                      )}
+                      {detailFlags.show_basic_salary && (
+                        <div>
+                          <dt className="text-xs text-ink-3">Basic salary</dt>
+                          <dd className="tabular-nums text-ink">
+                            {fmtNum(row.basic_salary)}
+                          </dd>
+                        </div>
+                      )}
                       {(
                         [
                           ["commission", "Commission"],
@@ -309,6 +315,8 @@ export function PayslipClientModal({
                         if (k === "medical_reimbursement") {
                           return detailFlags.show_medical_reimbursement;
                         }
+                        if (k === "others") return detailFlags.show_others;
+                        if (k === "allowances") return detailFlags.show_allowances;
                         return true;
                       })
                       .map(([k, lab]) => (
@@ -319,7 +327,9 @@ export function PayslipClientModal({
                           </dd>
                         </div>
                       ))}
-                      {row.period_month === 11 && row.period_half === 2 && (
+                      {detailFlags.show_thirteenth_month &&
+                        row.period_month === 11 &&
+                        row.period_half === 2 && (
                         <div>
                           <dt className="text-xs text-ink-3">13th Month</dt>
                           <dd className="tabular-nums text-ink">
@@ -342,28 +352,34 @@ export function PayslipClientModal({
                       Deductions
                     </p>
                     <dl className="flex flex-col gap-3 text-sm">
-                      <div>
-                        <dt className="text-xs text-ink-3">
-                          Withholding tax
-                        </dt>
-                        <dd className="tabular-nums text-red-600 dark:text-red-400">
-                          {fmtNum(row.withholding_tax)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-ink-3">
-                          SSS contribution
-                        </dt>
-                        <dd className="tabular-nums text-red-600 dark:text-red-400">
-                          {fmtNum(row.sss_contribution)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-ink-3">Philhealth</dt>
-                        <dd className="tabular-nums text-red-600 dark:text-red-400">
-                          {fmtNum(row.philhealth)}
-                        </dd>
-                      </div>
+                      {detailFlags.show_withholding_tax && (
+                        <div>
+                          <dt className="text-xs text-ink-3">
+                            Withholding tax
+                          </dt>
+                          <dd className="tabular-nums text-red-600 dark:text-red-400">
+                            {fmtNum(row.withholding_tax)}
+                          </dd>
+                        </div>
+                      )}
+                      {detailFlags.show_sss_contribution && (
+                        <div>
+                          <dt className="text-xs text-ink-3">
+                            SSS contribution
+                          </dt>
+                          <dd className="tabular-nums text-red-600 dark:text-red-400">
+                            {fmtNum(row.sss_contribution)}
+                          </dd>
+                        </div>
+                      )}
+                      {detailFlags.show_philhealth && (
+                        <div>
+                          <dt className="text-xs text-ink-3">Philhealth</dt>
+                          <dd className="tabular-nums text-red-600 dark:text-red-400">
+                            {fmtNum(row.philhealth)}
+                          </dd>
+                        </div>
+                      )}
                       {detailFlags.show_pag_ibig && (
                         <div>
                           <dt className="text-xs text-ink-3">

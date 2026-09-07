@@ -2538,9 +2538,34 @@ def delete_app_user(user_id: int) -> bool:
             return cur.rowcount > 0
 
 
+_COMPANY_FLAG_COLUMNS: tuple[str, ...] = (
+    # Income-side (Settings → Companies "Income" group; main grid in
+    # PayslipFormFields).
+    "show_total",
+    "show_basic_salary",
+    "show_commission",
+    "show_reimbursement",
+    "show_medical_reimbursement",
+    "show_others",
+    "show_allowances",
+    "show_thirteenth_month",
+    # Deduction-side ("Deductions" group; the aside in PayslipFormFields).
+    "show_withholding_tax",
+    "show_sss_contribution",
+    "show_philhealth",
+    "show_pag_ibig",
+    "show_mp2",
+    "show_trust_fund",
+)
+
+# Every flag defaults to shown -- that was every column's behavior before
+# per-company visibility existed -- except Trust Fund, which is new and off
+# everywhere until a company turns it on.
+_COMPANY_FLAG_DEFAULTS: dict[str, bool] = {c: True for c in _COMPANY_FLAG_COLUMNS}
+_COMPANY_FLAG_DEFAULTS["show_trust_fund"] = False
+
 _COMPANY_PUBLIC_COLS = (
-    "id, name, created_at, sort_order, show_commission, show_reimbursement, "
-    "show_medical_reimbursement, show_pag_ibig, show_mp2, show_trust_fund"
+    "id, name, created_at, sort_order, " + ", ".join(_COMPANY_FLAG_COLUMNS)
 )
 
 
@@ -2554,40 +2579,31 @@ def list_companies() -> list[dict[str, Any]]:
             return [_row_to_dict(cur, r) for r in cur.fetchall()]
 
 
-def insert_company(
-    name: str,
-    show_commission: bool = True,
-    show_reimbursement: bool = True,
-    show_medical_reimbursement: bool = True,
-    show_pag_ibig: bool = True,
-    show_mp2: bool = True,
-    show_trust_fund: bool = False,
-) -> dict[str, Any]:
+def insert_company(name: str, flags: dict[str, bool] | None = None) -> dict[str, Any]:
     """Insert one company at the end of the order and return its row.
+
+    ``flags`` maps a subset (or none) of ``_COMPANY_FLAG_COLUMNS`` to a bool;
+    anything omitted falls back to ``_COMPANY_FLAG_DEFAULTS``.
 
     Raises ``psycopg2.IntegrityError`` if ``name`` (case-insensitively)
     already exists -- the caller turns that into a 409.
     """
+    merged = {**_COMPANY_FLAG_DEFAULTS, **(flags or {})}
+    values = [merged[c] for c in _COMPANY_FLAG_COLUMNS]
+    cols_sql = ", ".join(_COMPANY_FLAG_COLUMNS)
+    placeholders_sql = ", ".join("?" for _ in _COMPANY_FLAG_COLUMNS)
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 f"""
-                INSERT INTO company (
-                    name, sort_order, show_commission, show_reimbursement,
-                    show_medical_reimbursement, show_pag_ibig, show_mp2, show_trust_fund
+                INSERT INTO company (name, sort_order, {cols_sql})
+                VALUES (
+                    ?, COALESCE((SELECT MAX(sort_order) FROM company), -1) + 1,
+                    {placeholders_sql}
                 )
-                VALUES (?, COALESCE((SELECT MAX(sort_order) FROM company), -1) + 1, ?, ?, ?, ?, ?, ?)
                 RETURNING {_COMPANY_PUBLIC_COLS}
                 """,
-                (
-                    name,
-                    show_commission,
-                    show_reimbursement,
-                    show_medical_reimbursement,
-                    show_pag_ibig,
-                    show_mp2,
-                    show_trust_fund,
-                ),
+                (name, *values),
             )
             return _row_to_dict(cur, cur.fetchone())
 
@@ -2622,42 +2638,23 @@ def reorder_companies(ordered_ids: list[int]) -> list[dict[str, Any]] | None:
 
 
 def update_company(
-    company_id: int,
-    name: str,
-    show_commission: bool = True,
-    show_reimbursement: bool = True,
-    show_medical_reimbursement: bool = True,
-    show_pag_ibig: bool = True,
-    show_mp2: bool = True,
-    show_trust_fund: bool = False,
+    company_id: int, name: str, flags: dict[str, bool] | None = None
 ) -> dict[str, Any] | None:
     """Rename/retag a company and return its refreshed row (or ``None`` if no
-    such company). Raises ``psycopg2.IntegrityError`` on a name collision."""
+    such company). ``flags`` -- see ``insert_company``. Raises
+    ``psycopg2.IntegrityError`` on a name collision."""
+    merged = {**_COMPANY_FLAG_DEFAULTS, **(flags or {})}
+    values = [merged[c] for c in _COMPANY_FLAG_COLUMNS]
+    set_sql = ", ".join(f"{c} = ?" for c in _COMPANY_FLAG_COLUMNS)
     with get_connection() as conn:
         with db_cursor(conn) as cur:
             cur.execute(
                 f"""
-                UPDATE company SET
-                    name = ?,
-                    show_commission = ?,
-                    show_reimbursement = ?,
-                    show_medical_reimbursement = ?,
-                    show_pag_ibig = ?,
-                    show_mp2 = ?,
-                    show_trust_fund = ?
+                UPDATE company SET name = ?, {set_sql}
                 WHERE id = ?
                 RETURNING {_COMPANY_PUBLIC_COLS}
                 """,
-                (
-                    name,
-                    show_commission,
-                    show_reimbursement,
-                    show_medical_reimbursement,
-                    show_pag_ibig,
-                    show_mp2,
-                    show_trust_fund,
-                    company_id,
-                ),
+                (name, *values, company_id),
             )
             row = cur.fetchone()
             return _row_to_dict(cur, row) if row else None

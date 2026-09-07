@@ -26,7 +26,7 @@ function YearPayslipBlockInner({
   const yearSum = yearSlots.netSum;
   const yearGross = showGross ? yearSlots.grossSum : null;
   return (
-    <div className="flex w-full min-w-0 flex-col rounded-lg border border-line bg-zinc-50/40 p-4 sm:p-5 dark:bg-zinc-900/30">
+    <div className="@container flex w-full min-w-0 flex-col rounded-lg border border-line bg-zinc-50/40 p-4 sm:p-5 dark:bg-zinc-900/30">
       <h3 className="mb-4 flex min-w-0 items-start justify-between gap-2 border-b border-line pb-3 text-base font-semibold text-ink">
         <span className="shrink-0 whitespace-nowrap">{year}</span>
         {(yearSum != null || yearGross != null) && (
@@ -58,8 +58,12 @@ function YearPayslipBlockInner({
           </span>
         )}
       </h3>
-      {/* 2 months per row on mobile (3 side by side is too narrow for a label + peso amount); 3 per row × 4 rows from sm: up */}
-      <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3.5">
+      {/* 2 months per row when this card is narrow (3 side by side is too narrow for a label + peso
+          amount); 3 per row × 4 rows once the card itself has room. Keyed off the card's own width
+          via a container query (not the viewport) so the grid reflows correctly regardless of how
+          much space the sidebar leaves it — a plain `sm:` breakpoint stays stuck on 3 columns (or 2)
+          whenever the viewport crosses 640px without the card actually gaining/losing room. */}
+      <div className="grid w-full min-w-0 grid-cols-2 gap-2 @lg:grid-cols-3 @lg:gap-3.5">
         {MONTHS.map((month) => {
           const ms = yearSlots.months.get(month);
           const monthSum = ms?.netSum ?? null;
@@ -78,36 +82,36 @@ function YearPayslipBlockInner({
                 <span className="flex min-w-0 flex-col items-end">
                   {monthSum != null ? (
                     <span
-                      className={`min-w-0 truncate text-[10px] tabular-nums leading-tight sm:text-xs ${NET_TEXT_CLASSES}`}
+                      className={`min-w-0 truncate text-[10px] tabular-nums leading-tight @lg:text-xs ${NET_TEXT_CLASSES}`}
                       title={`Net ${fmtNum(monthSum)}`}
                     >
                       {fmtNum(monthSum)}
                     </span>
                   ) : showGross ? (
-                    <span className="invisible text-[10px] sm:text-xs" aria-hidden>0.00</span>
+                    <span className="invisible text-[10px] @lg:text-xs" aria-hidden>0.00</span>
                   ) : null}
                   {showGross ? (
                     monthGross != null ? (
                       <span
-                        className={`min-w-0 truncate text-[10px] tabular-nums leading-tight sm:text-xs ${GROSS_TEXT_CLASSES}`}
+                        className={`min-w-0 truncate text-[10px] tabular-nums leading-tight @lg:text-xs ${GROSS_TEXT_CLASSES}`}
                         title={`Gross ${fmtNum(monthGross)}`}
                       >
                         {fmtNum(monthGross)}
                       </span>
                     ) : (
-                      <span className="invisible text-[10px] sm:text-xs" aria-hidden>0.00</span>
+                      <span className="invisible text-[10px] @lg:text-xs" aria-hidden>0.00</span>
                     )
                   ) : null}
                   {showGross ? (
                     monthGross != null && monthSum != null ? (
                       <span
-                        className="min-w-0 truncate text-[10px] tabular-nums leading-tight text-red-600 sm:text-xs dark:text-red-400"
+                        className="min-w-0 truncate text-[10px] tabular-nums leading-tight text-red-600 @lg:text-xs dark:text-red-400"
                         title={`Deductions ${fmtNum(monthGross - monthSum)}`}
                       >
                         -{fmtNum(monthGross - monthSum)}
                       </span>
                     ) : (
-                      <span className="invisible text-[10px] sm:text-xs" aria-hidden>0.00</span>
+                      <span className="invisible text-[10px] @lg:text-xs" aria-hidden>0.00</span>
                     )
                   ) : null}
                 </span>
@@ -150,7 +154,7 @@ function YearPayslipBlockInner({
                       aria-label={ariaLabel}
                       title={titleText}
                       onClick={() => onOpenSlot(year, month, half as 1 | 2)}
-                      className={`flex min-h-[2.5rem] w-full min-w-0 items-center justify-end rounded-md border px-1 py-2 text-right tabular-nums leading-tight transition-colors duration-150 break-all sm:px-1.5 sm:leading-none ${
+                      className={`flex min-h-[2.5rem] w-full min-w-0 items-center justify-end rounded-md border px-1 py-2 text-right tabular-nums leading-tight transition-colors duration-150 break-all @lg:px-1.5 @lg:leading-none ${
                         hasRows
                           ? "border-indigo-200 bg-indigo-50/90 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60"
                           : "border-dashed border-line bg-zinc-50/50 text-ink-3 hover:border-line-strong hover:bg-surface-2 dark:bg-zinc-900/40"
@@ -159,34 +163,34 @@ function YearPayslipBlockInner({
                       <span className="flex w-full min-w-0 flex-col items-end gap-0 px-0.5">
                         {st != null ? (
                           <span
-                            className={`min-w-0 truncate text-right text-[10px] sm:text-sm ${NET_TEXT_CLASSES}`}
+                            className={`min-w-0 truncate text-right text-[10px] @lg:text-sm ${NET_TEXT_CLASSES}`}
                           >
                             {netStr}
                           </span>
                         ) : showGross ? (
-                          <span className="invisible text-[10px] sm:text-sm" aria-hidden>0.00</span>
+                          <span className="invisible text-[10px] @lg:text-sm" aria-hidden>0.00</span>
                         ) : null}
                         {showGross ? (
                           stGross != null ? (
                             <span
-                              className={`min-w-0 truncate text-right text-[10px] sm:text-sm ${GROSS_TEXT_CLASSES}`}
+                              className={`min-w-0 truncate text-right text-[10px] @lg:text-sm ${GROSS_TEXT_CLASSES}`}
                             >
                               {grossStr}
                             </span>
                           ) : (
-                            <span className="invisible text-[10px] sm:text-sm" aria-hidden>0.00</span>
+                            <span className="invisible text-[10px] @lg:text-sm" aria-hidden>0.00</span>
                           )
                         ) : null}
                         {showGross ? (
                           stGross != null && st != null ? (
                             <span
-                              className="min-w-0 truncate text-right text-[10px] text-red-600 sm:text-sm dark:text-red-400"
+                              className="min-w-0 truncate text-right text-[10px] text-red-600 @lg:text-sm dark:text-red-400"
                               title={`Deductions ${fmtNum(stGrossRaw! - st)}`}
                             >
                               -{fmtNum(stGrossRaw! - st)}
                             </span>
                           ) : (
-                            <span className="invisible text-[10px] sm:text-sm" aria-hidden>0.00</span>
+                            <span className="invisible text-[10px] @lg:text-sm" aria-hidden>0.00</span>
                           )
                         ) : null}
                       </span>

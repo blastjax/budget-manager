@@ -1172,42 +1172,51 @@ export async function verifyAppUserPassword(username: string, password: string) 
   });
 }
 
-/** A company payslips are tagged under; managed via Settings → Companies. */
-export type CompanyRow = {
-  id: number;
-  name: string;
-  created_at: string;
-  sort_order: number;
+/** The 14 per-company "show this field?" toggles — one per payslip amount
+ * field, income-side first (the main grid in PayslipFormFields), then
+ * deduction-side (the "Deductions" aside). */
+export type CompanyColumnFlags = {
+  show_total: boolean;
+  show_basic_salary: boolean;
   /** Whether the Commission field/stat card show up on this company's Payslip page. */
   show_commission: boolean;
   show_reimbursement: boolean;
   show_medical_reimbursement: boolean;
+  show_others: boolean;
+  show_allowances: boolean;
+  show_thirteenth_month: boolean;
+  show_withholding_tax: boolean;
+  show_sss_contribution: boolean;
+  show_philhealth: boolean;
   show_pag_ibig: boolean;
   show_mp2: boolean;
   show_trust_fund: boolean;
 };
 
-/** The 6 per-company "show this field?" toggles, split out of `CompanyRow` so
- * callers that only need the flags (not the id/name/etc.) can pass this shape
- * around, e.g. into `createCompany`/`updateCompany` or `PayslipFormFields`. */
-export type CompanyColumnFlags = Pick<
-  CompanyRow,
-  | "show_commission"
-  | "show_reimbursement"
-  | "show_medical_reimbursement"
-  | "show_pag_ibig"
-  | "show_mp2"
-  | "show_trust_fund"
->;
+/** A company payslips are tagged under; managed via Settings → Companies. */
+export type CompanyRow = CompanyColumnFlags & {
+  id: number;
+  name: string;
+  created_at: string;
+  sort_order: number;
+};
 
-/** What every existing column defaulted to before this toggle existed
- * (all shown), plus Trust Fund defaulting to hidden since it's new. Used
- * whenever a payslip's `company` string doesn't match any managed company
- * (e.g. an old/deleted one) so fields still show up rather than vanishing. */
+/** What every column defaulted to before this toggle existed (all shown),
+ * except Trust Fund, which is new and defaults to hidden. Used whenever a
+ * payslip's `company` string doesn't match any managed company (e.g. an
+ * old/deleted one) so fields still show up rather than vanishing. */
 export const DEFAULT_COMPANY_COLUMN_FLAGS: CompanyColumnFlags = {
+  show_total: true,
+  show_basic_salary: true,
   show_commission: true,
   show_reimbursement: true,
   show_medical_reimbursement: true,
+  show_others: true,
+  show_allowances: true,
+  show_thirteenth_month: true,
+  show_withholding_tax: true,
+  show_sss_contribution: true,
+  show_philhealth: true,
   show_pag_ibig: true,
   show_mp2: true,
   show_trust_fund: false,
@@ -1220,16 +1229,23 @@ export function companyColumnFlags(
   companyName: string,
 ): CompanyColumnFlags {
   const c = companies.find((c) => c.name === companyName);
-  return c
-    ? {
-        show_commission: c.show_commission,
-        show_reimbursement: c.show_reimbursement,
-        show_medical_reimbursement: c.show_medical_reimbursement,
-        show_pag_ibig: c.show_pag_ibig,
-        show_mp2: c.show_mp2,
-        show_trust_fund: c.show_trust_fund,
-      }
-    : DEFAULT_COMPANY_COLUMN_FLAGS;
+  if (!c) return DEFAULT_COMPANY_COLUMN_FLAGS;
+  return {
+    show_total: c.show_total,
+    show_basic_salary: c.show_basic_salary,
+    show_commission: c.show_commission,
+    show_reimbursement: c.show_reimbursement,
+    show_medical_reimbursement: c.show_medical_reimbursement,
+    show_others: c.show_others,
+    show_allowances: c.show_allowances,
+    show_thirteenth_month: c.show_thirteenth_month,
+    show_withholding_tax: c.show_withholding_tax,
+    show_sss_contribution: c.show_sss_contribution,
+    show_philhealth: c.show_philhealth,
+    show_pag_ibig: c.show_pag_ibig,
+    show_mp2: c.show_mp2,
+    show_trust_fund: c.show_trust_fund,
+  };
 }
 
 export async function getCompanies() {

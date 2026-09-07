@@ -56,48 +56,54 @@ export function PayslipFormFields({
 
   const deductionFields = (
     <>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-ink-2">Withholding tax</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          className={INPUT_CLASSES}
-          value={form.withholding_tax}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, withholding_tax: e.target.value }))
-          }
-          onBlur={onAmountBlur("withholding_tax")}
-          disabled={disabled}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-ink-2">SSS contribution</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          className={INPUT_CLASSES}
-          value={form.sss_contribution}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, sss_contribution: e.target.value }))
-          }
-          onBlur={onAmountBlur("sss_contribution")}
-          disabled={disabled}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-ink-2">Philhealth</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          className={INPUT_CLASSES}
-          value={form.philhealth}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, philhealth: e.target.value }))
-          }
-          onBlur={onAmountBlur("philhealth")}
-          disabled={disabled}
-        />
-      </label>
+      {flags.show_withholding_tax && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-ink-2">Withholding tax</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            className={INPUT_CLASSES}
+            value={form.withholding_tax}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, withholding_tax: e.target.value }))
+            }
+            onBlur={onAmountBlur("withholding_tax")}
+            disabled={disabled}
+          />
+        </label>
+      )}
+      {flags.show_sss_contribution && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-ink-2">SSS contribution</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            className={INPUT_CLASSES}
+            value={form.sss_contribution}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, sss_contribution: e.target.value }))
+            }
+            onBlur={onAmountBlur("sss_contribution")}
+            disabled={disabled}
+          />
+        </label>
+      )}
+      {flags.show_philhealth && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-ink-2">Philhealth</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            className={INPUT_CLASSES}
+            value={form.philhealth}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, philhealth: e.target.value }))
+            }
+            onBlur={onAmountBlur("philhealth")}
+            disabled={disabled}
+          />
+        </label>
+      )}
       {flags.show_pag_ibig && (
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-ink-2">
@@ -238,17 +244,21 @@ export function PayslipFormFields({
         </label>
         {(
           [
-            ["total", "Total"],
-            ["basic_salary", "Basic salary"],
-            ...(flags.show_commission ? ([["commission", "Commission"]] as const) : []),
-            ...(flags.show_reimbursement ? ([["reimbursement", "Reimbursement"]] as const) : []),
-            ...(flags.show_medical_reimbursement
-              ? ([["medical_reimbursement", "Medical reimbursement"]] as const)
-              : []),
-            ["others", "Others"],
-            ["allowances", "Allowances"],
+            ["total", "Total", flags.show_total],
+            ["basic_salary", "Basic salary", flags.show_basic_salary],
+            ["commission", "Commission", flags.show_commission],
+            ["reimbursement", "Reimbursement", flags.show_reimbursement],
+            [
+              "medical_reimbursement",
+              "Medical reimbursement",
+              flags.show_medical_reimbursement,
+            ],
+            ["others", "Others", flags.show_others],
+            ["allowances", "Allowances", flags.show_allowances],
           ] as const
-        ).map(([key, label]) => (
+        )
+        .filter(([, , shown]) => shown)
+        .map(([key, label]) => (
           <label key={key} className="flex flex-col gap-1 text-sm">
             <span className="text-ink-2">{label}</span>
             <input
@@ -264,7 +274,9 @@ export function PayslipFormFields({
             />
           </label>
         ))}
-        {form.period_month === "11" && form.period_half === "2" && (
+        {flags.show_thirteenth_month &&
+          form.period_month === "11" &&
+          form.period_half === "2" && (
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-ink-2">13th Month</span>
             <input

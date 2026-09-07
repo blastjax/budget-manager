@@ -39,9 +39,26 @@ export function PayslipYearStatsSection({
 }) {
   const [statsYear, setStatsYear] = useState(() => new Date().getFullYear());
   const statCardOrder = DEFAULT_STAT_CARD_ORDER.filter((id) => {
-    if (id === "commission") return flags.show_commission;
-    if (id === "trust_fund") return flags.show_trust_fund;
-    return true;
+    switch (id) {
+      case "total":
+        return flags.show_total;
+      case "basic":
+        return flags.show_basic_salary;
+      case "commission":
+        return flags.show_commission;
+      case "reimbursement":
+        return flags.show_reimbursement;
+      case "others":
+        return flags.show_others;
+      case "allowances":
+        return flags.show_allowances;
+      case "thirteenth_month":
+        return flags.show_thirteenth_month;
+      case "trust_fund":
+        return flags.show_trust_fund;
+      default:
+        return true;
+    }
   });
 
   const yearSlots = yearSlotsFromIndex(index, statsYear);
@@ -292,6 +309,7 @@ export function PayslipYearStatsSection({
         {statCardOrder.map((id) => renderStatCard(id))}
       </div>
 
+      {flags.show_medical_reimbursement && (
       <div className="mt-4 flex w-full justify-center sm:mt-5">
         <div className="w-full sm:max-w-[calc((100%-1rem)/2)] md:max-w-[calc((100%-1.25rem)/2)]">
           <div
@@ -369,6 +387,7 @@ export function PayslipYearStatsSection({
           </div>
         </div>
       </div>
+      )}
 
       <div
         className="my-4 border-t border-zinc-200/90 dark:border-zinc-700/80"
@@ -381,36 +400,42 @@ export function PayslipYearStatsSection({
           Deductions
         </h3>
         <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 sm:grid-cols-2 sm:gap-4 md:gap-5">
-          <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
-                Withholding tax
-              </h3>
-              <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
-                {fmtNum(sums.withholding_tax)}
+          {flags.show_withholding_tax && (
+            <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
+                  Withholding tax
+                </h3>
+                <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
+                  {fmtNum(sums.withholding_tax)}
+                </div>
               </div>
             </div>
-          </div>
-          <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
-                SSS contribution
-              </h3>
-              <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
-                {fmtNum(sums.sss_contribution)}
+          )}
+          {flags.show_sss_contribution && (
+            <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
+                  SSS contribution
+                </h3>
+                <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
+                  {fmtNum(sums.sss_contribution)}
+                </div>
               </div>
             </div>
-          </div>
-          <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
-                Philhealth
-              </h3>
-              <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
-                {fmtNum(sums.philhealth)}
+          )}
+          {flags.show_philhealth && (
+            <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-xs font-semibold leading-tight text-red-950 dark:text-red-100">
+                  Philhealth
+                </h3>
+                <div className="shrink-0 text-xs font-semibold tabular-nums leading-tight text-red-600 dark:text-red-400">
+                  {fmtNum(sums.philhealth)}
+                </div>
               </div>
             </div>
-          </div>
+          )}
           {flags.show_pag_ibig && (
             <div className={PAYSLIP_DEDUCTION_CARD_SHELL}>
               <div className="flex items-start justify-between gap-2">

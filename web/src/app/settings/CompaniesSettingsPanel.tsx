@@ -23,25 +23,39 @@ import {
   SECONDARY_BUTTON_CLASSES,
 } from "@/lib/ui";
 
-/** Every per-company column toggle, in the order they're checkboxed and
- * summarized. Trust Fund is the only one that defaults to hidden — see
- * `DEFAULT_COMPANY_COLUMN_FLAGS`. */
-const COLUMN_TOGGLES: { key: keyof CompanyColumnFlags; label: string }[] = [
+/** Every per-company column toggle, grouped and ordered to match the two
+ * halves of the Add/Edit Payslip form (the main grid vs. the "Deductions"
+ * aside — see PayslipFormFields). Trust Fund is the only one that defaults
+ * to hidden — see `DEFAULT_COMPANY_COLUMN_FLAGS`. */
+const INCOME_COLUMN_TOGGLES: { key: keyof CompanyColumnFlags; label: string }[] = [
+  { key: "show_total", label: "Total" },
+  { key: "show_basic_salary", label: "Basic salary" },
   { key: "show_commission", label: "Commission" },
   { key: "show_reimbursement", label: "Reimbursement" },
   { key: "show_medical_reimbursement", label: "Medical reimbursement" },
+  { key: "show_others", label: "Others" },
+  { key: "show_allowances", label: "Allowances" },
+  { key: "show_thirteenth_month", label: "13th Month" },
+];
+
+const DEDUCTION_COLUMN_TOGGLES: { key: keyof CompanyColumnFlags; label: string }[] = [
+  { key: "show_withholding_tax", label: "Withholding tax" },
+  { key: "show_sss_contribution", label: "SSS contribution" },
+  { key: "show_philhealth", label: "Philhealth" },
   { key: "show_pag_ibig", label: "Pag-ibig" },
   { key: "show_mp2", label: "MP2" },
   { key: "show_trust_fund", label: "Trust Fund" },
 ];
 
+const ALL_COLUMN_TOGGLES = [...INCOME_COLUMN_TOGGLES, ...DEDUCTION_COLUMN_TOGGLES];
+
 /** "All columns shown" for a company that never diverged from the defaults,
  * otherwise which columns are hidden and/or (for Trust Fund) turned on. */
 function describeFlags(flags: CompanyColumnFlags): string {
-  const hidden = COLUMN_TOGGLES.filter(
+  const hidden = ALL_COLUMN_TOGGLES.filter(
     (t) => DEFAULT_COMPANY_COLUMN_FLAGS[t.key] && !flags[t.key],
   ).map((t) => t.label);
-  const shown = COLUMN_TOGGLES.filter(
+  const shown = ALL_COLUMN_TOGGLES.filter(
     (t) => !DEFAULT_COMPANY_COLUMN_FLAGS[t.key] && flags[t.key],
   ).map((t) => t.label);
   if (hidden.length === 0 && shown.length === 0) return "All columns shown";
@@ -51,7 +65,41 @@ function describeFlags(flags: CompanyColumnFlags): string {
   return parts.join(" · ");
 }
 
-/** The 6 column checkboxes, shared by the add and edit forms. */
+/** One group of checkboxes (Income or Deductions). */
+function ColumnToggleGroup({
+  title,
+  toggles,
+  flags,
+  setFlags,
+}: {
+  title: string;
+  toggles: { key: keyof CompanyColumnFlags; label: string }[];
+  flags: CompanyColumnFlags;
+  setFlags: (flags: CompanyColumnFlags) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+        {title}
+      </span>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+        {toggles.map(({ key, label }) => (
+          <label key={key} className="flex items-center gap-2 text-sm text-ink-2">
+            <input
+              type="checkbox"
+              checked={flags[key]}
+              onChange={(e) => setFlags({ ...flags, [key]: e.target.checked })}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** All 14 column checkboxes, divided into Income and Deductions, shared by
+ * the add and edit forms. */
 function ColumnToggleFieldset({
   flags,
   setFlags,
@@ -60,17 +108,19 @@ function ColumnToggleFieldset({
   setFlags: (flags: CompanyColumnFlags) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-      {COLUMN_TOGGLES.map(({ key, label }) => (
-        <label key={key} className="flex items-center gap-2 text-sm text-ink-2">
-          <input
-            type="checkbox"
-            checked={flags[key]}
-            onChange={(e) => setFlags({ ...flags, [key]: e.target.checked })}
-          />
-          {label}
-        </label>
-      ))}
+    <div className="flex flex-col gap-4">
+      <ColumnToggleGroup
+        title="Income"
+        toggles={INCOME_COLUMN_TOGGLES}
+        flags={flags}
+        setFlags={setFlags}
+      />
+      <ColumnToggleGroup
+        title="Deductions"
+        toggles={DEDUCTION_COLUMN_TOGGLES}
+        flags={flags}
+        setFlags={setFlags}
+      />
     </div>
   );
 }
@@ -143,14 +193,9 @@ export function CompaniesSettingsPanel() {
   function startEdit(company: CompanyRow) {
     setEditingId(company.id);
     setEditName(company.name);
-    setEditFlags({
-      show_commission: company.show_commission,
-      show_reimbursement: company.show_reimbursement,
-      show_medical_reimbursement: company.show_medical_reimbursement,
-      show_pag_ibig: company.show_pag_ibig,
-      show_mp2: company.show_mp2,
-      show_trust_fund: company.show_trust_fund,
-    });
+    // `CompanyRow` carries every `CompanyColumnFlags` field (plus id/name/etc.),
+    // so it structurally satisfies the narrower type as-is.
+    setEditFlags(company);
     setEditError(null);
   }
 
