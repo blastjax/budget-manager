@@ -79,39 +79,39 @@ function YearPayslipBlockInner({
                 {monthLabel}
               </span>
               {(monthSum != null || monthGross != null || showGross) && (
-                <span className="flex min-w-0 flex-col items-end">
+                <span className="flex min-w-0 flex-1 flex-col">
                   {monthSum != null ? (
                     <span
-                      className={`min-w-0 truncate text-[10px] tabular-nums leading-tight @lg:text-xs ${NET_TEXT_CLASSES}`}
+                      className={`block w-full min-w-0 truncate text-right text-[10px] tabular-nums leading-tight @lg:text-xs ${NET_TEXT_CLASSES}`}
                       title={`Net ${fmtNum(monthSum)}`}
                     >
                       {fmtNum(monthSum)}
                     </span>
                   ) : showGross ? (
-                    <span className="invisible text-[10px] @lg:text-xs" aria-hidden>0.00</span>
+                    <span className="invisible block w-full text-right text-[10px] @lg:text-xs" aria-hidden>0.00</span>
                   ) : null}
                   {showGross ? (
                     monthGross != null ? (
                       <span
-                        className={`min-w-0 truncate text-[10px] tabular-nums leading-tight @lg:text-xs ${GROSS_TEXT_CLASSES}`}
+                        className={`block w-full min-w-0 truncate text-right text-[10px] tabular-nums leading-tight @lg:text-xs ${GROSS_TEXT_CLASSES}`}
                         title={`Gross ${fmtNum(monthGross)}`}
                       >
                         {fmtNum(monthGross)}
                       </span>
                     ) : (
-                      <span className="invisible text-[10px] @lg:text-xs" aria-hidden>0.00</span>
+                      <span className="invisible block w-full text-right text-[10px] @lg:text-xs" aria-hidden>0.00</span>
                     )
                   ) : null}
                   {showGross ? (
                     monthGross != null && monthSum != null ? (
                       <span
-                        className="min-w-0 truncate text-[10px] tabular-nums leading-tight text-red-600 @lg:text-xs dark:text-red-400"
+                        className="block w-full min-w-0 truncate text-right text-[10px] tabular-nums leading-tight text-red-600 @lg:text-xs dark:text-red-400"
                         title={`Deductions ${fmtNum(monthGross - monthSum)}`}
                       >
                         -{fmtNum(monthGross - monthSum)}
                       </span>
                     ) : (
-                      <span className="invisible text-[10px] @lg:text-xs" aria-hidden>0.00</span>
+                      <span className="invisible block w-full text-right text-[10px] @lg:text-xs" aria-hidden>0.00</span>
                     )
                   ) : null}
                 </span>

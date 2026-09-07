@@ -9,6 +9,7 @@ import {
 import { MONTH_NAMES_FULL } from "@/lib/dateFormat";
 import { formatAmountOnBlur } from "@/lib/parseFormNumber";
 import { INPUT_CLASSES } from "@/lib/ui";
+import { YearPickerField } from "@/components/YearPickerField";
 import type { FormState } from "./payslipModalForm";
 import { MONTHS } from "./payslipModalForm";
 
@@ -187,13 +188,10 @@ export function PayslipFormFields({
           <>
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-ink-2">Period year</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                className={INPUT_CLASSES}
+              <YearPickerField
                 value={form.period_year}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, period_year: e.target.value }))
+                onChange={(period_year) =>
+                  setForm((f) => ({ ...f, period_year }))
                 }
                 disabled={disabled || lockPeriod}
               />
